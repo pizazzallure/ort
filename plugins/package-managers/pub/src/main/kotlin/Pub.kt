@@ -21,59 +21,22 @@ package org.ossreviewtoolkit.plugins.packagemanagers.pub
 
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.dataformat.yaml.JacksonYAMLParseException
-
-import java.io.File
-import java.io.IOException
-
 import org.apache.logging.log4j.kotlin.logger
-
-import org.ossreviewtoolkit.analyzer.AbstractPackageManagerFactory
-import org.ossreviewtoolkit.analyzer.PackageManager
-import org.ossreviewtoolkit.analyzer.PackageManagerDependencyResult
-import org.ossreviewtoolkit.analyzer.PackageManagerFactory
-import org.ossreviewtoolkit.analyzer.PackageManagerResult
+import org.ossreviewtoolkit.analyzer.*
 import org.ossreviewtoolkit.analyzer.managers.utils.PackageManagerDependencyHandler
-import org.ossreviewtoolkit.analyzer.parseAuthorString
 import org.ossreviewtoolkit.downloader.VcsHost
 import org.ossreviewtoolkit.downloader.VersionControlSystem
-import org.ossreviewtoolkit.model.EMPTY_JSON_NODE
-import org.ossreviewtoolkit.model.Hash
-import org.ossreviewtoolkit.model.HashAlgorithm
-import org.ossreviewtoolkit.model.Identifier
-import org.ossreviewtoolkit.model.Issue
-import org.ossreviewtoolkit.model.Package
-import org.ossreviewtoolkit.model.PackageLinkage
-import org.ossreviewtoolkit.model.PackageReference
-import org.ossreviewtoolkit.model.Project
-import org.ossreviewtoolkit.model.ProjectAnalyzerResult
-import org.ossreviewtoolkit.model.RemoteArtifact
-import org.ossreviewtoolkit.model.Scope
-import org.ossreviewtoolkit.model.Severity
-import org.ossreviewtoolkit.model.VcsInfo
-import org.ossreviewtoolkit.model.VcsType
+import org.ossreviewtoolkit.model.*
 import org.ossreviewtoolkit.model.config.AnalyzerConfiguration
 import org.ossreviewtoolkit.model.config.PackageManagerConfiguration
 import org.ossreviewtoolkit.model.config.RepositoryConfiguration
-import org.ossreviewtoolkit.model.createAndLogIssue
-import org.ossreviewtoolkit.model.yamlMapper
 import org.ossreviewtoolkit.plugins.packagemanagers.pub.utils.PubCacheReader
-import org.ossreviewtoolkit.utils.common.CommandLineTool
-import org.ossreviewtoolkit.utils.common.Os
-import org.ossreviewtoolkit.utils.common.ProcessCapture
-import org.ossreviewtoolkit.utils.common.collectMessages
-import org.ossreviewtoolkit.utils.common.realFile
-import org.ossreviewtoolkit.utils.common.safeMkdirs
-import org.ossreviewtoolkit.utils.common.splitOnWhitespace
-import org.ossreviewtoolkit.utils.common.textValueOrEmpty
-import org.ossreviewtoolkit.utils.common.unpack
-import org.ossreviewtoolkit.utils.ort.downloadFile
-import org.ossreviewtoolkit.utils.ort.normalizeVcsUrl
-import org.ossreviewtoolkit.utils.ort.okHttpClient
-import org.ossreviewtoolkit.utils.ort.ortToolsDirectory
-import org.ossreviewtoolkit.utils.ort.showStackTrace
-
+import org.ossreviewtoolkit.utils.common.*
+import org.ossreviewtoolkit.utils.ort.*
 import org.semver4j.RangesList
 import org.semver4j.RangesListFactory
+import java.io.File
+import java.io.IOException
 
 private const val GRADLE_VERSION = "7.3"
 private const val PUBSPEC_YAML = "pubspec.yaml"
@@ -182,6 +145,7 @@ class Pub(
                     else -> throw IllegalArgumentException("Unsupported macOS architecture '$arch'.")
                 }
             }
+
             else -> throw IllegalArgumentException("Unsupported operating system.")
         }
 
@@ -502,6 +466,8 @@ class Pub(
             ),
             definitionFilePath = VersionControlSystem.getPathInfo(definitionFile).path,
             authors = authors,
+            // TODO: Check if package manager support native copyright holders
+            copyrightHolders = emptySet(),
             // Pub does not declare any licenses in the pubspec files, therefore we keep this empty.
             declaredLicenses = emptySet(),
             vcs = vcs,
@@ -626,6 +592,8 @@ class Pub(
                     packages[id] = Package(
                         id,
                         authors = authors,
+                        // TODO: Check if package manager support native copyright holders
+                        copyrightHolders = emptySet(),
                         // Pub does not declare any licenses in the pubspec files, therefore we keep this empty.
                         declaredLicenses = emptySet(),
                         description = description,
@@ -755,9 +723,9 @@ class Pub(
     override fun createPackageManagerResult(
         projectResults: Map<File, List<ProjectAnalyzerResult>>
     ): PackageManagerResult =
-        // TODO: Dependencies on projects should use the correct package linkage. To fix this, all project identifiers
-        //       should already be determined in beforeResolution() so that the linkage can be correctly set when the
-        //       dependency tree is built. Then also project packages could be prevented and the filter below could be
+    // TODO: Dependencies on projects should use the correct package linkage. To fix this, all project identifiers
+    //       should already be determined in beforeResolution() so that the linkage can be correctly set when the
+    //       dependency tree is built. Then also project packages could be prevented and the filter below could be
         //       removed.
         PackageManagerResult(projectResults.filterProjectPackages())
 }

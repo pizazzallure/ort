@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonInclude
 import org.ossreviewtoolkit.utils.common.zip
 import org.ossreviewtoolkit.utils.ort.DeclaredLicenseProcessor
 import org.ossreviewtoolkit.utils.spdx.SpdxExpression
+import java.util.*
 
 /**
  * This class contains curation data for a package. It is used to amend the automatically detected metadata for a
@@ -52,6 +53,11 @@ data class PackageCurationData(
      * The set of authors of the package.
      */
     val authors: Set<String>? = null,
+
+    /**
+     * The set of copyright holders of this package.
+     */
+    val copyrightHolders: Set<String>? = null,
 
     /**
      * The concluded license as an [SpdxExpression]. It can be used to override the [declared][Package.declaredLicenses]
@@ -129,6 +135,7 @@ data class PackageCurationData(
             purl = purl ?: original.purl,
             cpe = cpe ?: original.cpe,
             authors = authors ?: original.authors,
+            copyrightHolders = copyrightHolders ?: original.copyrightHolders,
             declaredLicenses = original.declaredLicenses,
             declaredLicensesProcessed = declaredLicensesProcessed,
             concludedLicense = concludedLicense ?: original.concludedLicense,
@@ -168,6 +175,7 @@ data class PackageCurationData(
             purl = purl ?: other.purl,
             cpe = cpe ?: other.cpe,
             authors = authors.orEmpty() + other.authors.orEmpty(),
+            copyrightHolders = copyrightHolders.orEmpty() + other.copyrightHolders.orEmpty(),
             concludedLicense = setOfNotNull(concludedLicense, other.concludedLicense).reduce(SpdxExpression::and),
             description = description ?: other.description,
             homepageUrl = homepageUrl ?: other.homepageUrl,

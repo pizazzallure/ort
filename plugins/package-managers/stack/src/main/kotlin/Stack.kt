@@ -21,37 +21,24 @@ package org.ossreviewtoolkit.plugins.packagemanagers.stack
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import com.fasterxml.jackson.module.kotlin.readValue
-
-import java.io.File
-import java.io.IOException
-
 import org.apache.logging.log4j.kotlin.logger
-
 import org.ossreviewtoolkit.analyzer.AbstractPackageManagerFactory
 import org.ossreviewtoolkit.analyzer.PackageManager
 import org.ossreviewtoolkit.analyzer.parseAuthorString
 import org.ossreviewtoolkit.downloader.VersionControlSystem
-import org.ossreviewtoolkit.model.Identifier
-import org.ossreviewtoolkit.model.Package
-import org.ossreviewtoolkit.model.PackageReference
-import org.ossreviewtoolkit.model.Project
-import org.ossreviewtoolkit.model.ProjectAnalyzerResult
-import org.ossreviewtoolkit.model.RemoteArtifact
-import org.ossreviewtoolkit.model.Scope
-import org.ossreviewtoolkit.model.VcsInfo
-import org.ossreviewtoolkit.model.VcsType
+import org.ossreviewtoolkit.model.*
 import org.ossreviewtoolkit.model.config.AnalyzerConfiguration
 import org.ossreviewtoolkit.model.config.RepositoryConfiguration
-import org.ossreviewtoolkit.model.jsonMapper
 import org.ossreviewtoolkit.model.utils.toPurl
 import org.ossreviewtoolkit.utils.common.CommandLineTool
 import org.ossreviewtoolkit.utils.common.ProcessCapture
 import org.ossreviewtoolkit.utils.common.safeDeleteRecursively
 import org.ossreviewtoolkit.utils.ort.downloadText
 import org.ossreviewtoolkit.utils.ort.okHttpClient
-
 import org.semver4j.RangesList
 import org.semver4j.RangesListFactory
+import java.io.File
+import java.io.IOException
 
 private const val EXTERNAL_SCOPE_NAME = "external"
 private const val TEST_SCOPE_NAME = "test"
@@ -97,8 +84,8 @@ class Stack(
     override fun command(workingDir: File?) = "stack"
 
     override fun transformVersion(output: String) =
-        // The version string can be something like:
-        // Version 1.7.1 x86_64
+    // The version string can be something like:
+    // Version 1.7.1 x86_64
         // Version 2.1.1, Git revision f612ea85316bbc327a64e4ad8d9f0b150dc12d4b (7648 commits) x86_64 hpack-0.31.2
         output.removePrefix("Version ").substringBefore(',').substringBefore(' ')
 
@@ -213,6 +200,7 @@ class Stack(
             id = projectId,
             definitionFilePath = VersionControlSystem.getPathInfo(definitionFile).path,
             authors = projectPackage.authors,
+            copyrightHolders = projectPackage.copyrightHolders,
             declaredLicenses = projectPackage.declaredLicenses,
             vcs = projectPackage.vcs,
             vcsProcessed = processProjectVcs(workingDir, projectPackage.vcs, projectPackage.homepageUrl),
@@ -260,6 +248,7 @@ class Stack(
                     val nestedMap = parseKeyValue(i, keyPrefix + keyValue[0].replace(" ", "-") + "-")
                     map += nestedMap
                 }
+
                 2 -> {
                     // Handle lines with a colon.
                     val key = (keyPrefix + keyValue[0]).lowercase()
@@ -347,6 +336,8 @@ class Stack(
                 .map(String::trim)
                 .filter(String::isNotEmpty)
                 .mapNotNullTo(mutableSetOf(), ::parseAuthorString),
+            // TODO: Check if package manager support native copyright holders
+            copyrightHolders = emptySet(),
             declaredLicenses = map["license"]?.let { setOf(it) } ?: emptySet(),
             description = map["description"].orEmpty(),
             homepageUrl = homepageUrl,

@@ -21,42 +21,20 @@ package org.ossreviewtoolkit.plugins.packagemanagers.composer
 
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.node.ObjectNode
-
-import java.io.File
-import java.io.IOException
-
 import org.apache.logging.log4j.kotlin.logger
-
 import org.ossreviewtoolkit.analyzer.AbstractPackageManagerFactory
 import org.ossreviewtoolkit.analyzer.PackageManager
 import org.ossreviewtoolkit.downloader.VersionControlSystem
-import org.ossreviewtoolkit.model.Hash
-import org.ossreviewtoolkit.model.Identifier
-import org.ossreviewtoolkit.model.Package
-import org.ossreviewtoolkit.model.PackageReference
-import org.ossreviewtoolkit.model.Project
-import org.ossreviewtoolkit.model.ProjectAnalyzerResult
-import org.ossreviewtoolkit.model.RemoteArtifact
-import org.ossreviewtoolkit.model.Scope
-import org.ossreviewtoolkit.model.VcsInfo
-import org.ossreviewtoolkit.model.VcsType
+import org.ossreviewtoolkit.model.*
 import org.ossreviewtoolkit.model.config.AnalyzerConfiguration
 import org.ossreviewtoolkit.model.config.RepositoryConfiguration
-import org.ossreviewtoolkit.model.createAndLogIssue
-import org.ossreviewtoolkit.model.jsonMapper
-import org.ossreviewtoolkit.model.orEmpty
-import org.ossreviewtoolkit.model.readTree
-import org.ossreviewtoolkit.utils.common.CommandLineTool
-import org.ossreviewtoolkit.utils.common.Os
-import org.ossreviewtoolkit.utils.common.collectMessages
-import org.ossreviewtoolkit.utils.common.fieldNamesOrEmpty
-import org.ossreviewtoolkit.utils.common.splitOnWhitespace
-import org.ossreviewtoolkit.utils.common.textValueOrEmpty
+import org.ossreviewtoolkit.utils.common.*
 import org.ossreviewtoolkit.utils.ort.showStackTrace
-
 import org.semver4j.RangesList
 import org.semver4j.RangesListFactory
 import org.semver4j.Semver
+import java.io.File
+import java.io.IOException
 
 const val COMPOSER_PHAR_BINARY = "composer.phar"
 const val COMPOSER_LOCK_FILE = "composer.lock"
@@ -95,8 +73,8 @@ class Composer(
     override fun getVersionArguments() = "--no-ansi --version"
 
     override fun transformVersion(output: String) =
-        // The version string can be something like:
-        // Composer version 1.5.1 2017-08-09 16:07:22
+    // The version string can be something like:
+    // Composer version 1.5.1 2017-08-09 16:07:22
         // Composer version @package_branch_alias_version@ (1.0.0-beta2) 2016-03-27 16:00:34
         output.splitOnWhitespace().dropLast(2).last().removeSurrounding("(", ")")
 
@@ -231,6 +209,8 @@ class Composer(
             ),
             definitionFilePath = VersionControlSystem.getPathInfo(definitionFile).path,
             authors = parseAuthors(json),
+            // TODO: Check if package manager support native copyright holders
+            copyrightHolders = emptySet(),
             declaredLicenses = parseDeclaredLicenses(json),
             vcs = vcs,
             vcsProcessed = processProjectVcs(definitionFile.parentFile, vcs, homepageUrl),
@@ -263,6 +243,8 @@ class Composer(
                         version = version
                     ),
                     authors = parseAuthors(pkgInfo),
+                    // TODO: Check if package manager support native copyright holders
+                    copyrightHolders = emptySet(),
                     declaredLicenses = parseDeclaredLicenses(pkgInfo),
                     description = pkgInfo["description"].textValueOrEmpty(),
                     homepageUrl = homepageUrl,

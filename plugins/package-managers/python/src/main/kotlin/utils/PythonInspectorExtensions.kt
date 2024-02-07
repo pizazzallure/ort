@@ -19,19 +19,10 @@
 
 package org.ossreviewtoolkit.plugins.packagemanagers.python.utils
 
-import java.io.File
-
 import org.ossreviewtoolkit.analyzer.PackageManager
 import org.ossreviewtoolkit.downloader.VersionControlSystem
-import org.ossreviewtoolkit.model.Hash
-import org.ossreviewtoolkit.model.Identifier
-import org.ossreviewtoolkit.model.Package
-import org.ossreviewtoolkit.model.PackageReference
-import org.ossreviewtoolkit.model.Project
-import org.ossreviewtoolkit.model.RemoteArtifact
-import org.ossreviewtoolkit.model.Scope
-import org.ossreviewtoolkit.model.VcsInfo
-import org.ossreviewtoolkit.model.VcsType
+import org.ossreviewtoolkit.model.*
+import java.io.File
 
 private const val TYPE = "PyPI"
 
@@ -52,6 +43,8 @@ internal fun PythonInspector.Result.toOrtProject(
         id = id,
         definitionFilePath = VersionControlSystem.getPathInfo(definitionFile).path,
         authors = projectData?.parties?.toAuthors() ?: emptySet(),
+        // TODO: Check if package manager support native copyright holders
+        copyrightHolders = emptySet(),
         declaredLicenses = projectData?.declaredLicense?.getDeclaredLicenses() ?: emptySet(),
         vcs = VcsInfo.EMPTY,
         vcsProcessed = PackageManager.processProjectVcs(definitionFile.parentFile, VcsInfo.EMPTY, homepageUrl),
@@ -143,6 +136,8 @@ internal fun List<PythonInspector.Package>.toOrtPackages(): Set<Package> =
             id = id,
             purl = pkg.purl,
             authors = pkg.parties.toAuthors(),
+            // TODO: Check if package manager support native copyright holders
+            copyrightHolders = emptySet(),
             declaredLicenses = declaredLicenses,
             declaredLicensesProcessed = declaredLicensesProcessed,
             // Only use the first line of the description because the descriptions provided by python-inspector are

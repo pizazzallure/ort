@@ -43,7 +43,10 @@ import org.ossreviewtoolkit.utils.spdx.toSpdx
 import org.ossreviewtoolkit.utils.test.scannerRunOf
 
 val authors = setOf("The Author", "The Other Author")
+val copyrightHolders = setOf("The Copyright Holder", "The Other Copyright Holder")
+
 val projectAuthors = setOf("The Project Author")
+val projectCopyrightHolders = setOf("The Project Copyright Holder")
 
 val concludedLicense = "LicenseRef-a AND LicenseRef-b".toSpdx()
 val declaredLicenses = setOf("LicenseRef-a", "LicenseRef-b")
@@ -56,7 +59,8 @@ val licenseFindings = setOf(
 
 val packageWithAuthors = Package.EMPTY.copy(
     id = Identifier("Maven:org.ossreviewtoolkit:package-with-authors:1.0"),
-    authors = authors
+    authors = authors,
+    copyrightHolders = copyrightHolders
 )
 
 val packageWithoutLicense = Package.EMPTY.copy(
@@ -129,6 +133,7 @@ val project = Project.EMPTY.copy(
     id = Identifier("Maven:org.ossreviewtoolkit:project-included:1.0"),
     definitionFilePath = "included/pom.xml",
     authors = projectAuthors,
+    copyrightHolders = projectCopyrightHolders,
     scopeDependencies = setOf(scope)
 )
 

@@ -22,35 +22,18 @@
 package org.ossreviewtoolkit.plugins.packagemanagers.bower
 
 import com.fasterxml.jackson.databind.JsonNode
-
-import java.io.File
-import java.util.Stack
-
 import org.ossreviewtoolkit.analyzer.AbstractPackageManagerFactory
 import org.ossreviewtoolkit.analyzer.PackageManager
 import org.ossreviewtoolkit.analyzer.parseAuthorString
 import org.ossreviewtoolkit.downloader.VersionControlSystem
-import org.ossreviewtoolkit.model.Identifier
-import org.ossreviewtoolkit.model.Package
-import org.ossreviewtoolkit.model.PackageReference
-import org.ossreviewtoolkit.model.Project
-import org.ossreviewtoolkit.model.ProjectAnalyzerResult
-import org.ossreviewtoolkit.model.RemoteArtifact
-import org.ossreviewtoolkit.model.Scope
-import org.ossreviewtoolkit.model.VcsInfo
-import org.ossreviewtoolkit.model.VcsType
+import org.ossreviewtoolkit.model.*
 import org.ossreviewtoolkit.model.config.AnalyzerConfiguration
 import org.ossreviewtoolkit.model.config.RepositoryConfiguration
-import org.ossreviewtoolkit.model.jsonMapper
-import org.ossreviewtoolkit.utils.common.CommandLineTool
-import org.ossreviewtoolkit.utils.common.Os
-import org.ossreviewtoolkit.utils.common.fieldNamesOrEmpty
-import org.ossreviewtoolkit.utils.common.fieldsOrEmpty
-import org.ossreviewtoolkit.utils.common.stashDirectories
-import org.ossreviewtoolkit.utils.common.textValueOrEmpty
-
+import org.ossreviewtoolkit.utils.common.*
 import org.semver4j.RangesList
 import org.semver4j.RangesListFactory
+import java.io.File
+import java.util.*
 
 /**
  * The [Bower](https://bower.io/) package manager for JavaScript.
@@ -100,6 +83,7 @@ class Bower(
                 id = projectPackage.id,
                 definitionFilePath = VersionControlSystem.getPathInfo(definitionFile).path,
                 authors = projectPackage.authors,
+                copyrightHolders = projectPackage.copyrightHolders,
                 declaredLicenses = projectPackage.declaredLicenses,
                 vcs = projectPackage.vcs,
                 vcsProcessed = processProjectVcs(workingDir, projectPackage.vcs, projectPackage.homepageUrl),
@@ -171,6 +155,8 @@ private fun parsePackage(node: JsonNode) =
     Package(
         id = parsePackageId(node),
         authors = parseAuthors(node),
+        // TODO: Check if package manager support native copyright holders
+        copyrightHolders = emptySet(),
         declaredLicenses = parseDeclaredLicenses(node),
         description = node["pkgMeta"]["description"].textValueOrEmpty(),
         homepageUrl = node["pkgMeta"]["homepage"].textValueOrEmpty(),

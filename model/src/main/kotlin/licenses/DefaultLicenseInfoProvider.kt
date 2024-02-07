@@ -19,9 +19,6 @@
 
 package org.ossreviewtoolkit.model.licenses
 
-import java.util.concurrent.ConcurrentHashMap
-import java.util.concurrent.ConcurrentMap
-
 import org.ossreviewtoolkit.model.Identifier
 import org.ossreviewtoolkit.model.OrtResult
 import org.ossreviewtoolkit.model.Provenance
@@ -29,6 +26,8 @@ import org.ossreviewtoolkit.model.config.LicenseFindingCuration
 import org.ossreviewtoolkit.model.config.PathExclude
 import org.ossreviewtoolkit.model.utils.filterByVcsPath
 import org.ossreviewtoolkit.utils.ort.ProcessedDeclaredLicense
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.ConcurrentMap
 
 /**
  * The default [LicenseInfoProvider] that collects license information from an [ortResult].
@@ -58,6 +57,7 @@ class DefaultLicenseInfoProvider(val ortResult: OrtResult) : LicenseInfoProvider
         ortResult.getProject(id)?.let { project ->
             DeclaredLicenseInfo(
                 authors = project.authors,
+                copyrightHolders = project.copyrightHolders,
                 licenses = project.declaredLicenses,
                 processed = project.declaredLicensesProcessed,
                 appliedCurations = emptyList()
@@ -65,6 +65,7 @@ class DefaultLicenseInfoProvider(val ortResult: OrtResult) : LicenseInfoProvider
         } ?: ortResult.getPackage(id)?.let { (pkg, curations) ->
             DeclaredLicenseInfo(
                 authors = pkg.authors,
+                copyrightHolders = pkg.copyrightHolders,
                 licenses = pkg.declaredLicenses,
                 processed = pkg.declaredLicensesProcessed,
                 appliedCurations = curations.filter { it.curation.declaredLicenseMapping.isNotEmpty() }

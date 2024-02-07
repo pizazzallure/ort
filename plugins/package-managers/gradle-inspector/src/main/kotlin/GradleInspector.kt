@@ -21,40 +21,18 @@ package org.ossreviewtoolkit.plugins.packagemanagers.gradleinspector
 
 import OrtDependency
 import OrtDependencyTreeModel
-
-import java.io.ByteArrayOutputStream
-import java.io.File
-import java.util.Properties
-import java.util.concurrent.TimeUnit
-
 import org.apache.logging.log4j.kotlin.logger
-
 import org.gradle.tooling.GradleConnector
 import org.gradle.tooling.events.ProgressListener
 import org.gradle.tooling.internal.consumer.DefaultGradleConnector
-
 import org.ossreviewtoolkit.analyzer.AbstractPackageManagerFactory
 import org.ossreviewtoolkit.analyzer.PackageManager
 import org.ossreviewtoolkit.downloader.VcsHost
 import org.ossreviewtoolkit.downloader.VersionControlSystem
-import org.ossreviewtoolkit.model.Hash
-import org.ossreviewtoolkit.model.Identifier
-import org.ossreviewtoolkit.model.Issue
-import org.ossreviewtoolkit.model.Package
-import org.ossreviewtoolkit.model.PackageLinkage
-import org.ossreviewtoolkit.model.PackageReference
-import org.ossreviewtoolkit.model.Project
-import org.ossreviewtoolkit.model.ProjectAnalyzerResult
-import org.ossreviewtoolkit.model.RemoteArtifact
-import org.ossreviewtoolkit.model.Scope
-import org.ossreviewtoolkit.model.Severity
-import org.ossreviewtoolkit.model.VcsInfo
-import org.ossreviewtoolkit.model.VcsType
+import org.ossreviewtoolkit.model.*
 import org.ossreviewtoolkit.model.config.AnalyzerConfiguration
 import org.ossreviewtoolkit.model.config.PackageManagerConfiguration
 import org.ossreviewtoolkit.model.config.RepositoryConfiguration
-import org.ossreviewtoolkit.model.createAndLogIssue
-import org.ossreviewtoolkit.model.orEmpty
 import org.ossreviewtoolkit.model.utils.parseRepoManifestPath
 import org.ossreviewtoolkit.utils.common.Os
 import org.ossreviewtoolkit.utils.common.safeMkdirs
@@ -65,6 +43,10 @@ import org.ossreviewtoolkit.utils.ort.downloadText
 import org.ossreviewtoolkit.utils.ort.okHttpClient
 import org.ossreviewtoolkit.utils.ort.ortToolsDirectory
 import org.ossreviewtoolkit.utils.spdx.SpdxOperator
+import java.io.ByteArrayOutputStream
+import java.io.File
+import java.util.*
+import java.util.concurrent.TimeUnit
 
 /**
  * The names of Gradle (Groovy, Kotlin script) build files for a Gradle project.
@@ -228,6 +210,8 @@ class GradleInspector(
             id = projectId,
             definitionFilePath = VersionControlSystem.getPathInfo(definitionFile).path,
             authors = emptySet(),
+            // TODO: Check if package manager support native copyright holders
+            copyrightHolders = emptySet(),
             declaredLicenses = emptySet(),
             vcs = VcsInfo.EMPTY,
             vcsProcessed = processProjectVcs(definitionFile.parentFile),
@@ -274,6 +258,8 @@ class GradleInspector(
             Package(
                 id = id,
                 authors = model.authors,
+                // TODO: Check if package manager support native copyright holders
+                copyrightHolders = emptySet(),
                 declaredLicenses = model.licenses,
                 declaredLicensesProcessed = DeclaredLicenseProcessor.process(
                     model.licenses,

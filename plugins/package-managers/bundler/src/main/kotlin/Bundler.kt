@@ -20,50 +20,28 @@
 package org.ossreviewtoolkit.plugins.packagemanagers.bundler
 
 import com.fasterxml.jackson.databind.JsonNode
-
+import org.apache.logging.log4j.kotlin.logger
+import org.jruby.embed.LocalContextScope
+import org.jruby.embed.PathType
+import org.jruby.embed.ScriptingContainer
+import org.ossreviewtoolkit.analyzer.AbstractPackageManagerFactory
+import org.ossreviewtoolkit.analyzer.PackageManager
+import org.ossreviewtoolkit.downloader.VcsHost
+import org.ossreviewtoolkit.downloader.VersionControlSystem
+import org.ossreviewtoolkit.model.*
+import org.ossreviewtoolkit.model.config.AnalyzerConfiguration
+import org.ossreviewtoolkit.model.config.PackageManagerConfiguration
+import org.ossreviewtoolkit.model.config.RepositoryConfiguration
+import org.ossreviewtoolkit.utils.common.AlphaNumericComparator
+import org.ossreviewtoolkit.utils.common.collectMessages
+import org.ossreviewtoolkit.utils.common.textValueOrEmpty
+import org.ossreviewtoolkit.utils.ort.*
 import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.IOException
 import java.io.PrintStream
 import java.net.HttpURLConnection
-
 import kotlin.time.measureTime
-
-import org.apache.logging.log4j.kotlin.logger
-
-import org.jruby.embed.LocalContextScope
-import org.jruby.embed.PathType
-import org.jruby.embed.ScriptingContainer
-
-import org.ossreviewtoolkit.analyzer.AbstractPackageManagerFactory
-import org.ossreviewtoolkit.analyzer.PackageManager
-import org.ossreviewtoolkit.downloader.VcsHost
-import org.ossreviewtoolkit.downloader.VersionControlSystem
-import org.ossreviewtoolkit.model.Hash
-import org.ossreviewtoolkit.model.Identifier
-import org.ossreviewtoolkit.model.Issue
-import org.ossreviewtoolkit.model.Package
-import org.ossreviewtoolkit.model.PackageReference
-import org.ossreviewtoolkit.model.Project
-import org.ossreviewtoolkit.model.ProjectAnalyzerResult
-import org.ossreviewtoolkit.model.RemoteArtifact
-import org.ossreviewtoolkit.model.Scope
-import org.ossreviewtoolkit.model.VcsInfo
-import org.ossreviewtoolkit.model.config.AnalyzerConfiguration
-import org.ossreviewtoolkit.model.config.PackageManagerConfiguration
-import org.ossreviewtoolkit.model.config.RepositoryConfiguration
-import org.ossreviewtoolkit.model.createAndLogIssue
-import org.ossreviewtoolkit.model.fromYaml
-import org.ossreviewtoolkit.model.orEmpty
-import org.ossreviewtoolkit.model.yamlMapper
-import org.ossreviewtoolkit.utils.common.AlphaNumericComparator
-import org.ossreviewtoolkit.utils.common.collectMessages
-import org.ossreviewtoolkit.utils.common.textValueOrEmpty
-import org.ossreviewtoolkit.utils.ort.HttpDownloadError
-import org.ossreviewtoolkit.utils.ort.OkHttpClientHelper
-import org.ossreviewtoolkit.utils.ort.downloadText
-import org.ossreviewtoolkit.utils.ort.okHttpClient
-import org.ossreviewtoolkit.utils.ort.showStackTrace
 
 /**
  * The path to the helper script resource that resolves a `Gemfile`'s top-level dependencies with group information.
@@ -219,6 +197,8 @@ class Bundler(
                 id = projectId,
                 definitionFilePath = VersionControlSystem.getPathInfo(definitionFile).path,
                 authors = authors,
+                // TODO: Check if package manager support native copyright holders
+                copyrightHolders = emptySet(),
                 declaredLicenses = declaredLicenses,
                 vcs = VcsInfo.EMPTY,
                 vcsProcessed = processProjectVcs(workingDir, VcsInfo.EMPTY, homepageUrl),
@@ -344,6 +324,8 @@ class Bundler(
         return Package(
             id = gemId,
             authors = gemSpec.authors,
+            // TODO: Check if package manager support native copyright holders
+            copyrightHolders = emptySet(),
             declaredLicenses = gemSpec.declaredLicenses,
             description = gemSpec.description,
             homepageUrl = gemSpec.homepageUrl,

@@ -21,17 +21,13 @@ package org.ossreviewtoolkit.plugins.reporters.evaluatedmodel
 
 import com.fasterxml.jackson.annotation.JsonIdentityReference
 import com.fasterxml.jackson.annotation.JsonInclude
-
-import java.util.SortedSet
-
-import org.ossreviewtoolkit.model.Identifier
-import org.ossreviewtoolkit.model.Package
-import org.ossreviewtoolkit.model.PackageCurationResult
-import org.ossreviewtoolkit.model.RemoteArtifact
-import org.ossreviewtoolkit.model.VcsInfo
+import com.fasterxml.jackson.databind.annotation.JsonSerialize
+import org.ossreviewtoolkit.model.*
 import org.ossreviewtoolkit.model.config.PathExclude
 import org.ossreviewtoolkit.model.config.ScopeExclude
+import org.ossreviewtoolkit.utils.common.StringSortedSetConverter
 import org.ossreviewtoolkit.utils.spdx.SpdxExpression
+import java.util.*
 
 /**
  * The evaluated form of a [Package] used by the [EvaluatedModel].
@@ -44,6 +40,14 @@ data class EvaluatedPackage(
     val purl: String? = null,
     @JsonInclude(JsonInclude.Include.NON_EMPTY)
     val authors: Set<String>,
+
+    /**
+     * The set of copyright holders of this package.
+     */
+    @JsonInclude(JsonInclude.Include.NON_EMPTY)
+    @JsonSerialize(converter = StringSortedSetConverter::class)
+    val copyrightHolders: Set<String> = emptySet(),
+
     @JsonInclude(JsonInclude.Include.NON_EMPTY)
     val declaredLicenses: List<LicenseId>,
     val declaredLicensesProcessed: EvaluatedProcessedDeclaredLicense,

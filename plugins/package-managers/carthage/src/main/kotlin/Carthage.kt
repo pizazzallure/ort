@@ -20,29 +20,18 @@
 package org.ossreviewtoolkit.plugins.packagemanagers.carthage
 
 import com.fasterxml.jackson.module.kotlin.readValue
-
-import java.io.File
-import java.net.URI
-
 import org.ossreviewtoolkit.analyzer.AbstractPackageManagerFactory
 import org.ossreviewtoolkit.analyzer.PackageManager
 import org.ossreviewtoolkit.downloader.VcsHost
 import org.ossreviewtoolkit.downloader.VersionControlSystem
-import org.ossreviewtoolkit.model.Hash
-import org.ossreviewtoolkit.model.Identifier
-import org.ossreviewtoolkit.model.Package
-import org.ossreviewtoolkit.model.Project
-import org.ossreviewtoolkit.model.ProjectAnalyzerResult
-import org.ossreviewtoolkit.model.RemoteArtifact
-import org.ossreviewtoolkit.model.VcsInfo
-import org.ossreviewtoolkit.model.VcsType
+import org.ossreviewtoolkit.model.*
 import org.ossreviewtoolkit.model.config.AnalyzerConfiguration
 import org.ossreviewtoolkit.model.config.RepositoryConfiguration
-import org.ossreviewtoolkit.model.jsonMapper
-import org.ossreviewtoolkit.model.orEmpty
 import org.ossreviewtoolkit.utils.common.splitOnWhitespace
 import org.ossreviewtoolkit.utils.common.unquote
 import org.ossreviewtoolkit.utils.ort.normalizeVcsUrl
+import java.io.File
+import java.net.URI
 
 /**
  * The [Carthage](https://github.com/Carthage/Carthage) package manager for Objective-C / Swift.
@@ -82,6 +71,7 @@ class Carthage(
                     ),
                     definitionFilePath = VersionControlSystem.getPathInfo(definitionFile).path,
                     authors = emptySet(),
+                    copyrightHolders = emptySet(),
                     declaredLicenses = emptySet(),
                     vcs = VcsInfo.EMPTY,
                     vcsProcessed = processProjectVcs(workingDir, VcsInfo.EMPTY),
@@ -190,6 +180,7 @@ class Carthage(
                 version = revision
             ),
             authors = emptySet(),
+            copyrightHolders = emptySet(),
             declaredLicenses = emptySet(),
             description = "",
             homepageUrl = projectUrl.removeSuffix(".git"),
@@ -214,6 +205,7 @@ class Carthage(
                 version = revision
             ),
             authors = emptySet(),
+            copyrightHolders = emptySet(),
             declaredLicenses = emptySet(),
             description = "",
             homepageUrl = "",
@@ -232,6 +224,7 @@ class Carthage(
                 version = revision
             ),
             authors = emptySet(),
+            copyrightHolders = emptySet(),
             declaredLicenses = emptySet(),
             description = "",
             homepageUrl = "",
@@ -244,7 +237,7 @@ class Carthage(
         )
 
     private fun isFilePath(workingDir: String, path: String) =
-        // This covers the two cases supported by Carthage, where either the path start with "file://" and points to a
+    // This covers the two cases supported by Carthage, where either the path start with "file://" and points to a
         // local Git repository, or the path is a local binary specification JSON.
         path.startsWith("file://") || File(path).exists() || File("$workingDir/$path").exists()
 }

@@ -21,7 +21,6 @@ package org.ossreviewtoolkit.model
 
 import com.fasterxml.jackson.annotation.JsonInclude
 import com.fasterxml.jackson.databind.annotation.JsonSerialize
-
 import org.ossreviewtoolkit.model.utils.toPurl
 import org.ossreviewtoolkit.utils.common.StringSortedSetConverter
 import org.ossreviewtoolkit.utils.ort.DeclaredLicenseProcessor
@@ -62,6 +61,13 @@ data class Package(
     @JsonInclude(JsonInclude.Include.NON_DEFAULT)
     @JsonSerialize(converter = StringSortedSetConverter::class)
     val authors: Set<String> = emptySet(),
+
+    /**
+     * The set of copyright holders of this package.
+     */
+    @JsonInclude(JsonInclude.Include.NON_DEFAULT)
+    @JsonSerialize(converter = StringSortedSetConverter::class)
+    val copyrightHolders: Set<String> = emptySet(),
 
     /**
      * The set of licenses declared for this package. This does not necessarily correspond to the licenses as detected
@@ -140,6 +146,7 @@ data class Package(
             id = Identifier.EMPTY,
             purl = "",
             authors = emptySet(),
+            copyrightHolders = emptySet(),
             declaredLicenses = emptySet(),
             declaredLicensesProcessed = ProcessedDeclaredLicense.EMPTY,
             concludedLicense = null,
@@ -164,6 +171,7 @@ data class Package(
 
         return PackageCurationData(
             authors = authors.takeIf { it != other.authors },
+            copyrightHolders = copyrightHolders.takeIf { it != other.copyrightHolders },
             description = description.takeIf { it != other.description },
             homepageUrl = homepageUrl.takeIf { it != other.homepageUrl },
             binaryArtifact = binaryArtifact.takeIf { it != other.binaryArtifact },

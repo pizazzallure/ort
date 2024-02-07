@@ -24,55 +24,31 @@ import com.fasterxml.jackson.databind.MappingIterator
 import com.fasterxml.jackson.databind.node.NullNode
 import com.fasterxml.jackson.databind.node.ObjectNode
 import com.fasterxml.jackson.module.kotlin.readValues
-
-import java.io.File
-
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.runBlocking
-
 import org.apache.logging.log4j.kotlin.logger
-
 import org.ossreviewtoolkit.analyzer.AbstractPackageManagerFactory
 import org.ossreviewtoolkit.analyzer.PackageManager
 import org.ossreviewtoolkit.analyzer.PackageManagerResult
 import org.ossreviewtoolkit.downloader.VcsHost
 import org.ossreviewtoolkit.downloader.VersionControlSystem
-import org.ossreviewtoolkit.model.DependencyGraph
-import org.ossreviewtoolkit.model.Hash
-import org.ossreviewtoolkit.model.Identifier
-import org.ossreviewtoolkit.model.Issue
-import org.ossreviewtoolkit.model.Package
-import org.ossreviewtoolkit.model.PackageLinkage
-import org.ossreviewtoolkit.model.Project
-import org.ossreviewtoolkit.model.ProjectAnalyzerResult
-import org.ossreviewtoolkit.model.RemoteArtifact
-import org.ossreviewtoolkit.model.Severity
-import org.ossreviewtoolkit.model.VcsInfo
+import org.ossreviewtoolkit.model.*
 import org.ossreviewtoolkit.model.config.AnalyzerConfiguration
 import org.ossreviewtoolkit.model.config.PackageManagerConfiguration
 import org.ossreviewtoolkit.model.config.RepositoryConfiguration
-import org.ossreviewtoolkit.model.createAndLogIssue
-import org.ossreviewtoolkit.model.jsonMapper
 import org.ossreviewtoolkit.model.utils.DependencyGraphBuilder
 import org.ossreviewtoolkit.model.utils.DependencyHandler
-import org.ossreviewtoolkit.model.yamlMapper
-import org.ossreviewtoolkit.plugins.packagemanagers.node.utils.NodePackageManager
-import org.ossreviewtoolkit.plugins.packagemanagers.node.utils.NpmDetection
-import org.ossreviewtoolkit.plugins.packagemanagers.node.utils.fixNpmDownloadUrl
-import org.ossreviewtoolkit.plugins.packagemanagers.node.utils.parseNpmAuthors
-import org.ossreviewtoolkit.plugins.packagemanagers.node.utils.parseNpmLicenses
-import org.ossreviewtoolkit.plugins.packagemanagers.node.utils.parseNpmVcsInfo
-import org.ossreviewtoolkit.plugins.packagemanagers.node.utils.splitNpmNamespaceAndName
+import org.ossreviewtoolkit.plugins.packagemanagers.node.utils.*
 import org.ossreviewtoolkit.utils.common.CommandLineTool
 import org.ossreviewtoolkit.utils.common.Os
 import org.ossreviewtoolkit.utils.common.ProcessCapture
 import org.ossreviewtoolkit.utils.common.textValueOrEmpty
 import org.ossreviewtoolkit.utils.ort.showStackTrace
-
 import org.semver4j.RangesList
 import org.semver4j.RangesListFactory
+import java.io.File
 
 // The various Yarn dependency types supported by this package manager.
 private enum class YarnDependencyType(val type: String) {
@@ -188,9 +164,9 @@ class Yarn2(
     }
 
     override fun getVersion(workingDir: File?): String =
-        // `getVersion` with a `null` parameter is called once by the Analyzer to get the version of the global tool.
-        // For Yarn2+, the version is specific to each definition file being scanned therefore a global version doesn't
-        // apply.
+    // `getVersion` with a `null` parameter is called once by the Analyzer to get the version of the global tool.
+    // For Yarn2+, the version is specific to each definition file being scanned therefore a global version doesn't
+    // apply.
         // TODO: An alternative would be to collate the versions of all tools in `yarn2CommandsByPath`.
         if (workingDir == null) "" else super.getVersion(workingDir)
 
@@ -471,6 +447,9 @@ class Yarn2(
 
             val hash = details.hash
             val authors = details.author
+            // TODO: Check if package manager support native copyright holders
+            //      val copyrightHolders: Set<String> = emptySet()
+
             var vcsFromPackage = details.vcsFromPackage
 
             if (details.vcsFromDownloadUrl.url != details.downloadUrl) {

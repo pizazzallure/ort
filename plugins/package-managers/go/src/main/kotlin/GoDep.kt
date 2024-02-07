@@ -19,46 +19,25 @@
 
 package org.ossreviewtoolkit.plugins.packagemanagers.go
 
-import java.io.File
-import java.io.IOException
-import java.net.URI
-
-import kotlin.io.path.copyToRecursively
-import kotlin.io.path.createDirectories
-
 import net.peanuuutz.tomlkt.Toml
 import net.peanuuutz.tomlkt.decodeFromNativeReader
-
 import org.apache.logging.log4j.kotlin.logger
-
 import org.ossreviewtoolkit.analyzer.AbstractPackageManagerFactory
 import org.ossreviewtoolkit.analyzer.PackageManager
 import org.ossreviewtoolkit.downloader.VcsHost
 import org.ossreviewtoolkit.downloader.VersionControlSystem
-import org.ossreviewtoolkit.model.Identifier
-import org.ossreviewtoolkit.model.Issue
-import org.ossreviewtoolkit.model.Package
-import org.ossreviewtoolkit.model.PackageLinkage
-import org.ossreviewtoolkit.model.PackageReference
-import org.ossreviewtoolkit.model.Project
-import org.ossreviewtoolkit.model.ProjectAnalyzerResult
-import org.ossreviewtoolkit.model.RemoteArtifact
-import org.ossreviewtoolkit.model.Scope
-import org.ossreviewtoolkit.model.VcsInfo
-import org.ossreviewtoolkit.model.VcsType
+import org.ossreviewtoolkit.model.*
 import org.ossreviewtoolkit.model.config.AnalyzerConfiguration
 import org.ossreviewtoolkit.model.config.RepositoryConfiguration
-import org.ossreviewtoolkit.model.createAndLogIssue
-import org.ossreviewtoolkit.model.orEmpty
 import org.ossreviewtoolkit.plugins.packagemanagers.go.utils.normalizeModuleVersion
-import org.ossreviewtoolkit.utils.common.CommandLineTool
-import org.ossreviewtoolkit.utils.common.ProcessCapture
-import org.ossreviewtoolkit.utils.common.collectMessages
-import org.ossreviewtoolkit.utils.common.realFile
-import org.ossreviewtoolkit.utils.common.safeDeleteRecursively
-import org.ossreviewtoolkit.utils.common.toUri
+import org.ossreviewtoolkit.utils.common.*
 import org.ossreviewtoolkit.utils.ort.createOrtTempDir
 import org.ossreviewtoolkit.utils.ort.showStackTrace
+import java.io.File
+import java.io.IOException
+import java.net.URI
+import kotlin.io.path.copyToRecursively
+import kotlin.io.path.createDirectories
 
 private val toml = Toml { ignoreUnknownKeys = true }
 
@@ -143,6 +122,7 @@ class GoDep(
             val pkg = Package(
                 id = Identifier("Go", "", name, normalizeModuleVersion(version)),
                 authors = emptySet(),
+                copyrightHolders = emptySet(),
                 declaredLicenses = emptySet(),
                 description = "",
                 homepageUrl = "",
@@ -182,6 +162,8 @@ class GoDep(
                     ),
                     definitionFilePath = VersionControlSystem.getPathInfo(definitionFile).path,
                     authors = emptySet(),
+                    // TODO: Check if package manager support native copyright holders
+                    copyrightHolders = emptySet(),
                     declaredLicenses = emptySet(),
                     vcs = VcsInfo.EMPTY,
                     vcsProcessed = projectVcs,

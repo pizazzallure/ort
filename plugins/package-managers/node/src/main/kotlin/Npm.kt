@@ -23,66 +23,24 @@ package org.ossreviewtoolkit.plugins.packagemanagers.node
 
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.node.ObjectNode
-
-import java.io.File
-import java.util.concurrent.ConcurrentHashMap
-
-import kotlinx.coroutines.Deferred
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.async
-import kotlinx.coroutines.awaitAll
-import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.withContext
-
+import kotlinx.coroutines.*
 import org.apache.logging.log4j.kotlin.logger
-
 import org.ossreviewtoolkit.analyzer.AbstractPackageManagerFactory
 import org.ossreviewtoolkit.analyzer.PackageManager
 import org.ossreviewtoolkit.analyzer.PackageManagerResult
 import org.ossreviewtoolkit.downloader.VcsHost
 import org.ossreviewtoolkit.downloader.VersionControlSystem
-import org.ossreviewtoolkit.model.DependencyGraph
-import org.ossreviewtoolkit.model.Hash
-import org.ossreviewtoolkit.model.Identifier
-import org.ossreviewtoolkit.model.Issue
-import org.ossreviewtoolkit.model.Package
-import org.ossreviewtoolkit.model.Project
-import org.ossreviewtoolkit.model.ProjectAnalyzerResult
-import org.ossreviewtoolkit.model.RemoteArtifact
-import org.ossreviewtoolkit.model.Severity
-import org.ossreviewtoolkit.model.VcsInfo
+import org.ossreviewtoolkit.model.*
 import org.ossreviewtoolkit.model.config.AnalyzerConfiguration
 import org.ossreviewtoolkit.model.config.PackageManagerConfiguration
 import org.ossreviewtoolkit.model.config.RepositoryConfiguration
-import org.ossreviewtoolkit.model.jsonMapper
-import org.ossreviewtoolkit.model.orEmpty
-import org.ossreviewtoolkit.model.readTree
-import org.ossreviewtoolkit.model.readValue
 import org.ossreviewtoolkit.model.utils.DependencyGraphBuilder
-import org.ossreviewtoolkit.plugins.packagemanagers.node.utils.NON_EXISTING_SEMVER
-import org.ossreviewtoolkit.plugins.packagemanagers.node.utils.NodePackageManager
-import org.ossreviewtoolkit.plugins.packagemanagers.node.utils.NpmDependencyHandler
-import org.ossreviewtoolkit.plugins.packagemanagers.node.utils.NpmDetection
-import org.ossreviewtoolkit.plugins.packagemanagers.node.utils.NpmModuleInfo
-import org.ossreviewtoolkit.plugins.packagemanagers.node.utils.expandNpmShortcutUrl
-import org.ossreviewtoolkit.plugins.packagemanagers.node.utils.fixNpmDownloadUrl
-import org.ossreviewtoolkit.plugins.packagemanagers.node.utils.parseNpmAuthors
-import org.ossreviewtoolkit.plugins.packagemanagers.node.utils.parseNpmLicenses
-import org.ossreviewtoolkit.plugins.packagemanagers.node.utils.parseNpmVcsInfo
-import org.ossreviewtoolkit.plugins.packagemanagers.node.utils.splitNpmNamespaceAndName
-import org.ossreviewtoolkit.utils.common.CommandLineTool
-import org.ossreviewtoolkit.utils.common.Os
-import org.ossreviewtoolkit.utils.common.ProcessCapture
-import org.ossreviewtoolkit.utils.common.collectMessages
-import org.ossreviewtoolkit.utils.common.fieldNamesOrEmpty
-import org.ossreviewtoolkit.utils.common.isSymbolicLink
-import org.ossreviewtoolkit.utils.common.realFile
-import org.ossreviewtoolkit.utils.common.stashDirectories
-import org.ossreviewtoolkit.utils.common.textValueOrEmpty
-import org.ossreviewtoolkit.utils.common.withoutPrefix
-
+import org.ossreviewtoolkit.plugins.packagemanagers.node.utils.*
+import org.ossreviewtoolkit.utils.common.*
 import org.semver4j.RangesList
 import org.semver4j.RangesListFactory
+import java.io.File
+import java.util.concurrent.ConcurrentHashMap
 
 /** Name of the scope with the regular dependencies. */
 private const val DEPENDENCIES_SCOPE = "dependencies"
@@ -346,6 +304,9 @@ open class Npm(
         val module = Package(
             id = id,
             authors = authors,
+            // NPM Do not support native copyright holder in package configuration
+            // https://docs.npmjs.com/cli/v10/configuring-npm/package-json
+            copyrightHolders = emptySet(),
             declaredLicenses = declaredLicenses,
             description = description,
             homepageUrl = homepageUrl,
@@ -553,6 +514,9 @@ open class Npm(
             ),
             definitionFilePath = VersionControlSystem.getPathInfo(packageJson).path,
             authors = authors,
+            // NPM Do not support native copyright holder in package configuration
+            // https://docs.npmjs.com/cli/v10/configuring-npm/package-json
+            copyrightHolders = emptySet(),
             declaredLicenses = declaredLicenses,
             vcs = vcsFromPackage,
             vcsProcessed = processProjectVcs(projectDir, vcsFromPackage, homepageUrl),

@@ -25,45 +25,9 @@ import io.kotest.matchers.collections.shouldContainExactlyInAnyOrder
 import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldContain
-
-import io.mockk.coEvery
-import io.mockk.coVerify
-import io.mockk.every
-import io.mockk.mockk
-import io.mockk.mockkObject
-import io.mockk.mockkStatic
-import io.mockk.spyk
-import io.mockk.unmockkObject
-
-import java.time.Instant
-import java.util.concurrent.atomic.AtomicInteger
-
-import kotlin.time.Duration.Companion.milliseconds
-
+import io.mockk.*
 import kotlinx.coroutines.runInterruptible
-
-import org.ossreviewtoolkit.clients.fossid.EntityResponseBody
-import org.ossreviewtoolkit.clients.fossid.FossIdRestService
-import org.ossreviewtoolkit.clients.fossid.FossIdServiceWithVersion
-import org.ossreviewtoolkit.clients.fossid.MapResponseBody
-import org.ossreviewtoolkit.clients.fossid.PolymorphicInt
-import org.ossreviewtoolkit.clients.fossid.PolymorphicList
-import org.ossreviewtoolkit.clients.fossid.PolymorphicResponseBody
-import org.ossreviewtoolkit.clients.fossid.checkDownloadStatus
-import org.ossreviewtoolkit.clients.fossid.createIgnoreRule
-import org.ossreviewtoolkit.clients.fossid.createProject
-import org.ossreviewtoolkit.clients.fossid.createScan
-import org.ossreviewtoolkit.clients.fossid.deleteScan
-import org.ossreviewtoolkit.clients.fossid.downloadFromGit
-import org.ossreviewtoolkit.clients.fossid.getProject
-import org.ossreviewtoolkit.clients.fossid.listIdentifiedFiles
-import org.ossreviewtoolkit.clients.fossid.listIgnoreRules
-import org.ossreviewtoolkit.clients.fossid.listIgnoredFiles
-import org.ossreviewtoolkit.clients.fossid.listMarkedAsIdentifiedFiles
-import org.ossreviewtoolkit.clients.fossid.listMatchedLines
-import org.ossreviewtoolkit.clients.fossid.listPendingFiles
-import org.ossreviewtoolkit.clients.fossid.listScansForProject
-import org.ossreviewtoolkit.clients.fossid.listSnippets
+import org.ossreviewtoolkit.clients.fossid.*
 import org.ossreviewtoolkit.clients.fossid.model.Scan
 import org.ossreviewtoolkit.clients.fossid.model.identification.common.LicenseMatchType
 import org.ossreviewtoolkit.clients.fossid.model.identification.identifiedFiles.IdentifiedFile
@@ -80,25 +44,8 @@ import org.ossreviewtoolkit.clients.fossid.model.rules.RuleType
 import org.ossreviewtoolkit.clients.fossid.model.status.DownloadStatus
 import org.ossreviewtoolkit.clients.fossid.model.status.ScanStatus
 import org.ossreviewtoolkit.clients.fossid.model.status.UnversionedScanDescription
-import org.ossreviewtoolkit.clients.fossid.runScan
 import org.ossreviewtoolkit.downloader.VersionControlSystem
-import org.ossreviewtoolkit.model.ArtifactProvenance
-import org.ossreviewtoolkit.model.CopyrightFinding
-import org.ossreviewtoolkit.model.Hash
-import org.ossreviewtoolkit.model.Identifier
-import org.ossreviewtoolkit.model.Issue
-import org.ossreviewtoolkit.model.LicenseFinding
-import org.ossreviewtoolkit.model.Package
-import org.ossreviewtoolkit.model.PackageType
-import org.ossreviewtoolkit.model.RemoteArtifact
-import org.ossreviewtoolkit.model.RepositoryProvenance
-import org.ossreviewtoolkit.model.ScanResult
-import org.ossreviewtoolkit.model.Severity
-import org.ossreviewtoolkit.model.Snippet as OrtSnippet
-import org.ossreviewtoolkit.model.SnippetFinding
-import org.ossreviewtoolkit.model.TextLocation
-import org.ossreviewtoolkit.model.VcsInfo
-import org.ossreviewtoolkit.model.VcsType
+import org.ossreviewtoolkit.model.*
 import org.ossreviewtoolkit.model.config.Excludes
 import org.ossreviewtoolkit.model.config.PathExclude
 import org.ossreviewtoolkit.model.config.PathExcludeReason
@@ -110,6 +57,10 @@ import org.ossreviewtoolkit.scanner.ScanContext
 import org.ossreviewtoolkit.scanner.ScannerWrapperConfig
 import org.ossreviewtoolkit.scanner.provenance.NestedProvenance
 import org.ossreviewtoolkit.utils.spdx.SpdxExpression
+import java.time.Instant
+import java.util.concurrent.atomic.AtomicInteger
+import kotlin.time.Duration.Companion.milliseconds
+import org.ossreviewtoolkit.model.Snippet as OrtSnippet
 
 @Suppress("LargeClass")
 class FossIdTest : WordSpec({
@@ -1286,7 +1237,13 @@ private fun createIdentifier(index: Int = 1): Identifier =
  * Create a test [Package] with the given [id] , [vcsInfo], and [authors].
  */
 private fun createPackage(id: Identifier, vcsInfo: VcsInfo, authors: Set<String> = emptySet()): Package =
-    Package.EMPTY.copy(id = id, vcsProcessed = vcsInfo, authors = authors)
+    Package.EMPTY.copy(
+        id = id,
+        vcsProcessed = vcsInfo,
+        authors = authors,
+        // TODO: Check if package manager support native copyright holders
+        copyrightHolders = emptySet(),
+    )
 
 /**
  * Generate the path to a test file based on the given [index].

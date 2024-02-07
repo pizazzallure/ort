@@ -19,24 +19,12 @@
 
 package org.ossreviewtoolkit.plugins.packagemanagers.nuget.utils
 
-import java.io.File
-
 import org.ossreviewtoolkit.analyzer.PackageManager
 import org.ossreviewtoolkit.downloader.VersionControlSystem
-import org.ossreviewtoolkit.model.Hash
-import org.ossreviewtoolkit.model.Identifier
-import org.ossreviewtoolkit.model.Issue
-import org.ossreviewtoolkit.model.Package
-import org.ossreviewtoolkit.model.PackageReference
-import org.ossreviewtoolkit.model.Project
-import org.ossreviewtoolkit.model.RemoteArtifact
-import org.ossreviewtoolkit.model.Scope
-import org.ossreviewtoolkit.model.Severity
-import org.ossreviewtoolkit.model.VcsInfo
-import org.ossreviewtoolkit.model.VcsType
-import org.ossreviewtoolkit.model.fromYaml
+import org.ossreviewtoolkit.model.*
 import org.ossreviewtoolkit.model.utils.toPurl
 import org.ossreviewtoolkit.utils.ort.DeclaredLicenseProcessor
+import java.io.File
 
 private const val TYPE = "NuGet"
 
@@ -76,6 +64,8 @@ internal fun NuGetInspector.Result.toOrtProject(
         definitionFilePath = VersionControlSystem.getPathInfo(definitionFile).path,
         vcs = VcsInfo.EMPTY,
         authors = emptySet(),
+        // TODO: Check if package manager support native copyright holders
+        copyrightHolders = emptySet(),
         vcsProcessed = PackageManager.processProjectVcs(definitionFile.parentFile),
         declaredLicenses = emptySet(),
         homepageUrl = "",
@@ -144,6 +134,8 @@ internal fun Collection<NuGetInspector.PackageData>.toOrtPackages(): Set<Package
             id = id,
             purl = pkg.purl.takeUnless { it.isEmpty() } ?: id.toPurl(),
             authors = pkg.parties.toAuthors(),
+            // TODO: Check if package manager support native copyright holders
+            copyrightHolders = emptySet(),
             declaredLicenses = declaredLicenses,
             declaredLicensesProcessed = DeclaredLicenseProcessor.process(declaredLicenses),
             description = pkg.description.lineSequence().firstOrNull { it.isNotBlank() }.orEmpty(),

@@ -27,18 +27,11 @@ import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.maps.haveSize
 import io.kotest.matchers.should
 import io.kotest.matchers.shouldBe
-
 import org.ossreviewtoolkit.analyzer.managers.analyze
 import org.ossreviewtoolkit.analyzer.managers.create
 import org.ossreviewtoolkit.analyzer.managers.resolveSingleProject
 import org.ossreviewtoolkit.downloader.VersionControlSystem
-import org.ossreviewtoolkit.model.Identifier
-import org.ossreviewtoolkit.model.Project
-import org.ossreviewtoolkit.model.ProjectAnalyzerResult
-import org.ossreviewtoolkit.model.Scope
-import org.ossreviewtoolkit.model.VcsInfo
-import org.ossreviewtoolkit.model.VcsType
-import org.ossreviewtoolkit.model.toYaml
+import org.ossreviewtoolkit.model.*
 import org.ossreviewtoolkit.utils.ort.normalizeVcsUrl
 import org.ossreviewtoolkit.utils.test.getAssetFile
 import org.ossreviewtoolkit.utils.test.matchExpectedResult
@@ -88,6 +81,7 @@ class SpdxDocumentFileFunTest : WordSpec({
                     cpe = "cpe:2.3:a:http:curl:7.70.0:*:*:*:*:*:*:*",
                     definitionFilePath = vcsDir.getPathToRoot(curlPackageFile),
                     authors = setOf("Daniel Stenberg (daniel@haxx.se)"),
+                    copyrightHolders = setOf("Copyright Holder"),
                     declaredLicenses = setOf("curl"),
                     vcs = VcsInfo(
                         type = VcsType.GIT,
@@ -109,6 +103,7 @@ class SpdxDocumentFileFunTest : WordSpec({
                     cpe = "cpe:2.3:a:a-name:openssl:1.1.1g:*:*:*:*:*:*:*",
                     definitionFilePath = vcsDir.getPathToRoot(opensslPackageFile),
                     authors = setOf("OpenSSL Development Team"),
+                    copyrightHolders = setOf("Copyright Holder"),
                     declaredLicenses = setOf("Apache-2.0"),
                     vcs = VcsInfo(
                         type = VcsType.GIT,
@@ -130,6 +125,7 @@ class SpdxDocumentFileFunTest : WordSpec({
                     cpe = "cpe:/a:compress:zlib:1.2.11:::en-us",
                     definitionFilePath = vcsDir.getPathToRoot(zlibPackageFile),
                     authors = setOf("Jean-loup Gailly", "Mark Adler"),
+                    copyrightHolders = setOf("Copyright Holder"),
                     declaredLicenses = setOf("Zlib"),
                     vcs = VcsInfo(
                         type = VcsType.GIT,

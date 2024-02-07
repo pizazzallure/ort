@@ -19,49 +19,23 @@
 
 package org.ossreviewtoolkit.scanner
 
-import java.io.File
-import java.io.IOException
-import java.time.Instant
-
-import kotlin.time.measureTime
-
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.withContext
-
 import org.apache.logging.log4j.kotlin.logger
-
 import org.ossreviewtoolkit.downloader.DownloadException
+import org.ossreviewtoolkit.model.*
 import org.ossreviewtoolkit.model.FileList
-import org.ossreviewtoolkit.model.Identifier
-import org.ossreviewtoolkit.model.Issue
-import org.ossreviewtoolkit.model.KnownProvenance
-import org.ossreviewtoolkit.model.OrtResult
-import org.ossreviewtoolkit.model.Package
-import org.ossreviewtoolkit.model.PackageType
-import org.ossreviewtoolkit.model.Provenance
-import org.ossreviewtoolkit.model.ProvenanceResolutionResult
-import org.ossreviewtoolkit.model.RepositoryProvenance
-import org.ossreviewtoolkit.model.ScanResult
-import org.ossreviewtoolkit.model.ScanSummary
-import org.ossreviewtoolkit.model.ScannerRun
-import org.ossreviewtoolkit.model.VcsInfo
 import org.ossreviewtoolkit.model.config.DownloaderConfiguration
 import org.ossreviewtoolkit.model.config.ScannerConfiguration
 import org.ossreviewtoolkit.model.config.createFileArchiver
 import org.ossreviewtoolkit.model.config.createStorage
-import org.ossreviewtoolkit.model.createAndLogIssue
-import org.ossreviewtoolkit.model.mapLicense
 import org.ossreviewtoolkit.model.utils.FileArchiver
 import org.ossreviewtoolkit.model.utils.ProvenanceFileStorage
 import org.ossreviewtoolkit.model.utils.getKnownProvenancesWithoutVcsPath
 import org.ossreviewtoolkit.model.utils.vcsPath
-import org.ossreviewtoolkit.scanner.provenance.NestedProvenance
-import org.ossreviewtoolkit.scanner.provenance.NestedProvenanceResolver
-import org.ossreviewtoolkit.scanner.provenance.NestedProvenanceScanResult
-import org.ossreviewtoolkit.scanner.provenance.PackageProvenanceResolver
-import org.ossreviewtoolkit.scanner.provenance.ProvenanceDownloader
+import org.ossreviewtoolkit.scanner.provenance.*
 import org.ossreviewtoolkit.scanner.utils.FileListResolver
 import org.ossreviewtoolkit.utils.common.CommandLineTool
 import org.ossreviewtoolkit.utils.common.collectMessages
@@ -69,6 +43,10 @@ import org.ossreviewtoolkit.utils.common.safeDeleteRecursively
 import org.ossreviewtoolkit.utils.ort.Environment
 import org.ossreviewtoolkit.utils.ort.showStackTrace
 import org.ossreviewtoolkit.utils.spdx.toSpdx
+import java.io.File
+import java.io.IOException
+import java.time.Instant
+import kotlin.time.measureTime
 
 const val TOOL_NAME = "scanner"
 
@@ -447,7 +425,8 @@ class Scanner(
 
     private fun Collection<Package>.filterNotConcluded(): Collection<Package> =
         takeUnless { scannerConfig.skipConcluded }
-            ?: partition { it.concludedLicense != null && it.authors.isNotEmpty() }.let { (skip, keep) ->
+        // To determine if the package is concluded license, the concluded license must exist, and either authors or copyright holders must not be empty.
+            ?: partition { it.concludedLicense != null && (it.authors.isNotEmpty() || it.copyrightHolders.isNotEmpty()) }.let { (skip, keep) ->
                 if (skip.isNotEmpty()) {
                     logger.debug {
                         "Not scanning the following package(s) with concluded licenses: $skip"

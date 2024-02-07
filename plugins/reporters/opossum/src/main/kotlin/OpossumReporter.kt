@@ -21,36 +21,23 @@ package org.ossreviewtoolkit.plugins.reporters.opossum
 
 import com.fasterxml.jackson.annotation.JsonInclude.Include
 import com.fasterxml.jackson.databind.json.JsonMapper
-
-import java.io.File
-import java.time.LocalDateTime
-import java.util.SortedMap
-import java.util.SortedSet
-import java.util.UUID
-
-import kotlin.math.min
-
 import org.apache.logging.log4j.kotlin.logger
-
 import org.ossreviewtoolkit.downloader.VcsHost
-import org.ossreviewtoolkit.model.CuratedPackage
-import org.ossreviewtoolkit.model.DependencyNode
-import org.ossreviewtoolkit.model.Identifier
-import org.ossreviewtoolkit.model.Issue
-import org.ossreviewtoolkit.model.OrtResult
-import org.ossreviewtoolkit.model.Package
-import org.ossreviewtoolkit.model.Project
-import org.ossreviewtoolkit.model.ScanResult
-import org.ossreviewtoolkit.model.VcsInfo
+import org.ossreviewtoolkit.model.*
 import org.ossreviewtoolkit.model.config.PluginConfiguration
 import org.ossreviewtoolkit.model.utils.getPurlType
 import org.ossreviewtoolkit.model.utils.toPurl
+import org.ossreviewtoolkit.plugins.reporters.opossum.OpossumReporter.OpossumInput
 import org.ossreviewtoolkit.reporter.Reporter
 import org.ossreviewtoolkit.reporter.ReporterInput
 import org.ossreviewtoolkit.utils.common.packZip
 import org.ossreviewtoolkit.utils.ort.createOrtTempDir
 import org.ossreviewtoolkit.utils.spdx.SpdxExpression
 import org.ossreviewtoolkit.utils.spdx.SpdxLicense
+import java.io.File
+import java.time.LocalDateTime
+import java.util.*
+import kotlin.math.min
 
 private const val ISSUE_PRIORITY = 900
 
@@ -354,6 +341,7 @@ class OpossumReporter : Reporter {
                 id = projectId,
                 url = project.homepageUrl,
                 license = project.declaredLicensesProcessed.spdxExpression,
+                // copyright from authors
                 copyright = project.authors.joinToString(separator = "\n"),
                 preselected = true
             )
