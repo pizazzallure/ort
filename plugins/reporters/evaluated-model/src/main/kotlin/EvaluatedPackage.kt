@@ -21,11 +21,9 @@ package org.ossreviewtoolkit.plugins.reporters.evaluatedmodel
 
 import com.fasterxml.jackson.annotation.JsonIdentityReference
 import com.fasterxml.jackson.annotation.JsonInclude
-import com.fasterxml.jackson.databind.annotation.JsonSerialize
 import org.ossreviewtoolkit.model.*
 import org.ossreviewtoolkit.model.config.PathExclude
 import org.ossreviewtoolkit.model.config.ScopeExclude
-import org.ossreviewtoolkit.utils.common.StringSortedSetConverter
 import org.ossreviewtoolkit.utils.spdx.SpdxExpression
 import java.util.*
 
@@ -45,8 +43,7 @@ data class EvaluatedPackage(
      * The set of copyright holders of this package.
      */
     @JsonInclude(JsonInclude.Include.NON_EMPTY)
-    @JsonSerialize(converter = StringSortedSetConverter::class)
-    val copyrightHolders: Set<String> = emptySet(),
+    val copyrightHolders: Set<String>,
 
     @JsonInclude(JsonInclude.Include.NON_EMPTY)
     val declaredLicenses: List<LicenseId>,
