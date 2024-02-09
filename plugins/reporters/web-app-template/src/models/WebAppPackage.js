@@ -641,7 +641,7 @@ class WebAppPackage {
     }
 
     hasCopyrightHolders() {
-        return this.#copyrightHolders.size !== 0;;
+        return this.#copyrightHolders.size !== 0;
     }
 
     hasConcludedLicense() {
