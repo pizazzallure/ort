@@ -33,7 +33,7 @@ const PackageDetails = (props) => {
         definitionFilePath,
         purl,
         authors,
-        copyrightHolders,
+        copyright_holders,
         description,
         homepageUrl,
         binaryArtifact,
@@ -109,7 +109,7 @@ const PackageDetails = (props) => {
                         label="Copyright Holders"
                         key="ort-package-copyright-holders"
                     >
-                        {Array.from(copyrightHolders).join(', ')}
+                        {Array.from(copyright_holders).join(', ')}
                     </Item>
                 )
             }

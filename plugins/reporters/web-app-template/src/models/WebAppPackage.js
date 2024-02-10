@@ -27,7 +27,7 @@ class WebAppPackage {
 
     #authors = new Set();
 
-    #copyrightHolders = new Set();
+    #copyright_holders = new Set();
 
     #binaryArtifact;
 
@@ -133,8 +133,8 @@ class WebAppPackage {
                 this.#authors = new Set(obj.authors);
             }
 
-            if (obj.copyrightHolders) {
-                this.#copyrightHolders = new Set(obj.copyrightHolders);
+            if (obj.copyright_holders) {
+                this.#copyright_holders = new Set(obj.copyright_holders);
             }
 
             if (obj.binary_artifact || obj.binaryArtifact) {
@@ -340,8 +340,8 @@ class WebAppPackage {
         return this.#authors;
     }
 
-    get copyrightHolders() {
-        return this.#copyrightHolders;
+    get copyright_holders() {
+        return this.#copyright_holders;
     }
 
     get binaryArtifact() {
@@ -641,7 +641,7 @@ class WebAppPackage {
     }
 
     hasCopyrightHolders() {
-        return this.#copyrightHolders.size !== 0;
+        return this.#copyright_holders.size !== 0;
     }
 
     hasConcludedLicense() {
