@@ -133,8 +133,9 @@ class WebAppPackage {
                 this.#authors = new Set(obj.authors);
             }
 
-            if (obj.copyright_holders) {
-                this.#copyright_holders = new Set(obj.copyright_holders);
+            if (obj.copyright_holders || obj.copyrightHolders) {
+                const copyrightHolders = obj.copyright_holders || obj.copyrightHolders;
+                this.#copyright_holders = new Set(copyrightHolders);
             }
 
             if (obj.binary_artifact || obj.binaryArtifact) {
