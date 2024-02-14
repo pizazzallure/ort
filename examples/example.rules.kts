@@ -357,7 +357,7 @@ fun RuleSet.wrongLicenseInLicenseFileRule() = projectSourceRule("WRONG_LICENSE_I
 }
 
 /**
- * Check if both declared authors and copyright holder from Analyzer are empty.
+ * Check the parent project if both declared authors and copyright holder from Analyzer are empty.
  */
 fun PackageRule.hasMissingBothDeclaredAuthorsAndCopyright(): RuleMatcher {
     // check if both declared authors and copyright holder from Analyzer are empty
@@ -365,11 +365,14 @@ fun PackageRule.hasMissingBothDeclaredAuthorsAndCopyright(): RuleMatcher {
         override val description = "hasMissingBothDeclaredAuthorsAndCopyright()"
 
         override fun matches(): Boolean {
+            // only check if the parent scan project missing
             val analyzerRun = ruleSet.ortResult.analyzer ?: return false
-            val declaredPackages = analyzerRun.result.packages.associateBy { it.id }
-            val declaredPackage = declaredPackages.get(pkg.metadata.id) ?: return false
-            val declaredCopyrightHolders = declaredPackage.copyrightHolders
-            val declaredAuthors = declaredPackage.authors
+            val scanProjects = analyzerRun.result.projects.associateBy { it.id }
+            val scanProject = scanProjects.get(pkg.metadata.id) ?: return false
+
+            val declaredCopyrightHolders = scanProject.copyrightHolders
+            val declaredAuthors = scanProject.authors
+
             return declaredCopyrightHolders.isEmpty() && declaredAuthors.isEmpty()
         }
     }
@@ -396,13 +399,10 @@ fun PackageRule.hasMissingDetectedCopyrights(): RuleMatcher {
     }
 }
 
-/**
- * Check if the detected copyrights match the declared copyright holders.
- */
-fun PackageRule.hasUnmatchedCopyrightHolderBetweenDeclaredAndDetected(): RuleMatcher {
+fun PackageRule.hasUnmatchedCopyrightsBetweenDetectedAndCurated(): RuleMatcher {
     // check if the detected copyrights match the declared copyright holders
     return object : RuleMatcher {
-        override val description = "hasUnmatchedCopyrightHolderBetweenDeclaredAndDetected()"
+        override val description = "hasUnmatchedCopyrightsBetweenDetectedAndCurated()"
 
         override fun matches(): Boolean {
             val scannerRun = ruleSet.ortResult.scanner ?: return false
@@ -413,49 +413,35 @@ fun PackageRule.hasUnmatchedCopyrightHolderBetweenDeclaredAndDetected(): RuleMat
             val scanResult = scanResults.filter { it.provenance == packageProvenance }.first()
             val detectedCopyrightFindings = scanResult.summary.copyrightFindings
 
-            val analyzerRun = ruleSet.ortResult.analyzer ?: return false
-            val declaredPackages = analyzerRun.result.packages.associateBy { it.id }
-            val declaredPackage = declaredPackages.get(pkg.metadata.id) ?: return false
-            val declaredCopyrightHolders = declaredPackage.copyrightHolders
-
+            // curated copyright holders
+            val curatedCopyrightHolders = pkg.metadata.copyrightHolders
+            // detected copyrights statements
             val detectedCopyrightStatements = detectedCopyrightFindings.map { detectedCopyrightFinding ->
                 detectedCopyrightFinding.statement
             }.toSet()
 
-            return detectedCopyrightStatements != declaredCopyrightHolders
+            return detectedCopyrightStatements != curatedCopyrightHolders
         }
     }
 }
 
 fun PackageRule.howToFixDeclaredCopyrightHolderAndAuthorMissingRule(pkg: CuratedPackage): String {
-    val copyrightHolders = pkg.metadata.copyrightHolders
-    val authors = pkg.metadata.authors
     val howToFix = """
-            Both declared Copyright Holders and Authors are missing from Analyzer Run, please check the package.
-            The curated copyright holders: $copyrightHolders,
-            The curated authors: $authors
+            Both declared Copyright Holders and Authors are missing from Analyzer Run, please check the project.
         """.trimIndent()
     return howToFix
 }
 
 fun PackageRule.howToFixDetectedCopyrightsMissingRule(pkg: CuratedPackage): String {
-    val copyrightHolders = pkg.metadata.copyrightHolders
-    val authors = pkg.metadata.authors
     val howToFix = """
-            Detected copyrights from Scan Run are empty, please check the package.
-            The curated copyright holders: $copyrightHolders,
-            The curated authors: $authors
+            Detected copyrights from Scanner Run are empty, please check the package.
         """.trimIndent()
     return howToFix
 }
 
-fun PackageRule.howToFixCopyrightHolderBetweenDeclaredAndDetectedUnmatchedRule(pkg: CuratedPackage): String {
-    val copyrightHolders = pkg.metadata.copyrightHolders
-    val authors = pkg.metadata.authors
+fun PackageRule.howToFixCopyrightHolderBetweenDetectedAndCuratedUnmatchedRule(pkg: CuratedPackage): String {
     val howToFix = """
-            The declared copyright holders from Analyzer Run do not match the detected copyrights from Scan Run, please check the package.
-            The curated copyright holders: $copyrightHolders,
-            The curated authors: $authors
+            The detected copyrights from Scanner Run do not match the curated copyright holders from curation file.
         """.trimIndent()
     return howToFix
 }
@@ -469,7 +455,7 @@ fun RuleSet.declaredCopyrightHolderAndAuthorMissingRule() =
 
         issue(
             Severity.ERROR,
-            "The package ${pkg.metadata.id.toCoordinates()} has both empty declared authors and copyright holders",
+            "The package ${pkg.metadata.id.toCoordinates()} has both empty declared authors and copyright holders from Analyzer Run.",
             howToFixDeclaredCopyrightHolderAndAuthorMissingRule(pkg)
         )
     }
@@ -483,22 +469,22 @@ fun RuleSet.detectedCopyrightsMissingRule() =
 
         issue(
             Severity.ERROR,
-            "The package ${pkg.metadata.id.toCoordinates()} has empty detected copyrights",
+            "The package ${pkg.metadata.id.toCoordinates()} has empty detected copyrights from Scanner Run",
             howToFixDetectedCopyrightsMissingRule(pkg)
         )
     }
 
 fun RuleSet.copyrightHolderBetweenDeclaredAndDetectedUnmatchedRule() =
-    packageRule("COPYRIGHT_HOLDER_BETWEEN_DECLARED_AND_DETECTED_UNMATCHED_RULE") {
+    packageRule("COPYRIGHTS_BETWEEN_DETECTED_AND_CURATED_UNMATCHED_RULE") {
         require {
             -isExcluded()
-            +hasUnmatchedCopyrightHolderBetweenDeclaredAndDetected()
+            +hasUnmatchedCopyrightsBetweenDetectedAndCurated()
         }
 
         issue(
             Severity.WARNING,
-            "The package ${pkg.metadata.id.toCoordinates()} has unmatched copyright holders between declared and detected package",
-            howToFixCopyrightHolderBetweenDeclaredAndDetectedUnmatchedRule(pkg)
+            "The package ${pkg.metadata.id.toCoordinates()} has unmatched copyrights between detected copyrights from Scanner Run and curated copyrights from Curations file.",
+            howToFixCopyrightHolderBetweenDetectedAndCuratedUnmatchedRule(pkg)
         )
     }
 
