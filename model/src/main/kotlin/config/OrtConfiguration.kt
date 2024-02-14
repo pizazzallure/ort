@@ -23,19 +23,26 @@ import com.sksamuel.hoplite.ConfigLoaderBuilder
 import com.sksamuel.hoplite.PropertySource
 import com.sksamuel.hoplite.addEnvironmentSource
 import com.sksamuel.hoplite.fp.getOrElse
+
+import java.io.File
+
 import org.apache.logging.log4j.kotlin.logger
+
 import org.ossreviewtoolkit.model.Severity
 import org.ossreviewtoolkit.utils.common.EnvironmentVariableFilter
 import org.ossreviewtoolkit.utils.ort.ORT_FAILURE_STATUS_CODE
 import org.ossreviewtoolkit.utils.ort.ORT_PACKAGE_CONFIGURATIONS_DIRNAME
 import org.ossreviewtoolkit.utils.ort.ORT_PACKAGE_CURATIONS_DIRNAME
 import org.ossreviewtoolkit.utils.ort.ORT_PACKAGE_CURATIONS_FILENAME
-import java.io.File
 
 /**
  * The configuration model for all ORT components.
  */
 data class OrtConfiguration(
+    /**
+     * A flag to indicate whether authors should be considered as copyright holders.
+     */
+    val addAuthorsToCopyrights: Boolean = false,
 
     /**
      * A set with the names of environment variables that are explicitly allowed to be passed to child processes,

@@ -37,6 +37,7 @@ class LicenseViewTest : WordSpec() {
     private val licenseInfoResolver = LicenseInfoResolver(
         provider = DefaultLicenseInfoProvider(ortResult),
         copyrightGarbage = CopyrightGarbage(),
+        addAuthorsToCopyrights = false,
         archiver = FileArchiver.createDefault()
     )
 
