@@ -20,21 +20,8 @@
 package org.ossreviewtoolkit.model.licenses
 
 import io.kotest.core.spec.style.WordSpec
-import io.kotest.matchers.Matcher
-import io.kotest.matchers.be
-import io.kotest.matchers.collections.beEmpty
-import io.kotest.matchers.collections.contain
-import io.kotest.matchers.collections.containExactly
-import io.kotest.matchers.collections.containExactlyInAnyOrder
-import io.kotest.matchers.collections.haveSize
-import io.kotest.matchers.collections.shouldContainExactlyInAnyOrder
-import io.kotest.matchers.neverNullMatcher
-import io.kotest.matchers.should
-import io.kotest.matchers.shouldBe
-
-import java.io.File
-import java.lang.IllegalArgumentException
-
+import io.kotest.matchers.*
+import io.kotest.matchers.collections.*
 import org.ossreviewtoolkit.model.ArtifactProvenance
 import org.ossreviewtoolkit.model.CopyrightFinding
 import org.ossreviewtoolkit.model.Hash
@@ -48,13 +35,7 @@ import org.ossreviewtoolkit.model.RepositoryProvenance
 import org.ossreviewtoolkit.model.TextLocation
 import org.ossreviewtoolkit.model.VcsInfo
 import org.ossreviewtoolkit.model.VcsType
-import org.ossreviewtoolkit.model.config.CopyrightGarbage
-import org.ossreviewtoolkit.model.config.FileArchiverConfiguration
-import org.ossreviewtoolkit.model.config.LicenseFilePatterns
-import org.ossreviewtoolkit.model.config.LicenseFindingCuration
-import org.ossreviewtoolkit.model.config.LicenseFindingCurationReason
-import org.ossreviewtoolkit.model.config.PathExclude
-import org.ossreviewtoolkit.model.config.PathExcludeReason
+import org.ossreviewtoolkit.model.config.*
 import org.ossreviewtoolkit.model.licenses.TestUtils.containLicensesExactly
 import org.ossreviewtoolkit.model.utils.FileArchiver
 import org.ossreviewtoolkit.model.utils.FileProvenanceFileStorage
@@ -68,6 +49,7 @@ import org.ossreviewtoolkit.utils.test.createDefault
 import org.ossreviewtoolkit.utils.test.shouldNotBeNull
 import org.ossreviewtoolkit.utils.test.transformingCollectionEmptyMatcher
 import org.ossreviewtoolkit.utils.test.transformingCollectionMatcher
+import java.io.File
 
 class LicenseInfoResolverTest : WordSpec({
     val pkgId = Identifier("Gradle:org.ossreviewtoolkit:ort:1.0.0")
@@ -555,7 +537,7 @@ class LicenseInfoResolverTest : WordSpec({
             result should containNumberOfLocationsForLicense(bsdLicense, 4)
         }
 
-        "resolve copyrights from authors if enabled" {
+        "not resolve copyrights from authors" {
             val licenseInfos = listOf(
                 createLicenseInfo(
                     id = pkgId,
@@ -563,28 +545,7 @@ class LicenseInfoResolverTest : WordSpec({
                     declaredLicenses = declaredLicenses
                 )
             )
-            val resolver = createResolver(licenseInfos, addAuthorsToCopyrights = true)
-
-            val result = resolver.resolveLicenseInfo(pkgId)
-            result should containCopyrightStatementsForLicenseExactly(
-                "LicenseRef-a",
-                "Copyright (C) The Author", "Copyright (C) The Other Author"
-            )
-            result should containCopyrightStatementsForLicenseExactly(
-                "LicenseRef-b",
-                "Copyright (C) The Author", "Copyright (C) The Other Author"
-            )
-        }
-
-        "not resolve copyrights from authors if disabled" {
-            val licenseInfos = listOf(
-                createLicenseInfo(
-                    id = pkgId,
-                    authors = authors,
-                    declaredLicenses = declaredLicenses
-                )
-            )
-            val resolver = createResolver(licenseInfos, addAuthorsToCopyrights = false)
+            val resolver = createResolver(licenseInfos)
 
             val result = resolver.resolveLicenseInfo(pkgId)
             result should containCopyrightStatementsForLicenseExactly("LicenseRef-a")
@@ -658,12 +619,10 @@ class LicenseInfoResolverTest : WordSpec({
 private fun createResolver(
     data: List<LicenseInfo>,
     copyrightGarbage: Set<String> = emptySet(),
-    addAuthorsToCopyrights: Boolean = false,
     archiver: FileArchiver = FileArchiver.createDefault()
 ) = LicenseInfoResolver(
     provider = SimpleLicenseInfoProvider(data),
     copyrightGarbage = CopyrightGarbage(copyrightGarbage.toSortedSet()),
-    addAuthorsToCopyrights = addAuthorsToCopyrights,
     archiver = archiver
 )
 

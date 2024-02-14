@@ -21,31 +21,14 @@ package org.ossreviewtoolkit.plugins.commands.reporter
 
 import com.github.ajalt.clikt.core.BadParameterValue
 import com.github.ajalt.clikt.core.ProgramResult
-import com.github.ajalt.clikt.parameters.options.convert
-import com.github.ajalt.clikt.parameters.options.default
-import com.github.ajalt.clikt.parameters.options.flag
-import com.github.ajalt.clikt.parameters.options.multiple
-import com.github.ajalt.clikt.parameters.options.option
-import com.github.ajalt.clikt.parameters.options.required
-import com.github.ajalt.clikt.parameters.options.split
-import com.github.ajalt.clikt.parameters.options.splitPair
+import com.github.ajalt.clikt.parameters.options.*
 import com.github.ajalt.clikt.parameters.types.file
-
-import kotlin.time.measureTimedValue
-
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.runBlocking
-
 import org.apache.logging.log4j.kotlin.logger
-
-import org.ossreviewtoolkit.model.config.CopyrightGarbage
-import org.ossreviewtoolkit.model.config.LicenseFilePatterns
-import org.ossreviewtoolkit.model.config.PluginConfiguration
-import org.ossreviewtoolkit.model.config.RepositoryConfiguration
-import org.ossreviewtoolkit.model.config.createFileArchiver
-import org.ossreviewtoolkit.model.config.orEmpty
+import org.ossreviewtoolkit.model.config.*
 import org.ossreviewtoolkit.model.licenses.DefaultLicenseInfoProvider
 import org.ossreviewtoolkit.model.licenses.LicenseClassifications
 import org.ossreviewtoolkit.model.licenses.LicenseInfoResolver
@@ -70,14 +53,9 @@ import org.ossreviewtoolkit.reporter.ReporterInput
 import org.ossreviewtoolkit.utils.common.collectMessages
 import org.ossreviewtoolkit.utils.common.expandTilde
 import org.ossreviewtoolkit.utils.common.safeMkdirs
-import org.ossreviewtoolkit.utils.ort.ORT_COPYRIGHT_GARBAGE_FILENAME
-import org.ossreviewtoolkit.utils.ort.ORT_CUSTOM_LICENSE_TEXTS_DIRNAME
-import org.ossreviewtoolkit.utils.ort.ORT_HOW_TO_FIX_TEXT_PROVIDER_FILENAME
-import org.ossreviewtoolkit.utils.ort.ORT_LICENSE_CLASSIFICATIONS_FILENAME
-import org.ossreviewtoolkit.utils.ort.ORT_RESOLUTIONS_FILENAME
-import org.ossreviewtoolkit.utils.ort.ortConfigDirectory
-import org.ossreviewtoolkit.utils.ort.showStackTrace
+import org.ossreviewtoolkit.utils.ort.*
 import org.ossreviewtoolkit.utils.spdx.SpdxConstants.LICENSE_REF_PREFIX
+import kotlin.time.measureTimedValue
 
 class ReporterCommand : OrtCommand(
     name = "report",
@@ -242,7 +220,6 @@ class ReporterCommand : OrtCommand(
         val licenseInfoResolver = LicenseInfoResolver(
             provider = DefaultLicenseInfoProvider(ortResult),
             copyrightGarbage = copyrightGarbage,
-            addAuthorsToCopyrights = ortConfig.addAuthorsToCopyrights,
             archiver = ortConfig.scanner.archive.createFileArchiver(),
             licenseFilePatterns = LicenseFilePatterns.getInstance()
         )

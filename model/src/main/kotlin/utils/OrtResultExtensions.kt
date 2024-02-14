@@ -71,12 +71,10 @@ fun OrtResult.setResolutions(resolutionProvider: ResolutionProvider): OrtResult 
  */
 fun OrtResult.createLicenseInfoResolver(
     copyrightGarbage: CopyrightGarbage = CopyrightGarbage(),
-    addAuthorsToCopyrights: Boolean = false,
     archiver: FileArchiver? = null
 ) = LicenseInfoResolver(
     DefaultLicenseInfoProvider(this),
     copyrightGarbage,
-    addAuthorsToCopyrights,
     archiver,
     LicenseFilePatterns.getInstance()
 )

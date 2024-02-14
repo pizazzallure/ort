@@ -21,52 +21,24 @@ package org.ossreviewtoolkit.plugins.commands.evaluator
 
 import com.github.ajalt.clikt.core.ProgramResult
 import com.github.ajalt.clikt.core.terminal
-import com.github.ajalt.clikt.parameters.options.associate
-import com.github.ajalt.clikt.parameters.options.convert
-import com.github.ajalt.clikt.parameters.options.default
-import com.github.ajalt.clikt.parameters.options.flag
-import com.github.ajalt.clikt.parameters.options.multiple
-import com.github.ajalt.clikt.parameters.options.option
-import com.github.ajalt.clikt.parameters.options.split
+import com.github.ajalt.clikt.parameters.options.*
 import com.github.ajalt.clikt.parameters.types.enum
 import com.github.ajalt.clikt.parameters.types.file
-
-import java.io.File
-import java.net.URI
-import java.time.Duration
-
-import kotlin.time.toKotlinDuration
-
 import org.apache.logging.log4j.kotlin.logger
-
 import org.ossreviewtoolkit.evaluator.Evaluator
 import org.ossreviewtoolkit.model.FileFormat
 import org.ossreviewtoolkit.model.ResolvedPackageCurations.Companion.REPOSITORY_CONFIGURATION_PROVIDER_ID
 import org.ossreviewtoolkit.model.RuleViolation
-import org.ossreviewtoolkit.model.config.CopyrightGarbage
-import org.ossreviewtoolkit.model.config.LicenseFilePatterns
-import org.ossreviewtoolkit.model.config.RepositoryConfiguration
-import org.ossreviewtoolkit.model.config.createFileArchiver
-import org.ossreviewtoolkit.model.config.orEmpty
+import org.ossreviewtoolkit.model.config.*
 import org.ossreviewtoolkit.model.licenses.DefaultLicenseInfoProvider
 import org.ossreviewtoolkit.model.licenses.LicenseClassifications
 import org.ossreviewtoolkit.model.licenses.LicenseInfoResolver
 import org.ossreviewtoolkit.model.licenses.orEmpty
 import org.ossreviewtoolkit.model.readValue
 import org.ossreviewtoolkit.model.readValueOrDefault
-import org.ossreviewtoolkit.model.utils.CompositePackageConfigurationProvider
-import org.ossreviewtoolkit.model.utils.DefaultResolutionProvider
-import org.ossreviewtoolkit.model.utils.mergeLabels
-import org.ossreviewtoolkit.model.utils.setPackageConfigurations
-import org.ossreviewtoolkit.model.utils.setPackageCurations
-import org.ossreviewtoolkit.model.utils.setResolutions
+import org.ossreviewtoolkit.model.utils.*
 import org.ossreviewtoolkit.plugins.commands.api.OrtCommand
-import org.ossreviewtoolkit.plugins.commands.api.utils.SeverityStatsPrinter
-import org.ossreviewtoolkit.plugins.commands.api.utils.configurationGroup
-import org.ossreviewtoolkit.plugins.commands.api.utils.inputGroup
-import org.ossreviewtoolkit.plugins.commands.api.utils.outputGroup
-import org.ossreviewtoolkit.plugins.commands.api.utils.readOrtResult
-import org.ossreviewtoolkit.plugins.commands.api.utils.writeOrtResult
+import org.ossreviewtoolkit.plugins.commands.api.utils.*
 import org.ossreviewtoolkit.plugins.packageconfigurationproviders.api.PackageConfigurationProviderFactory
 import org.ossreviewtoolkit.plugins.packageconfigurationproviders.api.SimplePackageConfigurationProvider
 import org.ossreviewtoolkit.plugins.packageconfigurationproviders.dir.DirPackageConfigurationProvider
@@ -74,11 +46,11 @@ import org.ossreviewtoolkit.plugins.packagecurationproviders.api.SimplePackageCu
 import org.ossreviewtoolkit.plugins.packagecurationproviders.file.FilePackageCurationProvider
 import org.ossreviewtoolkit.utils.common.expandTilde
 import org.ossreviewtoolkit.utils.common.safeMkdirs
-import org.ossreviewtoolkit.utils.ort.ORT_COPYRIGHT_GARBAGE_FILENAME
-import org.ossreviewtoolkit.utils.ort.ORT_EVALUATOR_RULES_FILENAME
-import org.ossreviewtoolkit.utils.ort.ORT_LICENSE_CLASSIFICATIONS_FILENAME
-import org.ossreviewtoolkit.utils.ort.ORT_RESOLUTIONS_FILENAME
-import org.ossreviewtoolkit.utils.ort.ortConfigDirectory
+import org.ossreviewtoolkit.utils.ort.*
+import java.io.File
+import java.net.URI
+import java.time.Duration
+import kotlin.time.toKotlinDuration
 
 class EvaluatorCommand : OrtCommand(
     name = "evaluate",
@@ -304,7 +276,6 @@ class EvaluatorCommand : OrtCommand(
         val licenseInfoResolver = LicenseInfoResolver(
             provider = DefaultLicenseInfoProvider(ortResultInput),
             copyrightGarbage = copyrightGarbage,
-            addAuthorsToCopyrights = ortConfig.addAuthorsToCopyrights,
             archiver = ortConfig.scanner.archive.createFileArchiver(),
             licenseFilePatterns = LicenseFilePatterns.getInstance()
         )

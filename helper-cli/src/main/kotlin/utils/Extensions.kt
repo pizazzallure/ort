@@ -23,57 +23,23 @@ package org.ossreviewtoolkit.helper.utils
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.dataformat.yaml.YAMLGenerator
-
-import java.io.File
-import java.nio.file.Paths
-import java.sql.ResultSet
-
-import kotlin.io.path.createTempDirectory
-
 import org.jetbrains.exposed.sql.transactions.TransactionManager
-
 import org.ossreviewtoolkit.analyzer.PackageManagerFactory
 import org.ossreviewtoolkit.downloader.Downloader
-import org.ossreviewtoolkit.model.ArtifactProvenance
-import org.ossreviewtoolkit.model.Identifier
-import org.ossreviewtoolkit.model.Issue
-import org.ossreviewtoolkit.model.KnownProvenance
-import org.ossreviewtoolkit.model.OrtResult
-import org.ossreviewtoolkit.model.Package
-import org.ossreviewtoolkit.model.PackageCuration
-import org.ossreviewtoolkit.model.Project
-import org.ossreviewtoolkit.model.Provenance
-import org.ossreviewtoolkit.model.Repository
-import org.ossreviewtoolkit.model.RepositoryProvenance
-import org.ossreviewtoolkit.model.RuleViolation
-import org.ossreviewtoolkit.model.ScanResult
-import org.ossreviewtoolkit.model.Severity
-import org.ossreviewtoolkit.model.SourceCodeOrigin
-import org.ossreviewtoolkit.model.TextLocation
-import org.ossreviewtoolkit.model.config.CopyrightGarbage
-import org.ossreviewtoolkit.model.config.Curations
-import org.ossreviewtoolkit.model.config.DownloaderConfiguration
-import org.ossreviewtoolkit.model.config.Excludes
-import org.ossreviewtoolkit.model.config.IssueResolution
-import org.ossreviewtoolkit.model.config.LicenseFindingCuration
-import org.ossreviewtoolkit.model.config.PackageConfiguration
-import org.ossreviewtoolkit.model.config.PathExclude
-import org.ossreviewtoolkit.model.config.RepositoryConfiguration
-import org.ossreviewtoolkit.model.config.Resolutions
-import org.ossreviewtoolkit.model.config.RuleViolationResolution
-import org.ossreviewtoolkit.model.config.ScopeExclude
-import org.ossreviewtoolkit.model.config.VulnerabilityResolution
-import org.ossreviewtoolkit.model.readValue
+import org.ossreviewtoolkit.model.*
+import org.ossreviewtoolkit.model.config.*
 import org.ossreviewtoolkit.model.utils.FindingCurationMatcher
 import org.ossreviewtoolkit.model.utils.PackageConfigurationProvider
 import org.ossreviewtoolkit.model.utils.createLicenseInfoResolver
 import org.ossreviewtoolkit.model.utils.filterByVcsPath
-import org.ossreviewtoolkit.model.writeValue
-import org.ossreviewtoolkit.model.yamlMapper
 import org.ossreviewtoolkit.utils.common.safeMkdirs
 import org.ossreviewtoolkit.utils.ort.CopyrightStatementsProcessor
 import org.ossreviewtoolkit.utils.spdx.SpdxExpression
 import org.ossreviewtoolkit.utils.spdx.SpdxSingleLicenseExpression
+import java.io.File
+import java.nio.file.Paths
+import java.sql.ResultSet
+import kotlin.io.path.createTempDirectory
 
 /**
  * Return an approximated minimal sublist of [this] so that the result still matches the exact same entries of the given
@@ -107,14 +73,12 @@ internal fun OrtResult.downloadSources(id: Identifier, sourceCodeOrigin: SourceC
  */
 internal fun OrtResult.processAllCopyrightStatements(
     omitExcluded: Boolean = true,
-    copyrightGarbage: Set<String> = emptySet(),
-    addAuthorsToCopyrights: Boolean = false
+    copyrightGarbage: Set<String> = emptySet()
 ): List<ProcessedCopyrightStatement> {
     val result = mutableListOf<ProcessedCopyrightStatement>()
 
     val licenseInfoResolver = createLicenseInfoResolver(
-        copyrightGarbage = CopyrightGarbage(copyrightGarbage.toSortedSet()),
-        addAuthorsToCopyrights = addAuthorsToCopyrights
+        copyrightGarbage = CopyrightGarbage(copyrightGarbage.toSortedSet())
     )
 
     getProjectsAndPackages().forEach { id ->
