@@ -62,6 +62,7 @@ svnkit = "1.10.11"
 sw360Client = "17.0.1-m2"
 wiremock = "3.3.1"
 xz = "1.9"
+poiOoxml = "5.2.2"
 
 [plugins]
 dependencyAnalysis = { id = "com.autonomousapps.dependency-analysis", version.ref = "dependencyAnalysisPlugin" }
@@ -165,6 +166,7 @@ svnkit = { module = "org.tmatesoft.svnkit:svnkit", version.ref = "svnkit" }
 sw360Client = { module = "org.eclipse.sw360:client", version.ref = "sw360Client" }
 wiremock = { module = "org.wiremock:wiremock", version.ref = "wiremock" }
 xz = { module = "org.tukaani:xz", version.ref = "xz" }
+poiOoxml = { module = "org.apache.poi:poi-ooxml", version.ref = "poiOoxml" }
 
 [bundles]
 exposed = ["exposed-core", "exposed-dao", "exposed-jdbc", "exposed-javaTime", "exposed-json"]

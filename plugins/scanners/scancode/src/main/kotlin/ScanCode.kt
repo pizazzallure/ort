@@ -116,7 +116,8 @@ class ScanCode internal constructor(
     override val writeToStorage by lazy { wrapperConfig.writeToStorageWithDefault(matcher) }
 
     override fun command(workingDir: File?) =
-        listOfNotNull(workingDir, if (Os.isWindows) "scancode.bat" else "scancode").joinToString(File.separator)
+        listOfNotNull(workingDir, if (Os.isWindows) "scancode" else "scancode").joinToString(File.separator)
+    //        listOfNotNull(workingDir, if (Os.isWindows) "scancode.bat" else "scancode").joinToString(File.separator)
 
     override fun getVersion(workingDir: File?): String =
         // The release candidate version names lack a hyphen in between the minor version and the extension, e.g.

@@ -139,6 +139,15 @@ data class ResolvedLicenseInfo(
 }
 
 /**
+ * Source of resolved copyright finding
+ */
+enum class ResolvedCopyrightSource {
+    DETERMINED_BY_SCANNER,
+    SYNTHESIZED_FROM_AUTHOR,
+    PROVIDED_BY_CURATION;
+}
+
+/**
  * Filter all excluded licenses and copyrights. Licenses are removed if they are only
  * [detected][LicenseSource.DETECTED] and all [locations][ResolvedLicense.locations] have
  * [matching path excludes][ResolvedLicenseLocation.matchingPathExcludes]. Copyrights are removed if all

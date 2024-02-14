@@ -175,6 +175,25 @@ data class OrtResult(
     }
 
     /**
+     * Return the dependencies of the given [id] (which can refer to a [Project] or a [Package]), up to and including a
+     * depth of [maxLevel] where counting starts at 0 (for the [Project] or [Package] itself) and 1 are direct
+     * dependencies etc. A value below 0 means to not limit the depth.
+     */
+    fun collectDependencies(id: Identifier, maxLevel: Int = -1): Set<Identifier> {
+        val dependencies = mutableSetOf<Identifier>()
+
+        getProjects().forEach { project ->
+            if (project.id == id) {
+                dependencies += dependencyNavigator.projectDependencies(project, maxLevel)
+            }
+
+            dependencies += dependencyNavigator.packageDependencies(project, id, maxLevel)
+        }
+
+        return dependencies
+    }
+    
+    /**
      * Return all [AdvisorResult]s contained in this [OrtResult] or only the non-excluded ones if [omitExcluded] is
      * true.
      */

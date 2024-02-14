@@ -21,19 +21,11 @@ package org.ossreviewtoolkit.utils.spdx
 
 import com.fasterxml.jackson.dataformat.yaml.YAMLMapper
 import com.fasterxml.jackson.module.kotlin.registerKotlinModule
-
+import org.ossreviewtoolkit.utils.common.*
+import org.ossreviewtoolkit.utils.spdx.SpdxConstants.LICENSE_REF_PREFIX
 import java.io.File
 import java.net.URL
 import java.security.MessageDigest
-
-import org.ossreviewtoolkit.utils.common.Os
-import org.ossreviewtoolkit.utils.common.PATH_STRING_COMPARATOR
-import org.ossreviewtoolkit.utils.common.VCS_DIRECTORIES
-import org.ossreviewtoolkit.utils.common.calculateHash
-import org.ossreviewtoolkit.utils.common.encodeHex
-import org.ossreviewtoolkit.utils.common.isSymbolicLink
-import org.ossreviewtoolkit.utils.common.realFile
-import org.ossreviewtoolkit.utils.spdx.SpdxConstants.LICENSE_REF_PREFIX
 
 /**
  * A mapper to read license mapping from YAML resource files.
@@ -117,6 +109,12 @@ fun getLicenseText(
     licenseTextDirectories: List<File> = emptyList()
 ): String? = getLicenseTextReader(id, handleExceptions, addScanCodeLicenseTextsDir(licenseTextDirectories))?.invoke()
 
+fun hasLicenseText(
+    id: String,
+    handleExceptions: Boolean = false,
+    licenseTextDirectories: List<File> = emptyList()
+): Boolean = getLicenseTextReader(id, handleExceptions, addScanCodeLicenseTextsDir(licenseTextDirectories)) != null
+
 fun getLicenseTextReader(
     id: String,
     handleExceptions: Boolean = false,
@@ -135,6 +133,29 @@ fun getLicenseTextReader(
         SpdxLicense.forId(id.removeSuffix("+"))?.let { { it.text } }
             ?: SpdxLicenseException.forId(id)?.takeIf { handleExceptions }?.let { { it.text } }
     }
+}
+
+/**
+ * Retrieve the full text for the license with the provided SPDX [id] and if [licenseTextDirectories] is provided, the
+ * contained directories are searched in order for the license text.
+ */
+fun getCustomLicenseText(
+    id: String,
+    licenseTextDirectories: List<File> = emptyList()
+): String? = getCustomLicenseTextReader(id, licenseTextDirectories)?.invoke()
+
+fun hasCustomLicenseText(
+    id: String,
+    licenseTextDirectories: List<File> = emptyList()
+): Boolean = getCustomLicenseTextReader(id, licenseTextDirectories) != null
+
+fun getCustomLicenseTextReader(
+    id: String,
+    licenseTextDirectories: List<File> = emptyList()
+): (() -> String)? {
+    return licenseTextDirectories.asSequence().mapNotNull {
+        getLicenseTextFile(id, it)?.let { file -> { file.readText() } }
+    }.firstOrNull()
 }
 
 private fun getLicenseTextResource(id: String): URL? = object {}.javaClass.getResource("/licenserefs/$id")
