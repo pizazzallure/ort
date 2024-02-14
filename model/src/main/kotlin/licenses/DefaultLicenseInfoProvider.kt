@@ -72,6 +72,7 @@ class DefaultLicenseInfoProvider(val ortResult: OrtResult) : LicenseInfoProvider
             )
         } ?: DeclaredLicenseInfo(
             authors = emptySet(),
+            copyrightHolders = emptySet(),
             licenses = emptySet(),
             processed = ProcessedDeclaredLicense(null),
             appliedCurations = emptyList()

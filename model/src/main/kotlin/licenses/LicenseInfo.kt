@@ -78,7 +78,7 @@ data class DeclaredLicenseInfo(
     /**
      * The set of copyright holders of this package.
      */
-    val copyrightHolders: Set<String> = emptySet(),
+    val copyrightHolders: Set<String>,
 
     /**
      * The unmodified set of declared licenses.
