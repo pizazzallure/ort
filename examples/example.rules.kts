@@ -357,28 +357,6 @@ fun RuleSet.wrongLicenseInLicenseFileRule() = projectSourceRule("WRONG_LICENSE_I
 }
 
 /**
- * Check the parent project if both declared authors and copyright holder from Analyzer are empty.
- */
-fun PackageRule.hasMissingBothDeclaredAuthorsAndCopyright(): RuleMatcher {
-    // check if both declared authors and copyright holder from Analyzer are empty
-    return object : RuleMatcher {
-        override val description = "hasMissingBothDeclaredAuthorsAndCopyright()"
-
-        override fun matches(): Boolean {
-            // only check if the parent scan project missing
-            val analyzerRun = ruleSet.ortResult.analyzer ?: return false
-            val scanProjects = analyzerRun.result.projects.associateBy { it.id }
-            val scanProject = scanProjects.get(pkg.metadata.id) ?: return false
-
-            val declaredCopyrightHolders = scanProject.copyrightHolders
-            val declaredAuthors = scanProject.authors
-
-            return declaredCopyrightHolders.isEmpty() && declaredAuthors.isEmpty()
-        }
-    }
-}
-
-/**
  * check if the detected copyrights is empty for current package.
  */
 fun PackageRule.hasMissingDetectedCopyrights(): RuleMatcher {
@@ -400,11 +378,18 @@ fun PackageRule.hasMissingDetectedCopyrights(): RuleMatcher {
 }
 
 fun PackageRule.hasUnmatchedCopyrightsBetweenDetectedAndCurated(): RuleMatcher {
-    // check if the detected copyrights match the declared copyright holders
+    // check dependencies package if the detected copyrights match the curated copyright holders
     return object : RuleMatcher {
         override val description = "hasUnmatchedCopyrightsBetweenDetectedAndCurated()"
 
         override fun matches(): Boolean {
+            val analyzerRun = ruleSet.ortResult.analyzer ?: return false
+            val scanProjects = analyzerRun.result.projects.associateBy { it.id }
+            if (scanProjects.contains(pkg.metadata.id)) {
+                // skip checking the parent project
+                return false
+            }
+
             val scannerRun = ruleSet.ortResult.scanner ?: return false
             val packageProvenances = scannerRun.provenances.associateBy { it.id }
             val packageProvenance = packageProvenances.get(pkg.metadata.id)?.packageProvenance
@@ -425,13 +410,6 @@ fun PackageRule.hasUnmatchedCopyrightsBetweenDetectedAndCurated(): RuleMatcher {
     }
 }
 
-fun PackageRule.howToFixDeclaredCopyrightHolderAndAuthorMissingRule(pkg: CuratedPackage): String {
-    val howToFix = """
-            Both declared Copyright Holders and Authors are missing from Analyzer Run, please check the project.
-        """.trimIndent()
-    return howToFix
-}
-
 fun PackageRule.howToFixDetectedCopyrightsMissingRule(pkg: CuratedPackage): String {
     val howToFix = """
             Detected copyrights from Scanner Run are empty, please check the package.
@@ -445,20 +423,6 @@ fun PackageRule.howToFixCopyrightHolderBetweenDetectedAndCuratedUnmatchedRule(pk
         """.trimIndent()
     return howToFix
 }
-
-fun RuleSet.declaredCopyrightHolderAndAuthorMissingRule() =
-    packageRule("DECLARED_COPYRIGHTHOLDER_AND_AUTHOR_MISSING_IN_PACKAGE") {
-        require {
-            -isExcluded()
-            +hasMissingBothDeclaredAuthorsAndCopyright()
-        }
-
-        issue(
-            Severity.ERROR,
-            "The package ${pkg.metadata.id.toCoordinates()} has both empty declared authors and copyright holders from Analyzer Run.",
-            howToFixDeclaredCopyrightHolderAndAuthorMissingRule(pkg)
-        )
-    }
 
 fun RuleSet.detectedCopyrightsMissingRule() =
     packageRule("DETECTED_COPYRIGHTS_MISSING_IN_PACKAGE") {
@@ -499,7 +463,6 @@ val ruleSet = ruleSet(ortResult, licenseInfoResolver, resolutionProvider) {
     copyleftInSourceLimitedRule()
     vulnerabilityInPackageRule()
     highSeverityVulnerabilityInPackageRule()
-    declaredCopyrightHolderAndAuthorMissingRule()
     detectedCopyrightsMissingRule()
     copyrightHolderBetweenDeclaredAndDetectedUnmatchedRule()
 
