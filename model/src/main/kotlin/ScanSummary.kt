@@ -26,16 +26,11 @@ import com.fasterxml.jackson.annotation.JsonProperty
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize
 import com.fasterxml.jackson.databind.annotation.JsonSerialize
 import com.fasterxml.jackson.databind.util.StdConverter
-
-import java.time.Instant
-
 import org.ossreviewtoolkit.model.config.LicenseFilePatterns
-import org.ossreviewtoolkit.model.utils.CopyrightFindingSortedSetConverter
-import org.ossreviewtoolkit.model.utils.LicenseFindingSortedSetConverter
-import org.ossreviewtoolkit.model.utils.RootLicenseMatcher
-import org.ossreviewtoolkit.model.utils.SnippetFindingSortedSetConverter
+import org.ossreviewtoolkit.model.utils.*
 import org.ossreviewtoolkit.utils.common.FileMatcher
 import org.ossreviewtoolkit.utils.spdx.SpdxExpression
+import java.time.Instant
 
 /**
  * A short summary of the scan results.
@@ -67,6 +62,14 @@ data class ScanSummary(
     @JsonProperty("copyrights")
     @JsonSerialize(converter = CopyrightFindingSortedSetConverter::class)
     val copyrightFindings: Set<CopyrightFinding> = emptySet(),
+
+    /**
+     * The detected author findings.
+     */
+    @JsonInclude(JsonInclude.Include.NON_EMPTY)
+    @JsonProperty("authors")
+    @JsonSerialize(converter = AuthorFindingSortedSetConverter::class)
+    val authorFindings: Set<AuthorFinding> = emptySet(),
 
     /**
      * The detected snippet findings.

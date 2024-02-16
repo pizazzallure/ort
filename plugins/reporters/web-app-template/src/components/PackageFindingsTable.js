@@ -22,6 +22,7 @@ import PropTypes from 'prop-types';
 import { Table, Tooltip } from 'antd';
 import {
     CopyrightOutlined,
+    UserAddOutlined,
     FileAddOutlined,
     FileExcelOutlined,
     FileTextOutlined,
@@ -140,6 +141,16 @@ const PackageFindingsTable = (props) => {
                         </span>
                     ),
                     value: 'LICENSE'
+                },
+                {
+                    text: (
+                        <span>
+                            <UserAddOutlined />
+                            {' '}
+                            Author
+                        </span>
+                    ),
+                    value: 'AUTHOR'
                 }
             ])(),
             key: 'type',
@@ -148,6 +159,7 @@ const PackageFindingsTable = (props) => {
                 <span className="ort-scan-finding-type">
                     {type === 'LICENSE' && (<FileTextOutlined />)}
                     {type === 'COPYRIGHT' && (<CopyrightOutlined />)}
+                    {type === 'AUTHOR' && (<UserAddOutlined />)}
                 </span>
             ),
             width: '1em'

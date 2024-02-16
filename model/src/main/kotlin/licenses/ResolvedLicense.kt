@@ -84,6 +84,20 @@ data class ResolvedLicense(
     }
 
     /**
+     * Return all resolved authors for this license. Author findings that are excluded by [PathExclude]s are
+     * [omitted][omitExcluded] by default.
+     */
+    fun getResolvedAuthors(omitExcluded: Boolean = true): List<ResolvedAuthor> {
+        val resolvedAuthorFindings = locations.flatMap { location ->
+            location.authors.filter { author ->
+                !omitExcluded || author.matchingPathExcludes.isEmpty()
+            }
+        }
+
+        return resolvedAuthorFindings.toResolvedAuthors()
+    }
+
+    /**
      * Return all copyright statements associated to this license. Copyright findings that are excluded by
      * [PathExclude]s are [omitted][omitExcluded] by default. The copyrights are [processed][process] by default
      * using the [CopyrightStatementsProcessor].
@@ -91,6 +105,16 @@ data class ResolvedLicense(
     @JvmOverloads
     fun getCopyrights(process: Boolean = true, omitExcluded: Boolean = true): Set<String> =
         getResolvedCopyrights(process, omitExcluded).mapTo(mutableSetOf()) { it.statement }
+
+
+    /**
+     * Return all authors associated to this license. Author findings that are excluded by
+     * [PathExclude]s are [omitted][omitExcluded] by default.
+     */
+    @JvmOverloads
+    fun getAuthors(omitExcluded: Boolean = true): Set<String> =
+        getResolvedAuthors(omitExcluded).mapTo(mutableSetOf()) { it.author }
+
 
     /**
      * Filter all excluded copyrights. Copyrights which have
@@ -140,4 +164,9 @@ internal fun Collection<ResolvedCopyrightFinding>.toResolvedCopyrights(process: 
     }
 
     return processedCopyrights + unprocessedCopyrights
+}
+
+internal fun Collection<ResolvedAuthorFinding>.toResolvedAuthors(): List<ResolvedAuthor> {
+    val authorToFindings = groupBy { it.author }
+    return authorToFindings.map { (author, findings) -> ResolvedAuthor(author, findings.toSet()) }
 }

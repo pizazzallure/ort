@@ -19,26 +19,14 @@
 
 package org.ossreviewtoolkit.model.licenses
 
-import java.util.concurrent.ConcurrentHashMap
-
-import org.ossreviewtoolkit.model.CopyrightFinding
-import org.ossreviewtoolkit.model.Identifier
-import org.ossreviewtoolkit.model.KnownProvenance
-import org.ossreviewtoolkit.model.LicenseSource
-import org.ossreviewtoolkit.model.Provenance
-import org.ossreviewtoolkit.model.RepositoryProvenance
-import org.ossreviewtoolkit.model.TextLocation
-import org.ossreviewtoolkit.model.UnknownProvenance
+import org.ossreviewtoolkit.model.*
 import org.ossreviewtoolkit.model.config.CopyrightGarbage
 import org.ossreviewtoolkit.model.config.LicenseFilePatterns
 import org.ossreviewtoolkit.model.config.PathExclude
-import org.ossreviewtoolkit.model.utils.FileArchiver
-import org.ossreviewtoolkit.model.utils.FindingCurationMatcher
-import org.ossreviewtoolkit.model.utils.FindingsMatcher
-import org.ossreviewtoolkit.model.utils.RootLicenseMatcher
-import org.ossreviewtoolkit.model.utils.prependedPath
+import org.ossreviewtoolkit.model.utils.*
 import org.ossreviewtoolkit.utils.ort.createOrtTempDir
 import org.ossreviewtoolkit.utils.spdx.SpdxSingleLicenseExpression
+import java.util.concurrent.ConcurrentHashMap
 
 class LicenseInfoResolver(
     private val provider: LicenseInfoProvider,
@@ -97,6 +85,7 @@ class LicenseInfoResolver(
                     it == license
                 }.keys
 
+                // if the configuration "addAuthorsToCopyrights" is enabled, the author will be treated as copyrights.
                 licenseInfo.declaredLicenseInfo.authors.takeIf { it.isNotEmpty() && addAuthorsToCopyrights }?.also {
                     locations += ResolvedLicenseLocation(
                         provenance = UnknownProvenance,
@@ -113,6 +102,13 @@ class LicenseInfoResolver(
                                 location = UNDEFINED_TEXT_LOCATION,
                                 matchingPathExcludes = emptyList()
                             )
+                        },
+                        authors = it.mapTo(mutableSetOf()) { author ->
+                            ResolvedAuthorFinding(
+                                author = author,
+                                location = UNDEFINED_TEXT_LOCATION,
+                                matchingPathExcludes = emptyList()
+                            )
                         }
                     )
                 }
@@ -125,7 +121,9 @@ class LicenseInfoResolver(
             licenseInfo.detectedLicenseInfo.filterCopyrightGarbage(copyrightGarbageFindings)
 
         val unmatchedCopyrights = mutableMapOf<Provenance, MutableSet<ResolvedCopyrightFinding>>()
-        val resolvedLocations = resolveLocations(filteredDetectedLicenseInfo, unmatchedCopyrights)
+        val unmatchedAuthors = mutableMapOf<Provenance, MutableSet<ResolvedAuthorFinding>>()
+
+        val resolvedLocations = resolveLocations(filteredDetectedLicenseInfo, unmatchedCopyrights, unmatchedAuthors)
         val detectedLicenses = licenseInfo.detectedLicenseInfo.findings.flatMapTo(mutableSetOf()) { findings ->
             FindingCurationMatcher().applyAll(
                 findings.licenses,
@@ -159,7 +157,8 @@ class LicenseInfoResolver(
             licenseInfo,
             resolvedLicenses.values.map { it.build() },
             copyrightGarbageFindings,
-            unmatchedCopyrights
+            unmatchedCopyrights,
+            unmatchedAuthors
         )
     }
 
@@ -178,7 +177,8 @@ class LicenseInfoResolver(
 
     private fun resolveLocations(
         detectedLicenseInfo: DetectedLicenseInfo,
-        unmatchedCopyrights: MutableMap<Provenance, MutableSet<ResolvedCopyrightFinding>>
+        unmatchedCopyrights: MutableMap<Provenance, MutableSet<ResolvedCopyrightFinding>>,
+        unmatchedAuthors: MutableMap<Provenance, MutableSet<ResolvedAuthorFinding>>
     ): Map<SpdxSingleLicenseExpression, Set<ResolvedLicenseLocation>> {
         val resolvedLocations = mutableMapOf<SpdxSingleLicenseExpression, MutableSet<ResolvedLicenseLocation>>()
         val curationMatcher = FindingCurationMatcher()
@@ -193,11 +193,21 @@ class LicenseInfoResolver(
             //       resolved license for completeness, e.g. to show in a report that a license finding was marked as
             //       false positive.
             val curatedLicenseFindings = licenseCurationResults.keys.filterNotNull().toSet()
-            val matchResult = findingsMatcher.match(curatedLicenseFindings, findings.copyrights)
+            val matchResult = findingsMatcher.match(
+                curatedLicenseFindings,
+                findings.copyrights,
+                findings.authors
+            )
 
-            matchResult.matchedFindings.forEach { (licenseFinding, copyrightFindings) ->
+            matchResult.matchedFindings.forEach { (licenseFinding, matchedLicenseFinding) ->
                 val resolvedCopyrightFindings = resolveCopyrights(
-                    copyrightFindings,
+                    matchedLicenseFinding.copyrightsFindings,
+                    findings.pathExcludes,
+                    findings.relativeFindingsPath
+                )
+
+                val resolvedAuthorFindings = resolveAuthors(
+                    matchedLicenseFinding.authorFindings,
                     findings.pathExcludes,
                     findings.relativeFindingsPath
                 )
@@ -219,13 +229,20 @@ class LicenseInfoResolver(
                         licenseFinding.location,
                         appliedCuration = appliedCuration,
                         matchingPathExcludes = matchingPathExcludes,
-                        copyrights = resolvedCopyrightFindings
+                        copyrights = resolvedCopyrightFindings,
+                        authors = resolvedAuthorFindings
                     )
                 }
             }
 
             unmatchedCopyrights.getOrPut(findings.provenance) { mutableSetOf() } += resolveCopyrights(
                 copyrightFindings = matchResult.unmatchedCopyrights,
+                pathExcludes = findings.pathExcludes,
+                relativeFindingsPath = findings.relativeFindingsPath
+            )
+
+            unmatchedAuthors.getOrPut(findings.provenance) { mutableSetOf() } += resolveAuthors(
+                authorFindings = matchResult.unmatchedAuthors,
                 pathExcludes = findings.pathExcludes,
                 relativeFindingsPath = findings.relativeFindingsPath
             )
@@ -245,6 +262,19 @@ class LicenseInfoResolver(
             }
 
             ResolvedCopyrightFinding(finding.statement, finding.location, matchingPathExcludes)
+        }
+
+    private fun resolveAuthors(
+        authorFindings: Set<AuthorFinding>,
+        pathExcludes: List<PathExclude>,
+        relativeFindingsPath: String
+    ): Set<ResolvedAuthorFinding> =
+        authorFindings.mapTo(mutableSetOf()) { finding ->
+            val matchingPathExcludes = pathExcludes.filter {
+                it.matches(finding.location.prependedPath(relativeFindingsPath))
+            }
+
+            ResolvedAuthorFinding(finding.author, finding.location, matchingPathExcludes)
         }
 
     private fun createLicenseFileInfo(id: Identifier): ResolvedLicenseFileInfo {

@@ -19,18 +19,10 @@
 
 package org.ossreviewtoolkit.plugins.scanners.scancode
 
-import java.io.File
-
-import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.JsonElement
-import kotlinx.serialization.json.JsonNamingStrategy
-import kotlinx.serialization.json.decodeFromJsonElement
-import kotlinx.serialization.json.jsonArray
-import kotlinx.serialization.json.jsonObject
-import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.*
 import kotlinx.serialization.modules.SerializersModule
-
 import org.semver4j.Semver
+import java.io.File
 
 fun parseResult(result: File) = parseResult(result.readText())
 
@@ -48,18 +40,21 @@ private fun parseResult(result: JsonElement): ScanCodeResult {
             polymorphicDefaultDeserializer(FileEntry::class) { FileEntry.Version1.serializer() }
             polymorphicDefaultDeserializer(LicenseEntry::class) { LicenseEntry.Version1.serializer() }
             polymorphicDefaultDeserializer(CopyrightEntry::class) { CopyrightEntry.Version1.serializer() }
+            polymorphicDefaultDeserializer(CopyrightEntry::class) { AuthorEntry.Version1.serializer() }
         }
 
         2 -> SerializersModule {
             polymorphicDefaultDeserializer(FileEntry::class) { FileEntry.Version1.serializer() }
             polymorphicDefaultDeserializer(LicenseEntry::class) { LicenseEntry.Version1.serializer() }
             polymorphicDefaultDeserializer(CopyrightEntry::class) { CopyrightEntry.Version2.serializer() }
+            polymorphicDefaultDeserializer(CopyrightEntry::class) { AuthorEntry.Version2.serializer() }
         }
 
         else -> SerializersModule {
             polymorphicDefaultDeserializer(FileEntry::class) { FileEntry.Version3.serializer() }
             polymorphicDefaultDeserializer(LicenseEntry::class) { LicenseEntry.Version3.serializer() }
             polymorphicDefaultDeserializer(CopyrightEntry::class) { CopyrightEntry.Version2.serializer() }
+            polymorphicDefaultDeserializer(CopyrightEntry::class) { AuthorEntry.Version2.serializer() }
         }
     }
 

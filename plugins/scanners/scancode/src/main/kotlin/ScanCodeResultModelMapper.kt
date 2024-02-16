@@ -19,21 +19,12 @@
 
 package org.ossreviewtoolkit.plugins.scanners.scancode
 
+import org.ossreviewtoolkit.model.*
+import org.ossreviewtoolkit.model.utils.associateLicensesWithExceptions
+import org.semver4j.Semver
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
-
-import org.ossreviewtoolkit.model.CopyrightFinding
-import org.ossreviewtoolkit.model.Issue
-import org.ossreviewtoolkit.model.LicenseFinding
-import org.ossreviewtoolkit.model.ScanSummary
-import org.ossreviewtoolkit.model.Severity
-import org.ossreviewtoolkit.model.TextLocation
-import org.ossreviewtoolkit.model.createAndLogIssue
-import org.ossreviewtoolkit.model.mapLicense
-import org.ossreviewtoolkit.model.utils.associateLicensesWithExceptions
-
-import org.semver4j.Semver
 
 const val MAX_SUPPORTED_OUTPUT_FORMAT_MAJOR_VERSION = 3
 
@@ -61,6 +52,7 @@ private data class LicenseMatch(
 fun ScanCodeResult.toScanSummary(preferFileLicense: Boolean = false): ScanSummary {
     val licenseFindings = mutableSetOf<LicenseFinding>()
     val copyrightFindings = mutableSetOf<CopyrightFinding>()
+    val authorFindings = mutableSetOf<AuthorFinding>()
     val issues = mutableListOf<Issue>()
 
     val header = headers.single()
@@ -128,6 +120,17 @@ fun ScanCodeResult.toScanSummary(preferFileLicense: Boolean = false): ScanSummar
                 )
             )
         }
+
+        file.authors.mapTo(authorFindings) { authorFinding ->
+            AuthorFinding(
+                author = authorFinding.author,
+                location = TextLocation(
+                    path = file.path,
+                    startLine = authorFinding.startLine,
+                    endLine = authorFinding.endLine
+                )
+            )
+        }
     }
 
     issues += mapScanErrors(this)
@@ -140,6 +143,7 @@ fun ScanCodeResult.toScanSummary(preferFileLicense: Boolean = false): ScanSummar
         endTime = TIMESTAMP_FORMATTER.parse(header.endTimestamp).query(Instant::from),
         licenseFindings = associateLicensesWithExceptions(licenseFindings),
         copyrightFindings = copyrightFindings,
+        authorFindings = authorFindings,
         issues = issues
     )
 }

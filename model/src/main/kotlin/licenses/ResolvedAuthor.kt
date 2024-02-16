@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 The ORT Project Authors (see <https://github.com/oss-review-toolkit/ort/blob/main/NOTICE>)
+ * Copyright (C) 2022 The ORT Project Authors (see <https://github.com/oss-review-toolkit/ort/blob/main/NOTICE>)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,11 +17,22 @@
  * License-Filename: LICENSE
  */
 
-package org.ossreviewtoolkit.plugins.reporters.evaluatedmodel
+package org.ossreviewtoolkit.model.licenses
+
+import org.ossreviewtoolkit.utils.ort.CopyrightStatementsProcessor
 
 /**
- * The possible types of an [EvaluatedFinding].
+ * A resolved copyright.
  */
-enum class EvaluatedFindingType {
-    COPYRIGHT, LICENSE, AUTHOR
-}
+data class ResolvedAuthor(
+    /**
+     * The resolved author statement.
+     */
+    val author: String,
+
+    /**
+     * The resolved findings for this author. The authors in the findings can be different to [statement] if they
+     * were processed by the [CopyrightStatementsProcessor].
+     */
+    val findings: Set<ResolvedAuthorFinding>
+)

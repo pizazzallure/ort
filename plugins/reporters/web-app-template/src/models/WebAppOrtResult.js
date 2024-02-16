@@ -21,6 +21,7 @@ import Metadata from './Metadata';
 import Repository from './Repository';
 import Statistics from './Statistics';
 import WebAppCopyright from './WebAppCopyright';
+import WebAppAuthor from './WebAppAuthor';
 import WebAppLicense from './WebAppLicense';
 import WebAppOrtIssue from './WebAppOrtIssue';
 import WebAppPackage from './WebAppPackage';
@@ -38,6 +39,8 @@ class WebAppOrtResult {
     #concludedLicensePackages = [];
 
     #copyrights = [];
+
+    #authors = [];
 
     #declaredLicenses = [];
 
@@ -112,6 +115,12 @@ class WebAppOrtResult {
             if (obj.copyrights) {
                 for (let i = 0, len = obj.copyrights.length; i < len; i++) {
                     this.#copyrights.push(new WebAppCopyright(obj.copyrights[i]));
+                }
+            }
+
+            if (obj.authors) {
+                for (let i = 0, len = obj.authors.length; i < len; i++) {
+                    this.#authors.push(new WebAppAuthor(obj.authors[i]));
                 }
             }
 
@@ -374,6 +383,10 @@ class WebAppOrtResult {
         return this.#copyrights;
     }
 
+    get authors() {
+        return this.#authors;
+    }
+
     get declaredLicenses() {
         return this.#declaredLicenses;
     }
@@ -488,6 +501,10 @@ class WebAppOrtResult {
 
     getCopyrightByIndex(val) {
         return this.#copyrights[val] || null;
+    }
+
+    getAuthorByIndex(val) {
+        return this.#authors[val] || null;
     }
 
     getLicenseByIndex(val) {
