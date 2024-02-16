@@ -40,21 +40,21 @@ private fun parseResult(result: JsonElement): ScanCodeResult {
             polymorphicDefaultDeserializer(FileEntry::class) { FileEntry.Version1.serializer() }
             polymorphicDefaultDeserializer(LicenseEntry::class) { LicenseEntry.Version1.serializer() }
             polymorphicDefaultDeserializer(CopyrightEntry::class) { CopyrightEntry.Version1.serializer() }
-            polymorphicDefaultDeserializer(CopyrightEntry::class) { AuthorEntry.Version1.serializer() }
+            polymorphicDefaultDeserializer(AuthorEntry::class) { AuthorEntry.Version1.serializer() }
         }
 
         2 -> SerializersModule {
             polymorphicDefaultDeserializer(FileEntry::class) { FileEntry.Version1.serializer() }
             polymorphicDefaultDeserializer(LicenseEntry::class) { LicenseEntry.Version1.serializer() }
             polymorphicDefaultDeserializer(CopyrightEntry::class) { CopyrightEntry.Version2.serializer() }
-            polymorphicDefaultDeserializer(CopyrightEntry::class) { AuthorEntry.Version2.serializer() }
+            polymorphicDefaultDeserializer(AuthorEntry::class) { AuthorEntry.Version2.serializer() }
         }
 
         else -> SerializersModule {
             polymorphicDefaultDeserializer(FileEntry::class) { FileEntry.Version3.serializer() }
             polymorphicDefaultDeserializer(LicenseEntry::class) { LicenseEntry.Version3.serializer() }
             polymorphicDefaultDeserializer(CopyrightEntry::class) { CopyrightEntry.Version2.serializer() }
-            polymorphicDefaultDeserializer(CopyrightEntry::class) { AuthorEntry.Version2.serializer() }
+            polymorphicDefaultDeserializer(AuthorEntry::class) { AuthorEntry.Version2.serializer() }
         }
     }
 

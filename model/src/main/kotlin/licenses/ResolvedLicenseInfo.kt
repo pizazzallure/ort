@@ -114,13 +114,11 @@ data class ResolvedLicenseInfo(
      * using the [CopyrightStatementsProcessor].
      */
     @JvmOverloads
-    fun getAuthors(process: Boolean = true, omitExcluded: Boolean = true): Set<String> {
-        val copyrightStatements = licenses.flatMapTo(mutableSetOf()) { license ->
-            license.getCopyrights(process = false, omitExcluded = omitExcluded)
+    fun getAuthors(omitExcluded: Boolean = true): Set<String> {
+        val authors = licenses.flatMapTo(mutableSetOf()) { license ->
+            license.getAuthors(omitExcluded = omitExcluded)
         }
-
-        return copyrightStatements.takeIf { !process }
-            ?: CopyrightStatementsProcessor.process(copyrightStatements).allStatements
+        return authors
     }
 
     /**

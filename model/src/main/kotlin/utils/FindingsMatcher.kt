@@ -29,7 +29,7 @@ import kotlin.math.max
 import kotlin.math.min
 
 /**
- * A class for matching copyright findings to license findings. Copyright statements may be matched either to license
+ * A class for matching copyright and authors findings to license findings. Copyright statements and authors may be matched either to license
  * findings located nearby in the same file or to a license found in a license file whereas the given
  * [rootLicenseMatcher] determines whether a file is a license file.
  */
@@ -81,10 +81,10 @@ class FindingsMatcher(
     }
 
     /**
-     * Return those statements in [copyrights] which match the license location given by [licenseStartLine] and
+     * Return those statements in [copyrights] and authors in [authors] which match the license location given by [licenseStartLine] and
      * [licenseEndLine]. That matching is configured by [toleranceLines] and [expandToleranceLines].
      */
-    private fun getClosestCopyrightStatements(
+    private fun getClosestLicenseFinding(
         licenseFinding: LicenseFinding,
         copyrights: List<CopyrightFinding>,
         authors: List<AuthorFinding>
@@ -108,7 +108,7 @@ class FindingsMatcher(
     }
 
     /**
-     * Associate copyright findings to license findings within a single file.
+     * Associate copyright and author findings to license findings within a single file.
      */
     private fun matchFileFindings(
         licenses: List<LicenseFinding>,
@@ -130,10 +130,10 @@ class FindingsMatcher(
             return licenses.associateWith { matchedLicenseFinding }
         }
 
-        // If there are multiple license findings in a single file, search for the closest copyright statements
+        // If there are multiple license findings in a single file, search for the closest copyright statements and authors
         // for each of these, if any.
         return licenses.associateWith { licenseFinding ->
-            getClosestCopyrightStatements(
+            getClosestLicenseFinding(
                 licenseFinding,
                 copyrights,
                 authors
@@ -142,8 +142,8 @@ class FindingsMatcher(
     }
 
     /**
-     * Associate the [copyrightFindings] to the [licenseFindings]. Copyright findings are matched to license findings
-     * located nearby in the same file. Copyright findings that are not located close to a license finding are
+     * Associate the [copyrightFindings] and [authorFindings] to the [licenseFindings]. Copyright and author findings are matched to license findings
+     * located nearby in the same file. Copyright and author findings that are not located close to a license finding are
      * associated to the root licenses instead. The root licenses are the licenses found in any of the license files
      * defined by [rootLicenseMatcher].
      */
@@ -187,7 +187,7 @@ class FindingsMatcher(
 
         matchedFindings.merge(matchedRootLicenseFindings)
 
-        // the copyright which match the root licenses will be removed from unmatched collection
+        // the copyright and author which match the root licenses will be removed from unmatched collection
         val matchedRootLicenseCopyrights: MutableSet<CopyrightFinding> = mutableSetOf()
         val matchedRootLicenseAuthors: MutableSet<AuthorFinding> = mutableSetOf()
         matchedRootLicenseFindings.values.forEach { matchedRootLicenseFinding ->
@@ -201,8 +201,8 @@ class FindingsMatcher(
     }
 
     /**
-     * Associate the given [copyrightFindings] to its corresponding applicable root licenses. If no root license is
-     * applicable to a given copyright finding, that copyright finding is not contained in the result.
+     * Associate the given [copyrightFindings] and [authorFindings] to its corresponding applicable root licenses. If no root license is
+     * applicable to a given copyright finding and author finding, that copyright finding and author is not contained in the result.
      */
     private fun matchWithRootLicenses(
         licenseFindings: Set<LicenseFinding>,
@@ -264,12 +264,20 @@ data class FindingsMatcherResult(
     val unmatchedAuthors: MutableSet<AuthorFinding>
 )
 
+/**
+ * The match license finding include:
+ * 1. license finding
+ * 2. matched copyrights statement for the license finding
+ * 3. matched authors for the license finding
+ */
 data class MatchedLicenseFinding(
 
     val licenseFinding: LicenseFinding,
 
+    // matched copyrights statement for the license finding
     val copyrightsFindings: MutableSet<CopyrightFinding>,
 
+    // matched authors for the license finding
     val authorFindings: MutableSet<AuthorFinding>
 
 )
@@ -280,7 +288,12 @@ private fun MutableMap<LicenseFinding, MatchedLicenseFinding>.merge(
     other: Map<LicenseFinding, MatchedLicenseFinding>
 ) {
     other.forEach { (licenseFinding, matchedLicenseFinding) ->
-        getOrPut(licenseFinding) { matchedLicenseFinding }
+        if (containsKey(licenseFinding)) {
+            get(licenseFinding)?.copyrightsFindings?.addAll(matchedLicenseFinding.copyrightsFindings)
+            get(licenseFinding)?.authorFindings?.addAll(matchedLicenseFinding.authorFindings)
+        } else {
+            put(licenseFinding, matchedLicenseFinding)
+        }
     }
 }
 
