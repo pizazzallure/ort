@@ -19,7 +19,7 @@
 
 import { licenseToHslColor } from '../utils';
 
-class WebAppLicense {
+class WebAppAuthor {
     #_id;
 
     #author;
@@ -53,4 +53,4 @@ class WebAppLicense {
     }
 }
 
-export default WebAppLicense;
+export default WebAppAuthor;

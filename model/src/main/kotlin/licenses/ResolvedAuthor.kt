@@ -19,20 +19,17 @@
 
 package org.ossreviewtoolkit.model.licenses
 
-import org.ossreviewtoolkit.utils.ort.CopyrightStatementsProcessor
-
 /**
- * A resolved copyright.
+ * A resolved author.
  */
 data class ResolvedAuthor(
     /**
-     * The resolved author statement.
+     * The resolved author.
      */
     val author: String,
 
     /**
-     * The resolved findings for this author. The authors in the findings can be different to [statement] if they
-     * were processed by the [CopyrightStatementsProcessor].
+     * The resolved findings for this author.
      */
     val findings: Set<ResolvedAuthorFinding>
 )
