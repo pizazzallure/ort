@@ -19,40 +19,9 @@
 
 package org.ossreviewtoolkit.plugins.scanners.fossid
 
-import java.io.IOException
-import java.time.Instant
-
-import kotlin.time.Duration
-import kotlin.time.Duration.Companion.minutes
-import kotlin.time.Duration.Companion.seconds
-import kotlin.time.toKotlinDuration
-
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.async
-import kotlinx.coroutines.awaitAll
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.withTimeoutOrNull
-
+import kotlinx.coroutines.*
 import org.apache.logging.log4j.kotlin.logger
-
-import org.ossreviewtoolkit.clients.fossid.FossIdRestService
-import org.ossreviewtoolkit.clients.fossid.checkDownloadStatus
-import org.ossreviewtoolkit.clients.fossid.checkResponse
-import org.ossreviewtoolkit.clients.fossid.createIgnoreRule
-import org.ossreviewtoolkit.clients.fossid.createProject
-import org.ossreviewtoolkit.clients.fossid.createScan
-import org.ossreviewtoolkit.clients.fossid.deleteScan
-import org.ossreviewtoolkit.clients.fossid.downloadFromGit
-import org.ossreviewtoolkit.clients.fossid.getProject
-import org.ossreviewtoolkit.clients.fossid.listIdentifiedFiles
-import org.ossreviewtoolkit.clients.fossid.listIgnoreRules
-import org.ossreviewtoolkit.clients.fossid.listIgnoredFiles
-import org.ossreviewtoolkit.clients.fossid.listMarkedAsIdentifiedFiles
-import org.ossreviewtoolkit.clients.fossid.listMatchedLines
-import org.ossreviewtoolkit.clients.fossid.listPendingFiles
-import org.ossreviewtoolkit.clients.fossid.listScansForProject
-import org.ossreviewtoolkit.clients.fossid.listSnippets
+import org.ossreviewtoolkit.clients.fossid.*
 import org.ossreviewtoolkit.clients.fossid.model.Project
 import org.ossreviewtoolkit.clients.fossid.model.Scan
 import org.ossreviewtoolkit.clients.fossid.model.result.MatchType
@@ -61,29 +30,21 @@ import org.ossreviewtoolkit.clients.fossid.model.rules.RuleScope
 import org.ossreviewtoolkit.clients.fossid.model.rules.RuleType
 import org.ossreviewtoolkit.clients.fossid.model.status.DownloadStatus
 import org.ossreviewtoolkit.clients.fossid.model.status.ScanStatus
-import org.ossreviewtoolkit.clients.fossid.runScan
 import org.ossreviewtoolkit.downloader.VersionControlSystem
-import org.ossreviewtoolkit.model.Issue
-import org.ossreviewtoolkit.model.Provenance
-import org.ossreviewtoolkit.model.RepositoryProvenance
-import org.ossreviewtoolkit.model.ScanResult
-import org.ossreviewtoolkit.model.ScanSummary
-import org.ossreviewtoolkit.model.Severity
-import org.ossreviewtoolkit.model.UnknownProvenance
-import org.ossreviewtoolkit.model.VcsType
+import org.ossreviewtoolkit.model.*
 import org.ossreviewtoolkit.model.config.ScannerConfiguration
-import org.ossreviewtoolkit.model.createAndLogIssue
-import org.ossreviewtoolkit.scanner.PackageScannerWrapper
-import org.ossreviewtoolkit.scanner.ProvenanceScannerWrapper
-import org.ossreviewtoolkit.scanner.ScanContext
-import org.ossreviewtoolkit.scanner.ScannerMatcher
-import org.ossreviewtoolkit.scanner.ScannerWrapperConfig
-import org.ossreviewtoolkit.scanner.ScannerWrapperFactory
+import org.ossreviewtoolkit.scanner.*
 import org.ossreviewtoolkit.scanner.provenance.NestedProvenance
 import org.ossreviewtoolkit.utils.common.Options
 import org.ossreviewtoolkit.utils.common.enumSetOf
 import org.ossreviewtoolkit.utils.common.replaceCredentialsInUri
 import org.ossreviewtoolkit.utils.ort.showStackTrace
+import java.io.IOException
+import java.time.Instant
+import kotlin.time.Duration
+import kotlin.time.Duration.Companion.minutes
+import kotlin.time.Duration.Companion.seconds
+import kotlin.time.toKotlinDuration
 
 /**
  * A wrapper for [FossID](https://fossid.com/).
@@ -864,7 +825,7 @@ class FossId internal constructor(
 
         val ignoredFiles = rawResults.listIgnoredFiles.associateBy { it.path }
 
-        val (licenseFindings, copyrightFindings) = rawResults.markedAsIdentifiedFiles.ifEmpty {
+        val (licenseFindings, copyrightFindings, authorFindings) = rawResults.markedAsIdentifiedFiles.ifEmpty {
             rawResults.identifiedFiles
         }.mapSummary(ignoredFiles, issues, detectedLicenseMapping)
 
@@ -873,6 +834,7 @@ class FossId internal constructor(
             endTime = Instant.now(),
             licenseFindings = licenseFindings,
             copyrightFindings = copyrightFindings,
+            authorFindings = authorFindings,
             snippetFindings = snippetFindings,
             issues = issues + additionalIssues
         )

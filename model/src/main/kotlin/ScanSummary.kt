@@ -130,6 +130,7 @@ data class ScanSummary(
         return copy(
             licenseFindings = licenseFindings.filterTo(mutableSetOf()) { it.location.matchesPaths() },
             copyrightFindings = copyrightFindings.filterTo(mutableSetOf()) { it.location.matchesPaths() },
+            authorFindings = authorFindings.filterTo(mutableSetOf()) { it.location.matchesPaths() },
             snippetFindings = snippetFindings.filterTo(mutableSetOf()) { it.sourceLocation.matchesPaths() },
             issues = issues.filter { it.affectedPath?.matchesPaths() ?: true }
         )
@@ -145,6 +146,7 @@ data class ScanSummary(
         return copy(
             licenseFindings = licenseFindings.filterTo(mutableSetOf()) { !matcher.matches(it.location.path) },
             copyrightFindings = copyrightFindings.filterTo(mutableSetOf()) { !matcher.matches(it.location.path) },
+            authorFindings = authorFindings.filterTo(mutableSetOf()) { !matcher.matches(it.location.path) },
             snippetFindings = snippetFindings.filterTo(mutableSetOf()) { !matcher.matches(it.sourceLocation.path) },
             issues = issues.filter { it.affectedPath == null || !matcher.matches(it.affectedPath) }
         )

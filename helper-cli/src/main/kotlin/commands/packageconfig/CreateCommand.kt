@@ -21,33 +21,21 @@ package org.ossreviewtoolkit.helper.commands.packageconfig
 
 import com.github.ajalt.clikt.core.CliktCommand
 import com.github.ajalt.clikt.core.UsageError
-import com.github.ajalt.clikt.parameters.options.convert
-import com.github.ajalt.clikt.parameters.options.default
-import com.github.ajalt.clikt.parameters.options.flag
-import com.github.ajalt.clikt.parameters.options.option
-import com.github.ajalt.clikt.parameters.options.required
-import com.github.ajalt.clikt.parameters.options.split
+import com.github.ajalt.clikt.parameters.options.*
 import com.github.ajalt.clikt.parameters.types.file
-
-import java.io.File
-
 import org.ossreviewtoolkit.helper.utils.PathExcludeGenerator
 import org.ossreviewtoolkit.helper.utils.sortPathExcludes
 import org.ossreviewtoolkit.helper.utils.write
-import org.ossreviewtoolkit.model.ArtifactProvenance
-import org.ossreviewtoolkit.model.Identifier
-import org.ossreviewtoolkit.model.Package
-import org.ossreviewtoolkit.model.RepositoryProvenance
-import org.ossreviewtoolkit.model.ScanResult
+import org.ossreviewtoolkit.model.*
 import org.ossreviewtoolkit.model.config.PackageConfiguration
 import org.ossreviewtoolkit.model.config.VcsMatcher
 import org.ossreviewtoolkit.model.licenses.LicenseClassifications
-import org.ossreviewtoolkit.model.readValue
 import org.ossreviewtoolkit.scanner.storages.FileBasedStorage
 import org.ossreviewtoolkit.utils.common.expandTilde
 import org.ossreviewtoolkit.utils.common.safeMkdirs
 import org.ossreviewtoolkit.utils.ort.storage.LocalFileStorage
 import org.ossreviewtoolkit.utils.spdx.SpdxSingleLicenseExpression
+import java.io.File
 
 internal class CreateCommand : CliktCommand(
     help = "Creates one package configuration for the source artifact scan and one for the VCS scan, if " +
@@ -185,6 +173,10 @@ internal class CreateCommand : CliktCommand(
             }.mapTo(this) { it.location.path }
 
             summary.copyrightFindings.filter {
+                nonOffendingLicenses.isEmpty()
+            }.mapTo(this) { it.location.path }
+
+            summary.authorFindings.filter {
                 nonOffendingLicenses.isEmpty()
             }.mapTo(this) { it.location.path }
         }
