@@ -24,19 +24,15 @@ class WebAppAuthor {
 
     #author;
 
-    #color;
-
     constructor(obj) {
         if (obj) {
             if (Number.isInteger(obj._id)) {
                 this.#_id = obj._id;
             }
 
-            if (obj.id) {
-                this.#id = obj.id;
+            if (obj.author) {
+                this.#author = obj.author;
             }
-
-            this.#color = licenseToHslColor(this.#id);
         }
     }
 
@@ -48,9 +44,6 @@ class WebAppAuthor {
         return this.#author;
     }
 
-    get color() {
-        return this.#color;
-    }
 }
 
 export default WebAppAuthor;
