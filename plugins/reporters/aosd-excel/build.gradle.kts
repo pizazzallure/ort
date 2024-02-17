@@ -33,14 +33,4 @@ dependencies {
     implementation("org.apache.poi:poi-ooxml:4.1.1")
 
     testImplementation(libs.mockk)
-
-//    api(project(":reporter"))
-//
-//    implementation(project(":clients:fossid-webapp-client"))
-//    implementation(project(":model"))
-//    implementation(project(":utils:common-utils"))
-//    implementation(project(":utils:ort-utils"))
-//    implementation(libs.kotlinxCoroutines)
-//    implementation("org.apache.poi:poi-ooxml:4.1.1")
-//    testImplementation(libs.mockk)
 }

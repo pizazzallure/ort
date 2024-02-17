@@ -669,7 +669,7 @@ internal class EvaluatedModelMapper(private val input: ReporterInput) {
                     .let { this@EvaluatedModelMapper.pathExcludes.addIfRequired(it) }
 
                 findings += EvaluatedFinding(
-                    type = EvaluatedFindingType.COPYRIGHT,
+                    type = EvaluatedFindingType.AUTHOR,
                     license = null,
                     copyright = null,
                     author = actualAuthor,
