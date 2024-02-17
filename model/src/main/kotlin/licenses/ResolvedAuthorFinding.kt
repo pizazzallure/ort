@@ -19,43 +19,25 @@
 
 package org.ossreviewtoolkit.model.licenses
 
-import org.ossreviewtoolkit.model.Provenance
 import org.ossreviewtoolkit.model.TextLocation
-import org.ossreviewtoolkit.model.config.LicenseFindingCuration
 import org.ossreviewtoolkit.model.config.PathExclude
 
 /**
- * A resolved text location.
+ * A resolved author finding.
  */
-data class ResolvedLicenseLocation(
+data class ResolvedAuthorFinding(
     /**
-     * The provenance of the file.
+     * The author.
      */
-    val provenance: Provenance,
+    val author: String,
 
     /**
-     * The text location relative to the root of the VCS or source artifact defined by [provenance].
+     * The location where this author was found.
      */
     val location: TextLocation,
 
     /**
-     * The applied [LicenseFindingCuration], or null if none were applied.
-     */
-    val appliedCuration: LicenseFindingCuration?,
-
-    /**
      * All [PathExclude]s matching this [location].
      */
-    val matchingPathExcludes: List<PathExclude>,
-
-    /**
-     * All copyright findings associated to this license location, excluding copyright garbage.
-     */
-    val copyrights: Set<ResolvedCopyrightFinding>,
-
-    /**
-     * All author findings associated to this license location.
-     */
-    val authors: Set<ResolvedAuthorFinding>
-
+    val matchingPathExcludes: List<PathExclude>
 )

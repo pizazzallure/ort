@@ -72,6 +72,7 @@ class DefaultLicenseInfoProvider(val ortResult: OrtResult) : LicenseInfoProvider
             )
         } ?: DeclaredLicenseInfo(
             authors = emptySet(),
+            copyrightHolders = emptySet(),
             licenses = emptySet(),
             processed = ProcessedDeclaredLicense(null),
             appliedCurations = emptyList()
@@ -93,6 +94,7 @@ class DefaultLicenseInfoProvider(val ortResult: OrtResult) : LicenseInfoProvider
                 provenance = provenance,
                 licenses = summary.licenseFindings,
                 copyrights = summary.copyrightFindings,
+                authors = summary.authorFindings,
                 licenseFindingCurations = config.licenseFindingCurations,
                 pathExcludes = config.pathExcludes,
                 relativeFindingsPath = config.relativeFindingsPath

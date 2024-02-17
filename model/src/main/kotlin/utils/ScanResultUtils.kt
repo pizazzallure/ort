@@ -19,17 +19,9 @@
 
 package org.ossreviewtoolkit.model.utils
 
+import org.ossreviewtoolkit.model.*
 import java.io.File
 import java.time.Instant
-
-import org.ossreviewtoolkit.model.CopyrightFinding
-import org.ossreviewtoolkit.model.KnownProvenance
-import org.ossreviewtoolkit.model.LicenseFinding
-import org.ossreviewtoolkit.model.OrtResult
-import org.ossreviewtoolkit.model.RepositoryProvenance
-import org.ossreviewtoolkit.model.ScanResult
-import org.ossreviewtoolkit.model.ScanSummary
-import org.ossreviewtoolkit.model.SnippetFinding
 
 /**
  * Merge the nested [ScanResult]s into one [ScanResult] per used scanner. The entry for the empty string in
@@ -58,6 +50,7 @@ fun mergeScanResultsByScanner(
 
         val licenseFindings = scanResultsForScannerByPath.mergeLicenseFindings()
         val copyrightFindings = scanResultsForScannerByPath.mergeCopyrightFindings()
+        val authorFindings = scanResultsForScannerByPath.mergeAuthorFindings()
         val snippetFindings = scanResultsForScannerByPath.mergeSnippetFindings()
 
         ScanResult(
@@ -68,6 +61,7 @@ fun mergeScanResultsByScanner(
                 endTime = endTime,
                 licenseFindings = licenseFindings,
                 copyrightFindings = copyrightFindings,
+                authorFindings = authorFindings,
                 snippetFindings = snippetFindings,
                 issues = issues
             ),
@@ -100,6 +94,18 @@ private fun Map<String, List<ScanResult>>.mergeLicenseFindings(): Set<LicenseFin
 private fun Map<String, List<ScanResult>>.mergeCopyrightFindings(): Set<CopyrightFinding> {
     val findingsByPath = mapValues { (_, scanResults) ->
         scanResults.flatMap { it.summary.copyrightFindings }
+    }
+
+    val findings = findingsByPath.flatMapTo(mutableSetOf()) { (path, findings) ->
+        findings.map { it.copy(location = it.location.prependPath(path)) }
+    }
+
+    return findings
+}
+
+private fun Map<String, List<ScanResult>>.mergeAuthorFindings(): Set<AuthorFinding> {
+    val findingsByPath = mapValues { (_, scanResults) ->
+        scanResults.flatMap { it.summary.authorFindings }
     }
 
     val findings = findingsByPath.flatMapTo(mutableSetOf()) { (path, findings) ->

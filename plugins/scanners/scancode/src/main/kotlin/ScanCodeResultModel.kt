@@ -25,12 +25,7 @@ import kotlinx.serialization.builtins.serializer
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonTransformingSerializer
-
-import org.ossreviewtoolkit.utils.spdx.SpdxConstants
-import org.ossreviewtoolkit.utils.spdx.SpdxExpression
-import org.ossreviewtoolkit.utils.spdx.SpdxLicenseWithExceptionExpression
-import org.ossreviewtoolkit.utils.spdx.toSpdx
-import org.ossreviewtoolkit.utils.spdx.toSpdxId
+import org.ossreviewtoolkit.utils.spdx.*
 
 @Serializable
 data class ScanCodeResult(
@@ -60,6 +55,7 @@ sealed interface FileEntry {
     val type: String
     val licenses: List<LicenseEntry>
     val copyrights: List<CopyrightEntry>
+    val authors: List<AuthorEntry>
     val scanErrors: List<String>
 
     // A map of ScanCode license keys associated with their corresponding SPDX license ID.
@@ -71,6 +67,7 @@ sealed interface FileEntry {
         override val type: String,
         override val licenses: List<LicenseEntry.Version1>,
         override val copyrights: List<CopyrightEntry>,
+        override val authors: List<AuthorEntry>,
         override val scanErrors: List<String>
     ) : FileEntry {
         companion object {
@@ -104,6 +101,7 @@ sealed interface FileEntry {
         val detectedLicenseExpressionSpdx: String? = null, // This might be explicitly set to null in JSON.
         val licenseDetections: List<LicenseDetection>,
         override val copyrights: List<CopyrightEntry>,
+        override val authors: List<AuthorEntry>,
         override val scanErrors: List<String>
     ) : FileEntry {
         companion object {
@@ -188,6 +186,28 @@ sealed interface CopyrightEntry {
     ) : CopyrightEntry {
         override val statement = copyright
     }
+}
+
+sealed interface AuthorEntry {
+    val author: String
+    val startLine: Int
+    val endLine: Int
+
+    @Serializable
+    data class Version1(
+        val value: String,
+        override val startLine: Int,
+        override val endLine: Int
+    ) : AuthorEntry {
+        override val author = value
+    }
+
+    @Serializable
+    data class Version2(
+        override val author: String,
+        override val startLine: Int,
+        override val endLine: Int
+    ) : AuthorEntry
 }
 
 @Serializable

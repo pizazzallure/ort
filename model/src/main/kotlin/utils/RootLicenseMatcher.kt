@@ -19,12 +19,11 @@
 
 package org.ossreviewtoolkit.model.utils
 
-import java.io.File
-
 import org.ossreviewtoolkit.model.LicenseFinding
 import org.ossreviewtoolkit.model.config.LicenseFilePatterns
 import org.ossreviewtoolkit.utils.common.FileMatcher
 import org.ossreviewtoolkit.utils.common.getAllAncestorDirectories
+import java.io.File
 
 /**
  * A heuristic for determining which (root) license files apply to any file or directory.

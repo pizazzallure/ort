@@ -20,33 +20,16 @@
 package org.ossreviewtoolkit.utils.test
 
 import com.fasterxml.jackson.module.kotlin.readValue
-
-import java.io.File
-import java.time.Instant
-
 import org.ossreviewtoolkit.downloader.VersionControlSystem
-import org.ossreviewtoolkit.model.AdvisorRecord
-import org.ossreviewtoolkit.model.AdvisorResult
-import org.ossreviewtoolkit.model.AdvisorRun
-import org.ossreviewtoolkit.model.ArtifactProvenance
-import org.ossreviewtoolkit.model.FileList
-import org.ossreviewtoolkit.model.Hash
-import org.ossreviewtoolkit.model.HashAlgorithm
-import org.ossreviewtoolkit.model.Identifier
-import org.ossreviewtoolkit.model.KnownProvenance
-import org.ossreviewtoolkit.model.OrtResult
-import org.ossreviewtoolkit.model.ProvenanceResolutionResult
-import org.ossreviewtoolkit.model.RemoteArtifact
-import org.ossreviewtoolkit.model.RepositoryProvenance
-import org.ossreviewtoolkit.model.ScanResult
-import org.ossreviewtoolkit.model.ScannerRun
+import org.ossreviewtoolkit.model.*
 import org.ossreviewtoolkit.model.config.AdvisorConfiguration
-import org.ossreviewtoolkit.model.mapper
 import org.ossreviewtoolkit.model.utils.alignRevisions
 import org.ossreviewtoolkit.model.utils.clearVcsPath
 import org.ossreviewtoolkit.model.utils.toPurl
 import org.ossreviewtoolkit.utils.ort.Environment
 import org.ossreviewtoolkit.utils.ort.normalizeVcsUrl
+import java.io.File
+import java.time.Instant
 
 val USER_DIR = File(System.getProperty("user.dir"))
 
@@ -173,6 +156,7 @@ fun scannerRunOf(vararg pkgScanResults: Pair<Identifier, List<ScanResult>>): Sca
 
         val paths = buildSet {
             scanResult.summary.copyrightFindings.mapTo(this) { it.location.path }
+            scanResult.summary.authorFindings.mapTo(this) { it.location.path }
             scanResult.summary.licenseFindings.mapTo(this) { it.location.path }
             scanResult.summary.snippetFindings.mapTo(this) { it.sourceLocation.path }
         }

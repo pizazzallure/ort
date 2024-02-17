@@ -19,10 +19,7 @@
 
 package org.ossreviewtoolkit.plugins.scanners.fossid
 
-import java.lang.invoke.MethodHandles
-
 import org.apache.logging.log4j.kotlin.loggerOf
-
 import org.ossreviewtoolkit.clients.fossid.model.identification.identifiedFiles.IdentifiedFile
 import org.ossreviewtoolkit.clients.fossid.model.identification.ignored.IgnoredFile
 import org.ossreviewtoolkit.clients.fossid.model.identification.markedAsIdentified.MarkedAsIdentifiedFile
@@ -30,19 +27,7 @@ import org.ossreviewtoolkit.clients.fossid.model.result.MatchType
 import org.ossreviewtoolkit.clients.fossid.model.result.MatchedLines
 import org.ossreviewtoolkit.clients.fossid.model.result.Snippet
 import org.ossreviewtoolkit.clients.fossid.model.summary.Summarizable
-import org.ossreviewtoolkit.model.ArtifactProvenance
-import org.ossreviewtoolkit.model.CopyrightFinding
-import org.ossreviewtoolkit.model.Hash
-import org.ossreviewtoolkit.model.Issue
-import org.ossreviewtoolkit.model.LicenseFinding
-import org.ossreviewtoolkit.model.PackageProvider
-import org.ossreviewtoolkit.model.RemoteArtifact
-import org.ossreviewtoolkit.model.Severity
-import org.ossreviewtoolkit.model.Snippet as OrtSnippet
-import org.ossreviewtoolkit.model.SnippetFinding
-import org.ossreviewtoolkit.model.TextLocation
-import org.ossreviewtoolkit.model.createAndLogIssue
-import org.ossreviewtoolkit.model.mapLicense
+import org.ossreviewtoolkit.model.*
 import org.ossreviewtoolkit.model.utils.PurlType
 import org.ossreviewtoolkit.utils.common.alsoIfNull
 import org.ossreviewtoolkit.utils.common.collapseToRanges
@@ -51,6 +36,8 @@ import org.ossreviewtoolkit.utils.common.prettyPrintRanges
 import org.ossreviewtoolkit.utils.ort.DeclaredLicenseProcessor
 import org.ossreviewtoolkit.utils.spdx.SpdxConstants
 import org.ossreviewtoolkit.utils.spdx.toSpdx
+import java.lang.invoke.MethodHandles
+import org.ossreviewtoolkit.model.Snippet as OrtSnippet
 
 private val logger = loggerOf(MethodHandles.lookup().lookupClass())
 
@@ -71,7 +58,8 @@ internal data class RawResults(
  */
 internal data class FindingsContainer(
     val licenseFindings: MutableSet<LicenseFinding>,
-    val copyrightFindings: MutableSet<CopyrightFinding>
+    val copyrightFindings: MutableSet<CopyrightFinding>,
+    val authorFindings: MutableSet<AuthorFinding>
 )
 
 /**
@@ -84,6 +72,9 @@ internal fun <T : Summarizable> List<T>.mapSummary(
 ): FindingsContainer {
     val licenseFindings = mutableSetOf<LicenseFinding>()
     val copyrightFindings = mutableSetOf<CopyrightFinding>()
+
+    // TODO: read author from scan result
+    val authorFindings = mutableSetOf<AuthorFinding>()
 
     val files = filterNot { it.getFileName() in ignoredFiles }
     files.forEach { summarizable ->
@@ -116,7 +107,8 @@ internal fun <T : Summarizable> List<T>.mapSummary(
 
     return FindingsContainer(
         licenseFindings = licenseFindings,
-        copyrightFindings = copyrightFindings
+        copyrightFindings = copyrightFindings,
+        authorFindings = authorFindings
     )
 }
 

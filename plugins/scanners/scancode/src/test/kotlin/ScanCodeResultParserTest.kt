@@ -21,24 +21,14 @@ package org.ossreviewtoolkit.plugins.scanners.scancode
 
 import io.kotest.core.spec.style.FreeSpec
 import io.kotest.matchers.Matcher
-import io.kotest.matchers.collections.beEmpty
-import io.kotest.matchers.collections.containExactlyInAnyOrder
-import io.kotest.matchers.collections.shouldContainExactlyInAnyOrder
-import io.kotest.matchers.collections.shouldHaveSingleElement
-import io.kotest.matchers.collections.shouldHaveSize
+import io.kotest.matchers.collections.*
 import io.kotest.matchers.should
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldStartWith
-
+import org.ossreviewtoolkit.model.*
+import org.ossreviewtoolkit.utils.test.transformingCollectionMatcher
 import java.io.File
 import java.time.Instant
-
-import org.ossreviewtoolkit.model.Issue
-import org.ossreviewtoolkit.model.LicenseFinding
-import org.ossreviewtoolkit.model.ScanSummary
-import org.ossreviewtoolkit.model.Severity
-import org.ossreviewtoolkit.model.TextLocation
-import org.ossreviewtoolkit.utils.test.transformingCollectionMatcher
 
 class ScanCodeResultParserTest : FreeSpec({
     "generateSummary()" - {
@@ -208,5 +198,12 @@ private fun containCopyrightsExactly(vararg copyrights: Pair<String, List<TextLo
         summary.copyrightFindings.groupBy { it.statement }.entries
             .map { (key, value) -> key to value.map { it.location } }
     }
+
+private fun containAuthorsExactly(vararg authors: Pair<String, List<TextLocation>>): Matcher<ScanSummary?> =
+    transformingCollectionMatcher(expected = authors.toList(), matcher = ::containExactlyInAnyOrder) { summary ->
+        summary.authorFindings.groupBy { it.author }.entries
+            .map { (key, value) -> key to value.map { it.location } }
+    }
+
 
 private fun getAssetFile(path: String): File = File("src/test/assets", path).absoluteFile

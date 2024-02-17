@@ -96,5 +96,5 @@ internal class RemoveEntriesCommand : CliktCommand(
 
 private fun ScanResult.getAllFiles(): List<String> =
     with(summary) {
-        licenseFindings.map { it.location.path } + copyrightFindings.map { it.location.path }
+        licenseFindings.map { it.location.path } + copyrightFindings.map { it.location.path } + authorFindings.map { it.location.path }
     }.distinct()

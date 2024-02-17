@@ -22,6 +22,8 @@ import { randomStringGenerator } from '../utils';
 class WebAppFinding {
     #copyright;
 
+    #author;
+
     #endLine;
 
     #isExcluded = false;
@@ -48,6 +50,10 @@ class WebAppFinding {
         if (obj) {
             if (Number.isInteger(obj.copyright)) {
                 this.#copyright = obj.copyright;
+            }
+
+            if (Number.isInteger(obj.author)) {
+                this.#author = obj.author;
             }
 
             if (Number.isInteger(obj.end_line) || Number.isInteger(obj.endLine)) {
@@ -93,6 +99,17 @@ class WebAppFinding {
             const webAppFinding = this.#webAppOrtResult.getCopyrightByIndex(this.#copyright);
             if (webAppFinding) {
                 return webAppFinding.statement;
+            }
+        }
+
+        return null;
+    }
+
+    get author() {
+        if (this.#webAppOrtResult) {
+            const webAppFinding = this.#webAppOrtResult.getAuthorByIndex(this.#author);
+            if (webAppFinding) {
+                return webAppFinding.author;
             }
         }
 
@@ -174,6 +191,10 @@ class WebAppFinding {
     get value() {
         if (this.#type === 'COPYRIGHT') {
             return this.copyright;
+        }
+
+        if (this.#type === 'AUTHOR') {
+            return this.author;
         }
 
         return this.license;

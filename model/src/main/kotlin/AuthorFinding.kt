@@ -17,11 +17,23 @@
  * License-Filename: LICENSE
  */
 
-package org.ossreviewtoolkit.plugins.reporters.evaluatedmodel
+package org.ossreviewtoolkit.model
 
 /**
- * The possible types of an [EvaluatedFinding].
+ * A class representing a single author finding.
  */
-enum class EvaluatedFindingType {
-    COPYRIGHT, LICENSE, AUTHOR
+data class AuthorFinding(
+    /**
+     * The author.
+     */
+    val author: String,
+
+    /**
+     * The text location where the author was found.
+     */
+    val location: TextLocation
+) {
+    companion object {
+        val COMPARATOR = compareBy<AuthorFinding>({ it.author }, { it.location })
+    }
 }

@@ -19,22 +19,13 @@
 
 package org.ossreviewtoolkit.plugins.scanners.scanoss
 
-import java.time.Instant
-
 import org.ossreviewtoolkit.clients.scanoss.FullScanResponse
 import org.ossreviewtoolkit.clients.scanoss.model.IdentificationType
 import org.ossreviewtoolkit.clients.scanoss.model.ScanResponse
-import org.ossreviewtoolkit.model.CopyrightFinding
-import org.ossreviewtoolkit.model.LicenseFinding
-import org.ossreviewtoolkit.model.RepositoryProvenance
-import org.ossreviewtoolkit.model.ScanSummary
-import org.ossreviewtoolkit.model.Snippet
-import org.ossreviewtoolkit.model.SnippetFinding
-import org.ossreviewtoolkit.model.TextLocation
-import org.ossreviewtoolkit.model.VcsInfo
-import org.ossreviewtoolkit.model.VcsType
+import org.ossreviewtoolkit.model.*
 import org.ossreviewtoolkit.utils.spdx.SpdxConstants
 import org.ossreviewtoolkit.utils.spdx.SpdxExpression
+import java.time.Instant
 
 /**
  * Generate a summary from the given SCANOSS [result], using [startTime], [endTime] as metadata. This variant can be
@@ -43,6 +34,9 @@ import org.ossreviewtoolkit.utils.spdx.SpdxExpression
 internal fun generateSummary(startTime: Instant, endTime: Instant, result: FullScanResponse): ScanSummary {
     val licenseFindings = mutableSetOf<LicenseFinding>()
     val copyrightFindings = mutableSetOf<CopyrightFinding>()
+
+    // TODO: read authors from scan results
+    val authorFindings = mutableSetOf<AuthorFinding>()
     val snippetFindings = mutableSetOf<SnippetFinding>()
 
     result.forEach { (_, scanResponses) ->
@@ -71,6 +65,7 @@ internal fun generateSummary(startTime: Instant, endTime: Instant, result: FullS
         endTime = endTime,
         licenseFindings = licenseFindings,
         copyrightFindings = copyrightFindings,
+        authorFindings = authorFindings,
         snippetFindings = snippetFindings
     )
 }

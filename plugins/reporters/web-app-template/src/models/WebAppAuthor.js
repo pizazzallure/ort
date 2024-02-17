@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 The ORT Project Authors (see <https://github.com/oss-review-toolkit/ort/blob/main/NOTICE>)
+ * Copyright (C) 2020 The ORT Project Authors (see <https://github.com/oss-review-toolkit/ort/blob/main/NOTICE>)
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,11 +17,33 @@
  * License-Filename: LICENSE
  */
 
-package org.ossreviewtoolkit.plugins.reporters.evaluatedmodel
+import { licenseToHslColor } from '../utils';
 
-/**
- * The possible types of an [EvaluatedFinding].
- */
-enum class EvaluatedFindingType {
-    COPYRIGHT, LICENSE, AUTHOR
+class WebAppAuthor {
+    #_id;
+
+    #author;
+
+    constructor(obj) {
+        if (obj) {
+            if (Number.isInteger(obj._id)) {
+                this.#_id = obj._id;
+            }
+
+            if (obj.author) {
+                this.#author = obj.author;
+            }
+        }
+    }
+
+    get _id() {
+        return this.#_id;
+    }
+
+    get author() {
+        return this.#author;
+    }
+
 }
+
+export default WebAppAuthor;

@@ -19,26 +19,10 @@
 
 package org.ossreviewtoolkit.plugins.reporters.evaluatedmodel
 
-import com.fasterxml.jackson.annotation.JsonInclude
-
-import org.ossreviewtoolkit.model.LicenseFinding
-import org.ossreviewtoolkit.model.config.PathExclude
-
 /**
- * The evaluated form of a [LicenseFinding] used by the [EvaluatedModel].
+ * Wrapper class for Author identifiers. Allows Jackson to generate IDs for them when storing them in a separate list
+ * for de-duplication.
  */
-data class EvaluatedFinding(
-    val type: EvaluatedFindingType,
-    @JsonInclude(JsonInclude.Include.NON_NULL)
-    val license: LicenseId?,
-    @JsonInclude(JsonInclude.Include.NON_NULL)
-    val copyright: CopyrightStatement?,
-    @JsonInclude(JsonInclude.Include.NON_NULL)
-    val author: AuthorId?,
-    val path: String,
-    val startLine: Int,
-    val endLine: Int,
-    val scanResult: EvaluatedScanResult,
-    @JsonInclude(JsonInclude.Include.NON_EMPTY)
-    val pathExcludes: List<PathExclude>
+data class AuthorId(
+    val author: String
 )

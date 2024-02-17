@@ -78,7 +78,7 @@ data class DeclaredLicenseInfo(
     /**
      * The set of copyright holders of this package.
      */
-    val copyrightHolders: Set<String> = emptySet(),
+    val copyrightHolders: Set<String>,
 
     /**
      * The unmodified set of declared licenses.
@@ -107,7 +107,7 @@ data class DetectedLicenseInfo(
 )
 
 /**
- * A collection of [license][licenses] and [copyright][copyrights] findings detected in the source code located at
+ * A collection of [license][licenses], [copyright][copyrights] and [author][authors] findings detected in the source code located at
  * [provenance].
  */
 data class Findings(
@@ -127,6 +127,11 @@ data class Findings(
     val copyrights: Set<CopyrightFinding>,
 
     /**
+     * The set of all author findings.
+     */
+    val authors: Set<AuthorFinding>,
+
+    /**
      * The list of all license finding curations that apply to this [provenance].
      */
     val licenseFindingCurations: List<LicenseFindingCuration>,
@@ -137,11 +142,11 @@ data class Findings(
     val pathExcludes: List<PathExclude>,
 
     /**
-     * The root path of the locations of the [licenses] and [copyrights] relative to the paths used in the
+     * The root path of the locations of the [licenses], [copyrights] and [authors] relative to the paths used in the
      * [licenseFindingCurations] and [pathExcludes]. An empty string, if all refer to the same root path.
      *
      * The roots can be different in case of projects inside nested repositories (see [Repository.nestedRepositories]),
-     * where the license and copyright finding locations are relative to the nested repository, but the
+     * where the license, copyright and author finding locations are relative to the nested repository, but the
      * [licenseFindingCurations] and [pathExcludes] are relative to the root repository, because they are configured in
      * the [RepositoryConfiguration] of the root repository.
      */

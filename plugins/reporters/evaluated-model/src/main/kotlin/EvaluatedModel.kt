@@ -28,25 +28,12 @@ import com.fasterxml.jackson.databind.json.JsonMapper
 import com.fasterxml.jackson.databind.node.ArrayNode
 import com.fasterxml.jackson.databind.node.ObjectNode
 import com.fasterxml.jackson.dataformat.yaml.YAMLMapper
-
-import java.io.Writer
-
-import org.ossreviewtoolkit.model.Issue
-import org.ossreviewtoolkit.model.OrtResult
-import org.ossreviewtoolkit.model.Repository
-import org.ossreviewtoolkit.model.RuleViolation
-import org.ossreviewtoolkit.model.Severity
-import org.ossreviewtoolkit.model.config.IssueResolution
-import org.ossreviewtoolkit.model.config.LicenseFindingCuration
-import org.ossreviewtoolkit.model.config.PathExclude
-import org.ossreviewtoolkit.model.config.RepositoryConfiguration
-import org.ossreviewtoolkit.model.config.RuleViolationResolution
-import org.ossreviewtoolkit.model.config.ScopeExclude
-import org.ossreviewtoolkit.model.config.VulnerabilityResolution
-import org.ossreviewtoolkit.model.mapperConfig
+import org.ossreviewtoolkit.model.*
+import org.ossreviewtoolkit.model.config.*
 import org.ossreviewtoolkit.reporter.Reporter
 import org.ossreviewtoolkit.reporter.ReporterInput
 import org.ossreviewtoolkit.reporter.Statistics
+import java.io.Writer
 
 /**
  * The [EvaluatedModel] represents the outcome of the evaluation of a [ReporterInput]. This means that all additional
@@ -93,6 +80,7 @@ data class EvaluatedModel(
     val pathExcludes: List<PathExclude>,
     val scopeExcludes: List<ScopeExclude>,
     val copyrights: List<CopyrightStatement>,
+    val authors: List<AuthorId>,
     val licenses: List<LicenseId>,
     val scopes: List<EvaluatedScope>,
     val issueResolutions: List<IssueResolution>,
@@ -123,6 +111,7 @@ data class EvaluatedModel(
     companion object {
         private val INT_ID_TYPES = listOf(
             CopyrightStatement::class.java,
+            AuthorId::class.java,
             EvaluatedIssue::class.java,
             EvaluatedPackage::class.java,
             EvaluatedPackagePath::class.java,

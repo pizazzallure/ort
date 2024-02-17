@@ -25,17 +25,7 @@ import com.github.ajalt.clikt.parameters.options.flag
 import com.github.ajalt.clikt.parameters.options.option
 import com.github.ajalt.clikt.parameters.options.required
 import com.github.ajalt.clikt.parameters.types.file
-
-import org.ossreviewtoolkit.helper.utils.VcsUrlMapping
-import org.ossreviewtoolkit.helper.utils.getRepositoryPath
-import org.ossreviewtoolkit.helper.utils.getRepositoryPaths
-import org.ossreviewtoolkit.helper.utils.importPathExcludes
-import org.ossreviewtoolkit.helper.utils.mergePathExcludes
-import org.ossreviewtoolkit.helper.utils.orEmpty
-import org.ossreviewtoolkit.helper.utils.readOrtResult
-import org.ossreviewtoolkit.helper.utils.replacePathExcludes
-import org.ossreviewtoolkit.helper.utils.sortPathExcludes
-import org.ossreviewtoolkit.helper.utils.write
+import org.ossreviewtoolkit.helper.utils.*
 import org.ossreviewtoolkit.model.OrtResult
 import org.ossreviewtoolkit.model.config.RepositoryConfiguration
 import org.ossreviewtoolkit.model.readValue
@@ -116,6 +106,7 @@ private fun OrtResult.getProjectFindingFiles(): Set<String> {
             with(scanResult.summary) {
                 licenseFindings.mapTo(result) { "$repositoryPath/${it.location.path}" }
                 copyrightFindings.mapTo(result) { "$repositoryPath/${it.location.path}" }
+                authorFindings.mapTo(result) { "$repositoryPath/${it.location.path}" }
             }
         }
     }
