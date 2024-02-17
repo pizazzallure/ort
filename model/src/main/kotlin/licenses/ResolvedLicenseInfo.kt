@@ -169,6 +169,14 @@ enum class ResolvedCopyrightSource {
 }
 
 /**
+ * Source of resolved author finding
+ */
+enum class ResolvedAuthorSource {
+    DETERMINED_BY_SCANNER,
+    PROVIDED_BY_CURATION;
+}
+
+/**
  * Filter all excluded licenses and copyrights. Licenses are removed if they are only
  * [detected][LicenseSource.DETECTED] and all [locations][ResolvedLicense.locations] have
  * [matching path excludes][ResolvedLicenseLocation.matchingPathExcludes]. Copyrights are removed if all

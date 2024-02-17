@@ -39,5 +39,10 @@ data class ResolvedAuthorFinding(
     /**
      * All [PathExclude]s matching this [location].
      */
-    val matchingPathExcludes: List<PathExclude>
+    val matchingPathExcludes: List<PathExclude>,
+
+    /**
+     * The source of the author finding
+     */
+    val findingType: ResolvedAuthorSource
 )

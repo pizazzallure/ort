@@ -11,6 +11,7 @@ import org.apache.poi.xssf.usermodel.XSSFWorkbook
 import org.ossreviewtoolkit.model.Identifier
 import org.ossreviewtoolkit.model.config.PluginConfiguration
 import org.ossreviewtoolkit.model.licenses.LicenseView
+import org.ossreviewtoolkit.model.licenses.ResolvedAuthorSource
 import org.ossreviewtoolkit.model.licenses.ResolvedCopyrightSource
 import org.ossreviewtoolkit.model.licenses.ResolvedLicenseInfo
 import org.ossreviewtoolkit.reporter.CustomLicenseTextProvider
@@ -227,12 +228,27 @@ private fun XSSFRow.createLicenseTextCell(
             .filter { it.findingType == ResolvedCopyrightSource.DETERMINED_BY_SCANNER }
             .mapTo(mutableSetOf()) { it.statement }
 
+        val curatedAuthorFindings = it.getResolvedAuthors()
+            .flatMap { it.findings }
+            .filter { it.findingType == ResolvedAuthorSource.PROVIDED_BY_CURATION }
+            .mapTo(mutableSetOf()) { it.author }
+        val scannedAuthorFindings = it.getResolvedAuthors()
+            .flatMap { it.findings }
+            .filter { it.findingType == ResolvedAuthorSource.DETERMINED_BY_SCANNER }
+            .mapTo(mutableSetOf()) { it.author }
+
         licenseString += "#$spdxLicenseExpression"
         licenseString += "\n\n"
-        if (!curatedCopyrightFindings.isEmpty()) {
+        if (curatedCopyrightFindings.isNotEmpty()) {
             licenseString += curatedCopyrightFindings.joinToString("\n")
         } else {
             licenseString += scannedCopyrightFindings.joinToString("\n")
+        }
+        licenseString += "\n\n"
+        if (curatedAuthorFindings.isNotEmpty()) {
+            licenseString += curatedAuthorFindings.joinToString("\n")
+        } else {
+            licenseString += scannedAuthorFindings.joinToString("\n")
         }
         licenseString += "\n\n"
 

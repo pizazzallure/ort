@@ -108,7 +108,8 @@ class LicenseInfoResolver(
                             ResolvedAuthorFinding(
                                 author = author,
                                 location = UNDEFINED_TEXT_LOCATION,
-                                matchingPathExcludes = emptyList()
+                                matchingPathExcludes = emptyList(),
+                                findingType = ResolvedAuthorSource.PROVIDED_BY_CURATION
                             )
                         }
                     )
@@ -278,7 +279,10 @@ class LicenseInfoResolver(
                 it.matches(finding.location.prependedPath(relativeFindingsPath))
             }
 
-            ResolvedAuthorFinding(finding.author, finding.location, matchingPathExcludes)
+            ResolvedAuthorFinding(
+                finding.author, finding.location, matchingPathExcludes,
+                ResolvedAuthorSource.DETERMINED_BY_SCANNER
+            )
         }
 
     private fun createLicenseFileInfo(id: Identifier): ResolvedLicenseFileInfo {
