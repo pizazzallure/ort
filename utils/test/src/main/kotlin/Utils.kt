@@ -156,7 +156,6 @@ fun scannerRunOf(vararg pkgScanResults: Pair<Identifier, List<ScanResult>>): Sca
 
         val paths = buildSet {
             scanResult.summary.copyrightFindings.mapTo(this) { it.location.path }
-            scanResult.summary.authorFindings.mapTo(this) { it.location.path }
             scanResult.summary.licenseFindings.mapTo(this) { it.location.path }
             scanResult.summary.snippetFindings.mapTo(this) { it.sourceLocation.path }
         }

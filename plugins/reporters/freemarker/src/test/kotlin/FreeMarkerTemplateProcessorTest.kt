@@ -151,7 +151,7 @@ private fun expectResolvedLicenseInfo(
         locations = emptySet()
     )
 
-    val info = ResolvedLicenseInfo(id, mockk(), listOf(resolvedLicense), emptyMap(), emptyMap(), emptyMap())
+    val info = ResolvedLicenseInfo(id, mockk(), listOf(resolvedLicense), emptyMap(), emptyMap())
 
     every { resolverMock.resolveLicenseInfo(id) } returns info
 }
@@ -174,7 +174,7 @@ private fun expectResolvedLicenseInfo(
         )
     }
 
-    val info = ResolvedLicenseInfo(id, mockk(), resolvedLicenses, emptyMap(), emptyMap(), emptyMap())
+    val info = ResolvedLicenseInfo(id, mockk(), resolvedLicenses, emptyMap(), emptyMap())
 
     every { resolverMock.resolveLicenseInfo(id) } returns info
 }

@@ -69,8 +69,7 @@ class ResolvedLicenseInfoTest : WordSpec() {
                         )
                     ),
                     copyrightGarbage = emptyMap(),
-                    unmatchedCopyrights = emptyMap(),
-                    unmatchedAuthors = emptyMap()
+                    unmatchedCopyrights = emptyMap()
                 )
 
                 val choices = listOf(
@@ -189,8 +188,7 @@ class ResolvedLicenseInfoTest : WordSpec() {
             licenseInfo = mockk(),
             licenses = resolvedLicenses,
             copyrightGarbage = emptyMap(),
-            unmatchedCopyrights = emptyMap(),
-            unmatchedAuthors = emptyMap()
+            unmatchedCopyrights = emptyMap()
         )
     }
 }

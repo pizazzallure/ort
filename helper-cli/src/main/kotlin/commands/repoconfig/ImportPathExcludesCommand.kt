@@ -106,7 +106,6 @@ private fun OrtResult.getProjectFindingFiles(): Set<String> {
             with(scanResult.summary) {
                 licenseFindings.mapTo(result) { "$repositoryPath/${it.location.path}" }
                 copyrightFindings.mapTo(result) { "$repositoryPath/${it.location.path}" }
-                authorFindings.mapTo(result) { "$repositoryPath/${it.location.path}" }
             }
         }
     }

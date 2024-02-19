@@ -175,10 +175,6 @@ internal class CreateCommand : CliktCommand(
             summary.copyrightFindings.filter {
                 nonOffendingLicenses.isEmpty()
             }.mapTo(this) { it.location.path }
-
-            summary.authorFindings.filter {
-                nonOffendingLicenses.isEmpty()
-            }.mapTo(this) { it.location.path }
         }
 
     private fun getNonOffendingLicenses(): Set<SpdxSingleLicenseExpression> {
