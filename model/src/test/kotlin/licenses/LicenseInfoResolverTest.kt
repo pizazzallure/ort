@@ -91,10 +91,6 @@ class LicenseInfoResolverTest : WordSpec({
                                 CopyrightFinding("Copyright Apache-2.0", TextLocation("LICENSE", 1)),
                                 CopyrightFinding("Copyright MIT", TextLocation("LICENSE", 31))
                             ),
-                            authors = setOf(
-                                AuthorFinding("Author Apache-2.0", TextLocation("LICENSE", 1)),
-                                AuthorFinding("Author MIT", TextLocation("LICENSE", 31))
-                            ),
                             licenseFindingCurations = emptyList(),
                             pathExcludes = emptyList(),
                             relativeFindingsPath = ""
@@ -191,11 +187,6 @@ class LicenseInfoResolverTest : WordSpec({
                                 CopyrightFinding("(c) 2010 Holder 1", TextLocation("LICENSE", 2)),
                                 CopyrightFinding("(c) 2010 Holder 2", TextLocation("LICENSE", 3))
                             ),
-                            authors = setOf(
-                                AuthorFinding("Author 1", TextLocation("LICENSE", 1)),
-                                AuthorFinding("Author 2", TextLocation("LICENSE", 2)),
-                                AuthorFinding("Author 3", TextLocation("LICENSE", 3))
-                            ),
                             licenseFindingCurations = emptyList(),
                             pathExcludes = emptyList(),
                             relativeFindingsPath = ""
@@ -234,12 +225,6 @@ class LicenseInfoResolverTest : WordSpec({
                                 CopyrightFinding("(c) 2010 Holder", TextLocation("LICENSE", 2)),
                                 CopyrightFinding("(c) 2011 Holder", TextLocation("LICENSE", 50)),
                                 CopyrightFinding("(c) 2012 Holder", TextLocation("LICENSE", 51))
-                            ),
-                            authors = setOf(
-                                AuthorFinding("Author 1", TextLocation("LICENSE", 1)),
-                                AuthorFinding("Author 2", TextLocation("LICENSE", 2)),
-                                AuthorFinding("Author 3", TextLocation("LICENSE", 50)),
-                                AuthorFinding("Author 4", TextLocation("LICENSE", 51))
                             ),
                             licenseFindingCurations = emptyList(),
                             pathExcludes = emptyList(),
@@ -294,13 +279,6 @@ class LicenseInfoResolverTest : WordSpec({
                                 CopyrightFinding("(c) 2009 Holder 2", TextLocation("LICENSE", 3)),
                                 CopyrightFinding("(c) 2010 Holder 2", TextLocation("LICENSE", 4)),
                                 CopyrightFinding("(c) 2010 Holder 3", TextLocation("LICENSE", 5))
-                            ),
-                            authors = setOf(
-                                AuthorFinding("Author 1", TextLocation("LICENSE", 1)),
-                                AuthorFinding("Author 2", TextLocation("LICENSE", 2)),
-                                AuthorFinding("Author 3", TextLocation("LICENSE", 3)),
-                                AuthorFinding("Author 4", TextLocation("LICENSE", 4)),
-                                AuthorFinding("Author 5", TextLocation("LICENSE", 5))
                             ),
                             licenseFindingCurations = emptyList(),
                             pathExcludes = emptyList(),
@@ -363,10 +341,6 @@ class LicenseInfoResolverTest : WordSpec({
                                 CopyrightFinding("(c) 2010 Holder", TextLocation("LICENSE", 1)),
                                 CopyrightFinding("(c) 2010 Holder", TextLocation("a/b", 1))
                             ),
-                            authors = setOf(
-                                AuthorFinding("Author 1", TextLocation("LICENSE", 1)),
-                                AuthorFinding("Author 2", TextLocation("a/b", 1))
-                            ),
                             licenseFindingCurations = emptyList(),
                             pathExcludes = listOf(vcsPathExclude),
                             relativeFindingsPath = ""
@@ -382,10 +356,6 @@ class LicenseInfoResolverTest : WordSpec({
                             copyrights = setOf(
                                 CopyrightFinding("(c) 2010 Holder", TextLocation("LICENSE", 1)),
                                 CopyrightFinding("(c) 2010 Holder", TextLocation("a/b", 1))
-                            ),
-                            authors = setOf(
-                                AuthorFinding("Author 1", TextLocation("LICENSE", 1)),
-                                AuthorFinding("Author 2", TextLocation("a/b", 1))
                             ),
                             licenseFindingCurations = emptyList(),
                             pathExcludes = listOf(sourceArtifactPathExclude),
@@ -455,9 +425,6 @@ class LicenseInfoResolverTest : WordSpec({
                             copyrights = setOf(
                                 CopyrightFinding("(c) 2010 Holder 1", TextLocation("LICENSE", 1))
                             ),
-                            authors = setOf(
-                                AuthorFinding("Author 1", TextLocation("LICENSE", 1))
-                            ),
                             licenseFindingCurations = listOf(curation),
                             pathExcludes = emptyList(),
                             relativeFindingsPath = ""
@@ -518,10 +485,6 @@ class LicenseInfoResolverTest : WordSpec({
                                     TextLocation("LICENSE", 1)
                                 ),
                                 CopyrightFinding("Copyright BSD Zero Clause", TextLocation("LICENSE", 31))
-                            ),
-                            authors = setOf(
-                                AuthorFinding("Author 1", TextLocation("LICENSE", 1)),
-                                AuthorFinding("Author 2", TextLocation("a/b", 31))
                             ),
                             licenseFindingCurations = emptyList(),
                             pathExcludes = emptyList(),
@@ -617,9 +580,6 @@ class LicenseInfoResolverTest : WordSpec({
                             ).toFindingsSet(),
                             copyrights = setOf(
                                 CopyrightFinding("Copyright 2020 Holder", TextLocation("LICENSE", 1))
-                            ),
-                            authors = setOf(
-                                AuthorFinding("Author 1", TextLocation("LICENSE", 1))
                             ),
                             licenseFindingCurations = emptyList(),
                             pathExcludes = emptyList(),
@@ -805,8 +765,7 @@ private fun containLocationForLicense(
     location: TextLocation,
     appliedCuration: LicenseFindingCuration? = null,
     matchingPathExcludes: List<PathExclude> = emptyList(),
-    copyrights: Set<ResolvedCopyrightFinding> = emptySet(),
-    authors: Set<ResolvedAuthorFinding> = emptySet()
+    copyrights: Set<ResolvedCopyrightFinding> = emptySet()
 ): Matcher<Iterable<ResolvedLicense>?> =
     neverNullMatcher { value ->
         val expectedLocation =
@@ -815,8 +774,7 @@ private fun containLocationForLicense(
                 location,
                 appliedCuration,
                 matchingPathExcludes,
-                copyrights,
-                authors
+                copyrights
             )
 
         val locations = value.find { it.license == SpdxSingleLicenseExpression.parse(license) }?.locations.orEmpty()

@@ -75,14 +75,6 @@ data class ResolvedLicenseFile(
         licenses.flatMapTo(mutableSetOf()) { it.getCopyrights(process, omitExcluded) }
 
     /**
-     * Return all authors associated to the licenses found in this license file. Author findings that
-     * are excluded by [PathExclude]s are [omitted][omitExcluded] by default.
-     */
-    @JvmOverloads
-    fun getAuthors(omitExcluded: Boolean = true): Set<String> =
-        licenses.flatMapTo(mutableSetOf()) { it.getAuthors(omitExcluded) }
-
-    /**
      * The textual content of the [license file][file].
      */
     val text by lazy { file.readText() }

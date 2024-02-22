@@ -620,24 +620,39 @@ internal class EvaluatedModelMapper(private val input: ReporterInput) {
             .mapNotNull { it.curatedFinding }.toSortedSet(LicenseFinding.COMPARATOR)
         val matchResult = findingsMatcher.match(
             curatedFindings,
-            scanResult.summary.copyrightFindings,
-            scanResult.summary.authorFindings
+            scanResult.summary.copyrightFindings
         )
         val matchedFindings = matchResult.matchedFindings.entries.groupBy { it.key.license }.mapValues { entry ->
             val licenseFindings = entry.value.map { it.key }
-            val matchedLicenseFindings = entry.value.map { it.value }
-            Pair(licenseFindings, matchedLicenseFindings)
+            val copyrightFindings = entry.value.flatMapTo(mutableSetOf()) { it.value }
+            Pair(licenseFindings, copyrightFindings)
         }
 
-        matchedFindings.forEach { (license, findingPairs) ->
-            val (licenseFindings, matchedLicenseFindings) = findingPairs
+        val authorFindings: Set<AuthorFinding> = scanResult.summary.authorFindings
 
-            val copyrightFindings: MutableSet<CopyrightFinding> = mutableSetOf()
-            val authorFindings: MutableSet<AuthorFinding> = mutableSetOf()
-            matchedLicenseFindings.forEach {
-                copyrightFindings.addAll(it.copyrightsFindings)
-                authorFindings.addAll(it.authorFindings)
-            }
+        // collect author findings
+        authorFindings.forEach { authorFinding ->
+            val actualAuthor = authors.addIfRequired(AuthorId(authorFinding.author))
+
+            val evaluatedPathExcludes = pathExcludes
+                .filter { it.matches(authorFinding.location.getRelativePathToRoot(id)) }
+                .let { this@EvaluatedModelMapper.pathExcludes.addIfRequired(it) }
+
+            findings += EvaluatedFinding(
+                type = EvaluatedFindingType.AUTHOR,
+                license = null,
+                copyright = null,
+                author = actualAuthor,
+                path = authorFinding.location.path,
+                startLine = authorFinding.location.startLine,
+                endLine = authorFinding.location.endLine,
+                scanResult = evaluatedScanResult,
+                pathExcludes = evaluatedPathExcludes
+            )
+        }
+        
+        matchedFindings.forEach { (license, findingPairs) ->
+            val (licenseFindings, copyrightFindings) = findingPairs
 
             // collect copyright findings
             copyrightFindings.forEach { copyrightFinding ->
@@ -655,27 +670,6 @@ internal class EvaluatedModelMapper(private val input: ReporterInput) {
                     path = copyrightFinding.location.path,
                     startLine = copyrightFinding.location.startLine,
                     endLine = copyrightFinding.location.endLine,
-                    scanResult = evaluatedScanResult,
-                    pathExcludes = evaluatedPathExcludes
-                )
-            }
-
-            // collect author findings
-            authorFindings.forEach { authorFinding ->
-                val actualAuthor = authors.addIfRequired(AuthorId(authorFinding.author))
-
-                val evaluatedPathExcludes = pathExcludes
-                    .filter { it.matches(authorFinding.location.getRelativePathToRoot(id)) }
-                    .let { this@EvaluatedModelMapper.pathExcludes.addIfRequired(it) }
-
-                findings += EvaluatedFinding(
-                    type = EvaluatedFindingType.AUTHOR,
-                    license = null,
-                    copyright = null,
-                    author = actualAuthor,
-                    path = authorFinding.location.path,
-                    startLine = authorFinding.location.startLine,
-                    endLine = authorFinding.location.endLine,
                     scanResult = evaluatedScanResult,
                     pathExcludes = evaluatedPathExcludes
                 )

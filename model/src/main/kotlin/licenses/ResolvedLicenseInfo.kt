@@ -61,13 +61,7 @@ data class ResolvedLicenseInfo(
      */
     val unmatchedCopyrights: Map<Provenance, Set<ResolvedCopyrightFinding>>,
 
-    /**
-     * All author findings that could not be matched to a license finding, mapped to the [Provenance] where they were
-     * detected.
-     */
-    val unmatchedAuthors: Map<Provenance, Set<ResolvedAuthorFinding>>
-
-) : Iterable<ResolvedLicense> by licenses {
+    ) : Iterable<ResolvedLicense> by licenses {
     operator fun get(license: SpdxSingleLicenseExpression): ResolvedLicense? = find { it.license == license }
 
     /**
@@ -105,20 +99,6 @@ data class ResolvedLicenseInfo(
 
         return copyrightStatements.takeIf { !process }
             ?: CopyrightStatementsProcessor.process(copyrightStatements).allStatements
-    }
-
-
-    /**
-     * Return all authors associated to this license info. Author findings that are excluded by
-     * [PathExclude]s are [omitted][omitExcluded] by default. The authors are [processed][process] by default
-     * using the [CopyrightStatementsProcessor].
-     */
-    @JvmOverloads
-    fun getAuthors(omitExcluded: Boolean = true): Set<String> {
-        val authors = licenses.flatMapTo(mutableSetOf()) { license ->
-            license.getAuthors(omitExcluded = omitExcluded)
-        }
-        return authors
     }
 
     /**
