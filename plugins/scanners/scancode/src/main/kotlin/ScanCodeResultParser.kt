@@ -19,10 +19,18 @@
 
 package org.ossreviewtoolkit.plugins.scanners.scancode
 
-import kotlinx.serialization.json.*
-import kotlinx.serialization.modules.SerializersModule
-import org.semver4j.Semver
 import java.io.File
+
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonNamingStrategy
+import kotlinx.serialization.json.decodeFromJsonElement
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.modules.SerializersModule
+
+import org.semver4j.Semver
 
 fun parseResult(result: File) = parseResult(result.readText())
 

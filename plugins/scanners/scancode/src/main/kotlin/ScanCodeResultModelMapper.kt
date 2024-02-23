@@ -19,12 +19,22 @@
 
 package org.ossreviewtoolkit.plugins.scanners.scancode
 
-import org.ossreviewtoolkit.model.*
-import org.ossreviewtoolkit.model.utils.associateLicensesWithExceptions
-import org.semver4j.Semver
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+
+import org.ossreviewtoolkit.model.CopyrightFinding
+import org.ossreviewtoolkit.model.AuthorFinding
+import org.ossreviewtoolkit.model.Issue
+import org.ossreviewtoolkit.model.LicenseFinding
+import org.ossreviewtoolkit.model.ScanSummary
+import org.ossreviewtoolkit.model.Severity
+import org.ossreviewtoolkit.model.TextLocation
+import org.ossreviewtoolkit.model.createAndLogIssue
+import org.ossreviewtoolkit.model.mapLicense
+import org.ossreviewtoolkit.model.utils.associateLicensesWithExceptions
+
+import org.semver4j.Semver
 
 const val MAX_SUPPORTED_OUTPUT_FORMAT_MAJOR_VERSION = 3
 

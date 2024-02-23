@@ -22,8 +22,24 @@
 package org.ossreviewtoolkit.model.utils
 
 import com.fasterxml.jackson.databind.util.StdConverter
-import org.ossreviewtoolkit.model.*
-import java.util.*
+
+import java.util.SortedSet
+
+import org.ossreviewtoolkit.model.ArtifactProvenance
+import org.ossreviewtoolkit.model.AuthorFinding
+import org.ossreviewtoolkit.model.CopyrightFinding
+import org.ossreviewtoolkit.model.FileList
+import org.ossreviewtoolkit.model.Identifier
+import org.ossreviewtoolkit.model.LicenseFinding
+import org.ossreviewtoolkit.model.Package
+import org.ossreviewtoolkit.model.PackageReference
+import org.ossreviewtoolkit.model.Project
+import org.ossreviewtoolkit.model.Provenance
+import org.ossreviewtoolkit.model.ProvenanceResolutionResult
+import org.ossreviewtoolkit.model.RepositoryProvenance
+import org.ossreviewtoolkit.model.ScanResult
+import org.ossreviewtoolkit.model.Scope
+import org.ossreviewtoolkit.model.SnippetFinding
 
 class CopyrightFindingSortedSetConverter : StdConverter<Set<CopyrightFinding>, SortedSet<CopyrightFinding>>() {
     override fun convert(value: Set<CopyrightFinding>) = value.toSortedSet(CopyrightFinding.COMPARATOR)

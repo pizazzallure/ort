@@ -19,9 +19,18 @@
 
 package org.ossreviewtoolkit.model.utils
 
-import org.ossreviewtoolkit.model.*
 import java.io.File
 import java.time.Instant
+
+import org.ossreviewtoolkit.model.CopyrightFinding
+import org.ossreviewtoolkit.model.KnownProvenance
+import org.ossreviewtoolkit.model.LicenseFinding
+import org.ossreviewtoolkit.model.OrtResult
+import org.ossreviewtoolkit.model.RepositoryProvenance
+import org.ossreviewtoolkit.model.ScanResult
+import org.ossreviewtoolkit.model.ScanSummary
+import org.ossreviewtoolkit.model.SnippetFinding
+import org.ossreviewtoolkit.model.AuthorFinding
 
 /**
  * Merge the nested [ScanResult]s into one [ScanResult] per used scanner. The entry for the empty string in
