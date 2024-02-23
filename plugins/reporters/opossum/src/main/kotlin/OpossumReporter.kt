@@ -91,6 +91,7 @@ class OpossumReporter : Reporter {
         val url: String? = null,
         val license: SpdxExpression? = null,
         val copyright: String? = null,
+        val author: String? = null,
         val comment: String? = null,
         val preselected: Boolean = false,
         val followUp: Boolean = false,
@@ -110,6 +111,7 @@ class OpossumReporter : Reporter {
                     "packageName" to id?.name,
                     "packageVersion" to id?.version,
                     "copyright" to copyright,
+                    "author" to author,
                     "licenseName" to license?.toString(),
                     "url" to url,
                     "preSelected" to preselected,
@@ -125,6 +127,7 @@ class OpossumReporter : Reporter {
                 && url == other.url
                 && license == other.license
                 && copyright == other.copyright
+                && author == other.author
                 && comment == other.comment
                 && preselected == other.preselected
     }
@@ -355,8 +358,9 @@ class OpossumReporter : Reporter {
                 id = projectId,
                 url = project.homepageUrl,
                 license = project.declaredLicensesProcessed.spdxExpression,
-                // copyright from authors
+                // TODO: copyright from authors
                 copyright = project.authors.joinToString(separator = "\n"),
+                author = project.authors.joinToString(separator = "\n"),
                 preselected = true
             )
 
@@ -393,19 +397,27 @@ class OpossumReporter : Reporter {
 
             val licenseFindings = result.summary.licenseFindings
             val copyrightFindings = result.summary.copyrightFindings
+            val authorFindings = result.summary.authorFindings
             val source = addExternalAttributionSource("ORT-Scanner-$scanner", "ORT-Scanner $scanner", 20)
             val rootsBelowMaxDepth = roots.filter { it.value <= maxDepth }.map { it.key }
 
             if (rootsBelowMaxDepth.isNotEmpty()) {
+
                 val pathsFromFindings = licenseFindings
                     .map { it.location.path }
                     .union(copyrightFindings.map { it.location.path })
+                    .union(authorFindings.map { it.location.path })
 
                 pathsFromFindings.forEach { pathFromFinding ->
                     val copyright = copyrightFindings
                         .filter { it.location.path == pathFromFinding }
                         .distinct()
                         .joinToString(separator = "\n") { it.statement }
+
+                    val author = authorFindings
+                        .filter { it.location.path == pathFromFinding }
+                        .distinct()
+                        .joinToString(separator = "\n") { it.author }
 
                     val license = licenseFindings
                         .filter { it.location.path == pathFromFinding }
@@ -416,6 +428,7 @@ class OpossumReporter : Reporter {
                     val pathSignal = OpossumSignal(
                         source,
                         copyright = copyright,
+                        author = author,
                         license = license
                     )
 
@@ -433,6 +446,10 @@ class OpossumReporter : Reporter {
                     .distinct()
                     .joinToString(separator = "\n") { it.statement }
 
+                val author = authorFindings
+                    .distinct()
+                    .joinToString(separator = "\n") { it.author }
+
                 val license = licenseFindings
                     .map { it.license }
                     .distinct()
@@ -441,6 +458,7 @@ class OpossumReporter : Reporter {
                 val rootSignal = OpossumSignal(
                     source,
                     copyright = copyright,
+                    author = author,
                     license = license
                 )
                 addSignal(rootSignal, rootsAboveMaxDepth.toSortedSet())

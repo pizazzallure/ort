@@ -864,7 +864,7 @@ class FossId internal constructor(
 
         val ignoredFiles = rawResults.listIgnoredFiles.associateBy { it.path }
 
-        val (licenseFindings, copyrightFindings) = rawResults.markedAsIdentifiedFiles.ifEmpty {
+        val (licenseFindings, copyrightFindings, authorFindings) = rawResults.markedAsIdentifiedFiles.ifEmpty {
             rawResults.identifiedFiles
         }.mapSummary(ignoredFiles, issues, detectedLicenseMapping)
 
@@ -873,6 +873,7 @@ class FossId internal constructor(
             endTime = Instant.now(),
             licenseFindings = licenseFindings,
             copyrightFindings = copyrightFindings,
+            authorFindings = authorFindings,
             snippetFindings = snippetFindings,
             issues = issues + additionalIssues
         )

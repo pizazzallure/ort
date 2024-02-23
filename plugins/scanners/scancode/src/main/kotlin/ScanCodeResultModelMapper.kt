@@ -24,6 +24,7 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 
 import org.ossreviewtoolkit.model.CopyrightFinding
+import org.ossreviewtoolkit.model.AuthorFinding
 import org.ossreviewtoolkit.model.Issue
 import org.ossreviewtoolkit.model.LicenseFinding
 import org.ossreviewtoolkit.model.ScanSummary
@@ -61,6 +62,7 @@ private data class LicenseMatch(
 fun ScanCodeResult.toScanSummary(preferFileLicense: Boolean = false): ScanSummary {
     val licenseFindings = mutableSetOf<LicenseFinding>()
     val copyrightFindings = mutableSetOf<CopyrightFinding>()
+    val authorFindings = mutableSetOf<AuthorFinding>()
     val issues = mutableListOf<Issue>()
 
     val header = headers.single()
@@ -128,6 +130,17 @@ fun ScanCodeResult.toScanSummary(preferFileLicense: Boolean = false): ScanSummar
                 )
             )
         }
+
+        file.authors.mapTo(authorFindings) { authorFinding ->
+            AuthorFinding(
+                author = authorFinding.author,
+                location = TextLocation(
+                    path = file.path,
+                    startLine = authorFinding.startLine,
+                    endLine = authorFinding.endLine
+                )
+            )
+        }
     }
 
     issues += mapScanErrors(this)
@@ -140,6 +153,7 @@ fun ScanCodeResult.toScanSummary(preferFileLicense: Boolean = false): ScanSummar
         endTime = TIMESTAMP_FORMATTER.parse(header.endTimestamp).query(Instant::from),
         licenseFindings = associateLicensesWithExceptions(licenseFindings),
         copyrightFindings = copyrightFindings,
+        authorFindings = authorFindings,
         issues = issues
     )
 }

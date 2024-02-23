@@ -26,6 +26,7 @@ import com.fasterxml.jackson.databind.util.StdConverter
 import java.util.SortedSet
 
 import org.ossreviewtoolkit.model.ArtifactProvenance
+import org.ossreviewtoolkit.model.AuthorFinding
 import org.ossreviewtoolkit.model.CopyrightFinding
 import org.ossreviewtoolkit.model.FileList
 import org.ossreviewtoolkit.model.Identifier
@@ -42,6 +43,10 @@ import org.ossreviewtoolkit.model.SnippetFinding
 
 class CopyrightFindingSortedSetConverter : StdConverter<Set<CopyrightFinding>, SortedSet<CopyrightFinding>>() {
     override fun convert(value: Set<CopyrightFinding>) = value.toSortedSet(CopyrightFinding.COMPARATOR)
+}
+
+class AuthorFindingSortedSetConverter : StdConverter<Set<AuthorFinding>, SortedSet<AuthorFinding>>() {
+    override fun convert(value: Set<AuthorFinding>) = value.toSortedSet(AuthorFinding.COMPARATOR)
 }
 
 /** Do not convert to SortedSet in order to not require a comparator consistent with equals */
@@ -101,9 +106,11 @@ private fun Provenance.getSortKey(): String =
                 this += vcsInfo.type.toString()
                 this += vcsInfo.url
             }
+
             is ArtifactProvenance -> {
                 this += sourceArtifact.url
             }
+
             else -> {
                 // Do not add anything, because unknown provenance does not have any properties.
             }

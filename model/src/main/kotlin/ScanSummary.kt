@@ -34,6 +34,7 @@ import org.ossreviewtoolkit.model.utils.CopyrightFindingSortedSetConverter
 import org.ossreviewtoolkit.model.utils.LicenseFindingSortedSetConverter
 import org.ossreviewtoolkit.model.utils.RootLicenseMatcher
 import org.ossreviewtoolkit.model.utils.SnippetFindingSortedSetConverter
+import org.ossreviewtoolkit.model.utils.AuthorFindingSortedSetConverter
 import org.ossreviewtoolkit.utils.common.FileMatcher
 import org.ossreviewtoolkit.utils.spdx.SpdxExpression
 
@@ -67,6 +68,14 @@ data class ScanSummary(
     @JsonProperty("copyrights")
     @JsonSerialize(converter = CopyrightFindingSortedSetConverter::class)
     val copyrightFindings: Set<CopyrightFinding> = emptySet(),
+
+    /**
+     * The detected author findings.
+     */
+    @JsonInclude(JsonInclude.Include.NON_EMPTY)
+    @JsonProperty("authors")
+    @JsonSerialize(converter = AuthorFindingSortedSetConverter::class)
+    val authorFindings: Set<AuthorFinding> = emptySet(),
 
     /**
      * The detected snippet findings.
@@ -127,6 +136,7 @@ data class ScanSummary(
         return copy(
             licenseFindings = licenseFindings.filterTo(mutableSetOf()) { it.location.matchesPaths() },
             copyrightFindings = copyrightFindings.filterTo(mutableSetOf()) { it.location.matchesPaths() },
+            authorFindings = authorFindings.filterTo(mutableSetOf()) { it.location.matchesPaths() },
             snippetFindings = snippetFindings.filterTo(mutableSetOf()) { it.sourceLocation.matchesPaths() },
             issues = issues.filter { it.affectedPath?.matchesPaths() ?: true }
         )
@@ -142,6 +152,7 @@ data class ScanSummary(
         return copy(
             licenseFindings = licenseFindings.filterTo(mutableSetOf()) { !matcher.matches(it.location.path) },
             copyrightFindings = copyrightFindings.filterTo(mutableSetOf()) { !matcher.matches(it.location.path) },
+            authorFindings = authorFindings.filterTo(mutableSetOf()) { !matcher.matches(it.location.path) },
             snippetFindings = snippetFindings.filterTo(mutableSetOf()) { !matcher.matches(it.sourceLocation.path) },
             issues = issues.filter { it.affectedPath == null || !matcher.matches(it.affectedPath) }
         )

@@ -52,4 +52,5 @@ data class ResolvedLicenseLocation(
      * All copyright findings associated to this license location, excluding copyright garbage.
      */
     val copyrights: Set<ResolvedCopyrightFinding>
+
 )

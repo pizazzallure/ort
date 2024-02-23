@@ -41,6 +41,7 @@ internal class EvaluatedModelMapper(private val input: ReporterInput) {
     private val dependencyTrees = mutableListOf<DependencyTreeNode>()
     private val scanResults = mutableListOf<EvaluatedScanResult>()
     private val copyrights = mutableListOf<CopyrightStatement>()
+    private val authors = mutableListOf<AuthorId>()
     private val licenses = mutableListOf<LicenseId>()
     private val scopes = mutableMapOf<String, EvaluatedScope>()
     private val issues = mutableListOf<EvaluatedIssue>()
@@ -113,6 +114,7 @@ internal class EvaluatedModelMapper(private val input: ReporterInput) {
             issueResolutions = issueResolutions,
             issues = issues,
             copyrights = copyrights,
+            authors = authors,
             licenses = licenses,
             scopes = scopes.values.toList(),
             scanResults = scanResults,
@@ -416,7 +418,7 @@ internal class EvaluatedModelMapper(private val input: ReporterInput) {
             null
         )
 
-        addLicensesAndCopyrights(pkg.id, result, actualScanResult, findings)
+        addLicensesAndCopyrightsAndAuthors(pkg.id, result, actualScanResult, findings)
 
         return actualScanResult
     }
@@ -605,7 +607,7 @@ internal class EvaluatedModelMapper(private val input: ReporterInput) {
         return vulnerabilitiesResolutions.addIfRequired(matchingResolutions)
     }
 
-    private fun addLicensesAndCopyrights(
+    private fun addLicensesAndCopyrightsAndAuthors(
         id: Identifier,
         scanResult: ScanResult,
         evaluatedScanResult: EvaluatedScanResult,
@@ -616,15 +618,43 @@ internal class EvaluatedModelMapper(private val input: ReporterInput) {
         // Sort the curated findings here to avoid the need to sort in the web-app each time it is loaded.
         val curatedFindings = curationsMatcher.applyAll(scanResult.summary.licenseFindings, licenseFindingCurations)
             .mapNotNull { it.curatedFinding }.toSortedSet(LicenseFinding.COMPARATOR)
-        val matchResult = findingsMatcher.match(curatedFindings, scanResult.summary.copyrightFindings)
+        val matchResult = findingsMatcher.match(
+            curatedFindings,
+            scanResult.summary.copyrightFindings
+        )
         val matchedFindings = matchResult.matchedFindings.entries.groupBy { it.key.license }.mapValues { entry ->
             val licenseFindings = entry.value.map { it.key }
             val copyrightFindings = entry.value.flatMapTo(mutableSetOf()) { it.value }
             Pair(licenseFindings, copyrightFindings)
         }
 
+        val authorFindings: Set<AuthorFinding> = scanResult.summary.authorFindings
+
+        // collect author findings
+        authorFindings.forEach { authorFinding ->
+            val actualAuthor = authors.addIfRequired(AuthorId(authorFinding.author))
+
+            val evaluatedPathExcludes = pathExcludes
+                .filter { it.matches(authorFinding.location.getRelativePathToRoot(id)) }
+                .let { this@EvaluatedModelMapper.pathExcludes.addIfRequired(it) }
+
+            findings += EvaluatedFinding(
+                type = EvaluatedFindingType.AUTHOR,
+                license = null,
+                copyright = null,
+                author = actualAuthor,
+                path = authorFinding.location.path,
+                startLine = authorFinding.location.startLine,
+                endLine = authorFinding.location.endLine,
+                scanResult = evaluatedScanResult,
+                pathExcludes = evaluatedPathExcludes
+            )
+        }
+        
         matchedFindings.forEach { (license, findingPairs) ->
             val (licenseFindings, copyrightFindings) = findingPairs
+
+            // collect copyright findings
             copyrightFindings.forEach { copyrightFinding ->
                 val actualCopyright = copyrights.addIfRequired(CopyrightStatement(copyrightFinding.statement))
 
@@ -635,6 +665,7 @@ internal class EvaluatedModelMapper(private val input: ReporterInput) {
                 findings += EvaluatedFinding(
                     type = EvaluatedFindingType.COPYRIGHT,
                     license = null,
+                    author = null,
                     copyright = actualCopyright,
                     path = copyrightFinding.location.path,
                     startLine = copyrightFinding.location.startLine,
@@ -655,6 +686,7 @@ internal class EvaluatedModelMapper(private val input: ReporterInput) {
                     type = EvaluatedFindingType.LICENSE,
                     license = actualLicense,
                     copyright = null,
+                    author = null,
                     path = licenseFinding.location.path,
                     startLine = licenseFinding.location.startLine,
                     endLine = licenseFinding.location.endLine,
@@ -663,6 +695,7 @@ internal class EvaluatedModelMapper(private val input: ReporterInput) {
                 )
             }
         }
+
     }
 
     private fun addShortestPaths(project: Project) {
