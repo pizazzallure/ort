@@ -19,23 +19,38 @@
 
 package org.ossreviewtoolkit.plugins.packagemanagers.maven.utils
 
+import java.io.File
+import java.net.URI
+
+import kotlin.time.Duration.Companion.hours
+
 import org.apache.logging.log4j.kotlin.logger
 import org.apache.maven.artifact.repository.LegacyLocalRepositoryManager
 import org.apache.maven.bridge.MavenRepositorySystem
-import org.apache.maven.execution.*
+import org.apache.maven.execution.DefaultMavenExecutionRequest
+import org.apache.maven.execution.DefaultMavenExecutionResult
+import org.apache.maven.execution.MavenExecutionRequest
+import org.apache.maven.execution.MavenExecutionRequestPopulator
+import org.apache.maven.execution.MavenSession
 import org.apache.maven.internal.aether.DefaultRepositorySystemSessionFactory
 import org.apache.maven.model.Scm
 import org.apache.maven.model.building.ModelBuildingRequest
 import org.apache.maven.plugin.LegacySupport
-import org.apache.maven.project.*
+import org.apache.maven.project.MavenProject
+import org.apache.maven.project.ProjectBuilder
+import org.apache.maven.project.ProjectBuildingException
+import org.apache.maven.project.ProjectBuildingRequest
+import org.apache.maven.project.ProjectBuildingResult
 import org.apache.maven.properties.internal.EnvironmentUtils
 import org.apache.maven.session.scope.internal.SessionScope
+
 import org.codehaus.plexus.DefaultContainerConfiguration
 import org.codehaus.plexus.DefaultPlexusContainer
 import org.codehaus.plexus.PlexusConstants
 import org.codehaus.plexus.PlexusContainer
 import org.codehaus.plexus.classworlds.ClassWorld
 import org.codehaus.plexus.logging.BaseLoggerManager
+
 import org.eclipse.aether.DefaultRepositorySystemSession
 import org.eclipse.aether.RepositorySystem
 import org.eclipse.aether.RepositorySystemSession
@@ -56,16 +71,34 @@ import org.eclipse.aether.transfer.AbstractTransferListener
 import org.eclipse.aether.transfer.NoRepositoryConnectorException
 import org.eclipse.aether.transfer.TransferEvent
 import org.eclipse.aether.util.repository.JreProxySelector
+
 import org.ossreviewtoolkit.analyzer.PackageManager
 import org.ossreviewtoolkit.downloader.VcsHost
-import org.ossreviewtoolkit.model.*
+import org.ossreviewtoolkit.model.Hash
+import org.ossreviewtoolkit.model.Identifier
+import org.ossreviewtoolkit.model.Package
+import org.ossreviewtoolkit.model.PackageProvider
+import org.ossreviewtoolkit.model.RemoteArtifact
+import org.ossreviewtoolkit.model.VcsInfo
+import org.ossreviewtoolkit.model.VcsType
+import org.ossreviewtoolkit.model.fromYaml
+import org.ossreviewtoolkit.model.toYaml
 import org.ossreviewtoolkit.model.utils.parseRepoManifestPath
-import org.ossreviewtoolkit.utils.common.*
-import org.ossreviewtoolkit.utils.ort.*
+import org.ossreviewtoolkit.utils.common.DiskCache
+import org.ossreviewtoolkit.utils.common.collectMessages
+import org.ossreviewtoolkit.utils.common.gibibytes
+import org.ossreviewtoolkit.utils.common.searchUpwardsForSubdirectory
+import org.ossreviewtoolkit.utils.common.splitOnWhitespace
+import org.ossreviewtoolkit.utils.common.withoutPrefix
+import org.ossreviewtoolkit.utils.ort.DeclaredLicenseProcessor
+import org.ossreviewtoolkit.utils.ort.OrtAuthenticator
+import org.ossreviewtoolkit.utils.ort.OrtProxySelector
+import org.ossreviewtoolkit.utils.ort.ProcessedDeclaredLicense
+import org.ossreviewtoolkit.utils.ort.downloadText
+import org.ossreviewtoolkit.utils.ort.okHttpClient
+import org.ossreviewtoolkit.utils.ort.ortDataDirectory
+import org.ossreviewtoolkit.utils.ort.showStackTrace
 import org.ossreviewtoolkit.utils.spdx.SpdxOperator
-import java.io.File
-import java.net.URI
-import kotlin.time.Duration.Companion.hours
 
 fun Artifact.identifier() = "$groupId:$artifactId:$version"
 

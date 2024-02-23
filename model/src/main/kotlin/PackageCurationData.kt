@@ -24,7 +24,6 @@ import com.fasterxml.jackson.annotation.JsonInclude
 import org.ossreviewtoolkit.utils.common.zip
 import org.ossreviewtoolkit.utils.ort.DeclaredLicenseProcessor
 import org.ossreviewtoolkit.utils.spdx.SpdxExpression
-import java.util.*
 
 /**
  * This class contains curation data for a package. It is used to amend the automatically detected metadata for a

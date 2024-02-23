@@ -27,11 +27,18 @@ import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.maps.haveSize
 import io.kotest.matchers.should
 import io.kotest.matchers.shouldBe
+
 import org.ossreviewtoolkit.analyzer.managers.analyze
 import org.ossreviewtoolkit.analyzer.managers.create
 import org.ossreviewtoolkit.analyzer.managers.resolveSingleProject
 import org.ossreviewtoolkit.downloader.VersionControlSystem
-import org.ossreviewtoolkit.model.*
+import org.ossreviewtoolkit.model.Identifier
+import org.ossreviewtoolkit.model.Project
+import org.ossreviewtoolkit.model.ProjectAnalyzerResult
+import org.ossreviewtoolkit.model.Scope
+import org.ossreviewtoolkit.model.VcsInfo
+import org.ossreviewtoolkit.model.VcsType
+import org.ossreviewtoolkit.model.toYaml
 import org.ossreviewtoolkit.utils.ort.normalizeVcsUrl
 import org.ossreviewtoolkit.utils.test.getAssetFile
 import org.ossreviewtoolkit.utils.test.matchExpectedResult

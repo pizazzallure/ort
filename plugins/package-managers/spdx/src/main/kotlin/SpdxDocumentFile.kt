@@ -21,15 +21,32 @@
 
 package org.ossreviewtoolkit.plugins.packagemanagers.spdx
 
+import java.io.File
+
 import org.apache.logging.log4j.kotlin.logger
+
 import org.ossreviewtoolkit.analyzer.AbstractPackageManagerFactory
 import org.ossreviewtoolkit.analyzer.PackageManager
 import org.ossreviewtoolkit.analyzer.PackageManagerResult
 import org.ossreviewtoolkit.analyzer.managers.utils.PackageManagerDependencyHandler
 import org.ossreviewtoolkit.downloader.VersionControlSystem
-import org.ossreviewtoolkit.model.*
+import org.ossreviewtoolkit.model.Hash
+import org.ossreviewtoolkit.model.HashAlgorithm
+import org.ossreviewtoolkit.model.Identifier
+import org.ossreviewtoolkit.model.Issue
+import org.ossreviewtoolkit.model.Package
+import org.ossreviewtoolkit.model.PackageLinkage
+import org.ossreviewtoolkit.model.PackageReference
+import org.ossreviewtoolkit.model.Project
+import org.ossreviewtoolkit.model.ProjectAnalyzerResult
+import org.ossreviewtoolkit.model.RemoteArtifact
+import org.ossreviewtoolkit.model.Scope
+import org.ossreviewtoolkit.model.VcsInfo
+import org.ossreviewtoolkit.model.VcsType
 import org.ossreviewtoolkit.model.config.AnalyzerConfiguration
 import org.ossreviewtoolkit.model.config.RepositoryConfiguration
+import org.ossreviewtoolkit.model.createAndLogIssue
+import org.ossreviewtoolkit.model.orEmpty
 import org.ossreviewtoolkit.model.utils.toPurl
 import org.ossreviewtoolkit.plugins.packagemanagers.spdx.utils.SpdxDocumentCache
 import org.ossreviewtoolkit.plugins.packagemanagers.spdx.utils.SpdxResolvedDocument
@@ -39,9 +56,12 @@ import org.ossreviewtoolkit.utils.common.toUri
 import org.ossreviewtoolkit.utils.common.withoutPrefix
 import org.ossreviewtoolkit.utils.spdx.SpdxConstants
 import org.ossreviewtoolkit.utils.spdx.SpdxExpression
-import org.ossreviewtoolkit.utils.spdx.model.*
+import org.ossreviewtoolkit.utils.spdx.model.SpdxDocument
+import org.ossreviewtoolkit.utils.spdx.model.SpdxExternalDocumentReference
+import org.ossreviewtoolkit.utils.spdx.model.SpdxExternalReference
+import org.ossreviewtoolkit.utils.spdx.model.SpdxPackage
+import org.ossreviewtoolkit.utils.spdx.model.SpdxRelationship
 import org.ossreviewtoolkit.utils.spdx.toSpdx
-import java.io.File
 
 private const val MANAGER_NAME = "SpdxDocumentFile"
 private const val DEFAULT_SCOPE_NAME = "default"
