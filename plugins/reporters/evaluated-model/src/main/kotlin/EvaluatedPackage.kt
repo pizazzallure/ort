@@ -44,6 +44,13 @@ data class EvaluatedPackage(
     val purl: String? = null,
     @JsonInclude(JsonInclude.Include.NON_EMPTY)
     val authors: Set<String>,
+
+    /**
+     * The set of copyright holders of this package.
+     */
+    @JsonInclude(JsonInclude.Include.NON_EMPTY)
+    val copyrightHolders: Set<String>,
+
     @JsonInclude(JsonInclude.Include.NON_EMPTY)
     val declaredLicenses: List<LicenseId>,
     val declaredLicensesProcessed: EvaluatedProcessedDeclaredLicense,

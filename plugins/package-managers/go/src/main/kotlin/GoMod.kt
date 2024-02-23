@@ -138,6 +138,8 @@ class GoMod(
                         id = moduleInfoForModuleName.values.single { it.main }.toId(),
                         definitionFilePath = VersionControlSystem.getPathInfo(definitionFile).path,
                         authors = emptySet(), // Go mod doesn't support author information.
+                        // TODO: Check if package manager support native copyright holders
+                        copyrightHolders = emptySet(),
                         declaredLicenses = emptySet(), // Go mod doesn't support declared licenses.
                         vcs = projectVcs,
                         vcsProcessed = projectVcs,
@@ -316,6 +318,7 @@ class GoMod(
         return Package(
             id = toId(),
             authors = emptySet(), // Go mod doesn't support author information.
+            copyrightHolders = emptySet(),
             declaredLicenses = emptySet(), // Go mod doesn't support declared licenses.
             description = "",
             homepageUrl = "",

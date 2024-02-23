@@ -447,7 +447,8 @@ class Scanner(
 
     private fun Collection<Package>.filterNotConcluded(): Collection<Package> =
         takeUnless { scannerConfig.skipConcluded }
-            ?: partition { it.concludedLicense != null && it.authors.isNotEmpty() }.let { (skip, keep) ->
+        // To determine if the package is concluded license, the concluded license must exist, and either authors or copyright holders must not be empty.
+            ?: partition { it.concludedLicense != null && (it.authors.isNotEmpty() || it.copyrightHolders.isNotEmpty()) }.let { (skip, keep) ->
                 if (skip.isNotEmpty()) {
                     logger.debug {
                         "Not scanning the following package(s) with concluded licenses: $skip"

@@ -27,6 +27,8 @@ class WebAppPackage {
 
     #authors = new Set();
 
+    #copyright_holders = new Set();
+
     #binaryArtifact;
 
     #concludedLicense;
@@ -129,6 +131,11 @@ class WebAppPackage {
 
             if (obj.authors) {
                 this.#authors = new Set(obj.authors);
+            }
+
+            if (obj.copyright_holders || obj.copyrightHolders) {
+                const copyrightHolders = obj.copyright_holders || obj.copyrightHolders;
+                this.#copyright_holders = new Set(copyrightHolders);
             }
 
             if (obj.binary_artifact || obj.binaryArtifact) {
@@ -332,6 +339,10 @@ class WebAppPackage {
 
     get authors() {
         return this.#authors;
+    }
+
+    get copyright_holders() {
+        return this.#copyright_holders;
     }
 
     get binaryArtifact() {
@@ -630,6 +641,10 @@ class WebAppPackage {
         return this.#authors.size !== 0;
     }
 
+    hasCopyrightHolders() {
+        return this.#copyright_holders.size !== 0;
+    }
+
     hasConcludedLicense() {
         return this.#concludedLicense
             && this.#concludedLicense.length !== 0;
@@ -711,6 +726,7 @@ class WebAppPackage {
     hasRuleViolations() {
         return this.ruleViolations.length > 0;
     }
+
 }
 
 export default WebAppPackage;

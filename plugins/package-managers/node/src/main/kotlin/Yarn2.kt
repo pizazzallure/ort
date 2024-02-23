@@ -471,6 +471,9 @@ class Yarn2(
 
             val hash = details.hash
             val authors = details.author
+            // TODO: Check if package manager support native copyright holders
+            //      val copyrightHolders: Set<String> = emptySet()
+
             var vcsFromPackage = details.vcsFromPackage
 
             if (details.vcsFromDownloadUrl.url != details.downloadUrl) {

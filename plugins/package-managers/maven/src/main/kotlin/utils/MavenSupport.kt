@@ -158,7 +158,7 @@ class MavenSupport(private val workspaceReader: WorkspaceReader) {
             }
 
         fun processDeclaredLicenses(licenses: Set<String>): ProcessedDeclaredLicense =
-            // See http://maven.apache.org/ref/3.6.3/maven-model/maven.html#project which says: "If multiple licenses
+        // See http://maven.apache.org/ref/3.6.3/maven-model/maven.html#project which says: "If multiple licenses
             // are listed, it is assumed that the user can select any of them, not that they must accept all."
             DeclaredLicenseProcessor.process(licenses, operator = SpdxOperator.OR)
 
@@ -775,6 +775,8 @@ class MavenSupport(private val workspaceReader: WorkspaceReader) {
                 version = mavenProject.version
             ),
             authors = parseAuthors(mavenProject),
+            // TODO: Check if package manager support native copyright holders
+            copyrightHolders = emptySet(),
             declaredLicenses = declaredLicenses,
             declaredLicensesProcessed = declaredLicensesProcessed,
             description = mavenProject.description.orEmpty(),

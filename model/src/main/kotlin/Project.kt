@@ -63,6 +63,13 @@ data class Project(
     val authors: Set<String> = emptySet(),
 
     /**
+     * The set of copyright holders of this package.
+     */
+    @JsonInclude(JsonInclude.Include.NON_DEFAULT)
+    @JsonSerialize(converter = StringSortedSetConverter::class)
+    val copyrightHolders: Set<String> = emptySet(),
+
+    /**
      * The set of licenses declared for this project. This does not necessarily correspond to the licenses as detected
      * by a scanner. Both need to be taken into account for any conclusions.
      */
@@ -117,6 +124,7 @@ data class Project(
             id = Identifier.EMPTY,
             definitionFilePath = "",
             authors = emptySet(),
+            copyrightHolders = emptySet(),
             declaredLicenses = emptySet(),
             declaredLicensesProcessed = ProcessedDeclaredLicense.EMPTY,
             vcs = VcsInfo.EMPTY,
@@ -173,6 +181,7 @@ data class Project(
         Package(
             id = id,
             authors = authors,
+            copyrightHolders = copyrightHolders,
             declaredLicenses = declaredLicenses,
             description = "",
             homepageUrl = homepageUrl,

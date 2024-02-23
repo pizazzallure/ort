@@ -33,7 +33,6 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
-
 import org.apache.logging.log4j.kotlin.logger
 
 import org.ossreviewtoolkit.analyzer.AbstractPackageManagerFactory
@@ -346,6 +345,9 @@ open class Npm(
         val module = Package(
             id = id,
             authors = authors,
+            // NPM Do not support native copyright holder in package configuration
+            // https://docs.npmjs.com/cli/v10/configuring-npm/package-json
+            copyrightHolders = emptySet(),
             declaredLicenses = declaredLicenses,
             description = description,
             homepageUrl = homepageUrl,
@@ -553,6 +555,9 @@ open class Npm(
             ),
             definitionFilePath = VersionControlSystem.getPathInfo(packageJson).path,
             authors = authors,
+            // NPM Do not support native copyright holder in package configuration
+            // https://docs.npmjs.com/cli/v10/configuring-npm/package-json
+            copyrightHolders = emptySet(),
             declaredLicenses = declaredLicenses,
             vcs = vcsFromPackage,
             vcsProcessed = processProjectVcs(projectDir, vcsFromPackage, homepageUrl),

@@ -219,6 +219,8 @@ class Bundler(
                 id = projectId,
                 definitionFilePath = VersionControlSystem.getPathInfo(definitionFile).path,
                 authors = authors,
+                // TODO: Check if package manager support native copyright holders
+                copyrightHolders = emptySet(),
                 declaredLicenses = declaredLicenses,
                 vcs = VcsInfo.EMPTY,
                 vcsProcessed = processProjectVcs(workingDir, VcsInfo.EMPTY, homepageUrl),
@@ -344,6 +346,8 @@ class Bundler(
         return Package(
             id = gemId,
             authors = gemSpec.authors,
+            // TODO: Check if package manager support native copyright holders
+            copyrightHolders = emptySet(),
             declaredLicenses = gemSpec.declaredLicenses,
             description = gemSpec.description,
             homepageUrl = gemSpec.homepageUrl,

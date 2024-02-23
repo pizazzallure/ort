@@ -52,6 +52,8 @@ internal fun PythonInspector.Result.toOrtProject(
         id = id,
         definitionFilePath = VersionControlSystem.getPathInfo(definitionFile).path,
         authors = projectData?.parties?.toAuthors() ?: emptySet(),
+        // TODO: Check if package manager support native copyright holders
+        copyrightHolders = emptySet(),
         declaredLicenses = projectData?.declaredLicense?.getDeclaredLicenses() ?: emptySet(),
         vcs = VcsInfo.EMPTY,
         vcsProcessed = PackageManager.processProjectVcs(definitionFile.parentFile, VcsInfo.EMPTY, homepageUrl),
@@ -143,6 +145,8 @@ internal fun List<PythonInspector.Package>.toOrtPackages(): Set<Package> =
             id = id,
             purl = pkg.purl,
             authors = pkg.parties.toAuthors(),
+            // TODO: Check if package manager support native copyright holders
+            copyrightHolders = emptySet(),
             declaredLicenses = declaredLicenses,
             declaredLicensesProcessed = declaredLicensesProcessed,
             // Only use the first line of the description because the descriptions provided by python-inspector are

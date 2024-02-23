@@ -357,6 +357,102 @@ fun RuleSet.wrongLicenseInLicenseFileRule() = projectSourceRule("WRONG_LICENSE_I
 }
 
 /**
+ * check if the detected copyrights is empty for current package.
+ */
+fun PackageRule.hasMissingDetectedCopyrights(): RuleMatcher {
+    // check if the detected copyrights is empty for current package
+    return object : RuleMatcher {
+        override val description = "hasMissingDetectedCopyrights()"
+
+        override fun matches(): Boolean {
+            val scannerRun = ruleSet.ortResult.scanner ?: return false
+            val packageProvenances = scannerRun.provenances.associateBy { it.id }
+            val packageProvenance = packageProvenances.get(pkg.metadata.id)?.packageProvenance
+
+            val scanResults = scannerRun.scanResults
+            val scanResult = scanResults.filter { it.provenance == packageProvenance }.first()
+            val detectedcopyrightFindings = scanResult.summary.copyrightFindings
+            return detectedcopyrightFindings.isEmpty()
+        }
+    }
+}
+
+fun PackageRule.hasUnmatchedCopyrightsBetweenDetectedAndCurated(): RuleMatcher {
+    // check dependencies package if the detected copyrights match the curated copyright holders
+    return object : RuleMatcher {
+        override val description = "hasUnmatchedCopyrightsBetweenDetectedAndCurated()"
+
+        override fun matches(): Boolean {
+            val analyzerRun = ruleSet.ortResult.analyzer ?: return false
+            val scanProjects = analyzerRun.result.projects.associateBy { it.id }
+            if (scanProjects.contains(pkg.metadata.id)) {
+                // skip checking the parent project
+                return false
+            }
+
+            val scannerRun = ruleSet.ortResult.scanner ?: return false
+            val packageProvenances = scannerRun.provenances.associateBy { it.id }
+            val packageProvenance = packageProvenances.get(pkg.metadata.id)?.packageProvenance
+
+            val scanResults = scannerRun.scanResults
+            val scanResult = scanResults.filter { it.provenance == packageProvenance }.first()
+            val detectedCopyrightFindings = scanResult.summary.copyrightFindings
+
+            // curated copyright holders
+            val curatedCopyrightHolders = pkg.metadata.copyrightHolders
+            // detected copyrights statements
+            val detectedCopyrightStatements = detectedCopyrightFindings.map { detectedCopyrightFinding ->
+                detectedCopyrightFinding.statement
+            }.toSet()
+
+            return detectedCopyrightStatements != curatedCopyrightHolders
+        }
+    }
+}
+
+fun PackageRule.howToFixDetectedCopyrightsMissingRule(pkg: CuratedPackage): String {
+    val howToFix = """
+            Detected copyrights from Scanner Run are empty, please check the package.
+        """.trimIndent()
+    return howToFix
+}
+
+fun PackageRule.howToFixCopyrightHolderBetweenDetectedAndCuratedUnmatchedRule(pkg: CuratedPackage): String {
+    val howToFix = """
+            The detected copyrights from Scanner Run do not match the curated copyright holders from curation file.
+        """.trimIndent()
+    return howToFix
+}
+
+fun RuleSet.detectedCopyrightsMissingRule() =
+    packageRule("DETECTED_COPYRIGHTS_MISSING_IN_PACKAGE") {
+        require {
+            -isExcluded()
+            +hasMissingDetectedCopyrights()
+        }
+
+        issue(
+            Severity.ERROR,
+            "The package ${pkg.metadata.id.toCoordinates()} has empty detected copyrights from Scanner Run",
+            howToFixDetectedCopyrightsMissingRule(pkg)
+        )
+    }
+
+fun RuleSet.copyrightHolderBetweenDeclaredAndDetectedUnmatchedRule() =
+    packageRule("COPYRIGHTS_BETWEEN_DETECTED_AND_CURATED_UNMATCHED_RULE") {
+        require {
+            -isExcluded()
+            +hasUnmatchedCopyrightsBetweenDetectedAndCurated()
+        }
+
+        issue(
+            Severity.WARNING,
+            "The package ${pkg.metadata.id.toCoordinates()} has unmatched copyrights between detected copyrights from Scanner Run and curated copyrights from Curations file.",
+            howToFixCopyrightHolderBetweenDetectedAndCuratedUnmatchedRule(pkg)
+        )
+    }
+
+/**
  * The set of policy rules.
  */
 val ruleSet = ruleSet(ortResult, licenseInfoResolver, resolutionProvider) {
@@ -367,6 +463,8 @@ val ruleSet = ruleSet(ortResult, licenseInfoResolver, resolutionProvider) {
     copyleftInSourceLimitedRule()
     vulnerabilityInPackageRule()
     highSeverityVulnerabilityInPackageRule()
+    detectedCopyrightsMissingRule()
+    copyrightHolderBetweenDeclaredAndDetectedUnmatchedRule()
 
     // Rules which get executed for each dependency (of any project):
     copyleftInDependencyRule()

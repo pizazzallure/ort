@@ -228,6 +228,8 @@ class GradleInspector(
             id = projectId,
             definitionFilePath = VersionControlSystem.getPathInfo(definitionFile).path,
             authors = emptySet(),
+            // TODO: Check if package manager support native copyright holders
+            copyrightHolders = emptySet(),
             declaredLicenses = emptySet(),
             vcs = VcsInfo.EMPTY,
             vcsProcessed = processProjectVcs(definitionFile.parentFile),
@@ -274,6 +276,8 @@ class GradleInspector(
             Package(
                 id = id,
                 authors = model.authors,
+                // TODO: Check if package manager support native copyright holders
+                copyrightHolders = emptySet(),
                 declaredLicenses = model.licenses,
                 declaredLicensesProcessed = DeclaredLicenseProcessor.process(
                     model.licenses,

@@ -58,6 +58,7 @@ class DefaultLicenseInfoProvider(val ortResult: OrtResult) : LicenseInfoProvider
         ortResult.getProject(id)?.let { project ->
             DeclaredLicenseInfo(
                 authors = project.authors,
+                copyrightHolders = project.copyrightHolders,
                 licenses = project.declaredLicenses,
                 processed = project.declaredLicensesProcessed,
                 appliedCurations = emptyList()
@@ -65,12 +66,14 @@ class DefaultLicenseInfoProvider(val ortResult: OrtResult) : LicenseInfoProvider
         } ?: ortResult.getPackage(id)?.let { (pkg, curations) ->
             DeclaredLicenseInfo(
                 authors = pkg.authors,
+                copyrightHolders = pkg.copyrightHolders,
                 licenses = pkg.declaredLicenses,
                 processed = pkg.declaredLicensesProcessed,
                 appliedCurations = curations.filter { it.curation.declaredLicenseMapping.isNotEmpty() }
             )
         } ?: DeclaredLicenseInfo(
             authors = emptySet(),
+            copyrightHolders = emptySet(),
             licenses = emptySet(),
             processed = ProcessedDeclaredLicense(null),
             appliedCurations = emptyList()

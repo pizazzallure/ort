@@ -1286,7 +1286,13 @@ private fun createIdentifier(index: Int = 1): Identifier =
  * Create a test [Package] with the given [id] , [vcsInfo], and [authors].
  */
 private fun createPackage(id: Identifier, vcsInfo: VcsInfo, authors: Set<String> = emptySet()): Package =
-    Package.EMPTY.copy(id = id, vcsProcessed = vcsInfo, authors = authors)
+    Package.EMPTY.copy(
+        id = id,
+        vcsProcessed = vcsInfo,
+        authors = authors,
+        // TODO: Check if package manager support native copyright holders
+        copyrightHolders = emptySet(),
+    )
 
 /**
  * Generate the path to a test file based on the given [index].

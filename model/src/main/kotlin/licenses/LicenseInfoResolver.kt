@@ -83,6 +83,26 @@ class LicenseInfoResolver(
                 licenseInfo.concludedLicenseInfo.concludedLicense?.also {
                     originalExpressions += ResolvedOriginalExpression(expression = it, source = LicenseSource.CONCLUDED)
                 }
+
+                val curatedCopyrightHolders: MutableSet<String> = mutableSetOf()
+                licenseInfo.concludedLicenseInfo.appliedCurations.forEach {
+                    it.curation.copyrightHolders?.let { it1 -> curatedCopyrightHolders.addAll(it1) }
+                }
+
+                // associate the curated copyright holder to the concluded licenses.
+                locations += ResolvedLicenseLocation(
+                    provenance = UnknownProvenance,
+                    location = UNDEFINED_TEXT_LOCATION,
+                    appliedCuration = null,
+                    matchingPathExcludes = emptyList(),
+                    copyrights = curatedCopyrightHolders.mapTo(mutableSetOf()) { copyrightHolder ->
+                        ResolvedCopyrightFinding(
+                            statement = copyrightHolder,
+                            location = UNDEFINED_TEXT_LOCATION,
+                            matchingPathExcludes = emptyList()
+                        )
+                    }
+                )
             }
         }
 

@@ -26,7 +26,6 @@ import java.io.File
 import java.io.IOException
 
 import org.apache.logging.log4j.kotlin.logger
-
 import org.ossreviewtoolkit.analyzer.AbstractPackageManagerFactory
 import org.ossreviewtoolkit.analyzer.PackageManager
 import org.ossreviewtoolkit.downloader.VersionControlSystem
@@ -231,6 +230,8 @@ class Composer(
             ),
             definitionFilePath = VersionControlSystem.getPathInfo(definitionFile).path,
             authors = parseAuthors(json),
+            // TODO: Check if package manager support native copyright holders
+            copyrightHolders = emptySet(),
             declaredLicenses = parseDeclaredLicenses(json),
             vcs = vcs,
             vcsProcessed = processProjectVcs(definitionFile.parentFile, vcs, homepageUrl),
@@ -263,6 +264,8 @@ class Composer(
                         version = version
                     ),
                     authors = parseAuthors(pkgInfo),
+                    // TODO: Check if package manager support native copyright holders
+                    copyrightHolders = emptySet(),
                     declaredLicenses = parseDeclaredLicenses(pkgInfo),
                     description = pkgInfo["description"].textValueOrEmpty(),
                     homepageUrl = homepageUrl,

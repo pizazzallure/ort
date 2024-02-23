@@ -64,6 +64,13 @@ data class Package(
     val authors: Set<String> = emptySet(),
 
     /**
+     * The set of copyright holders of this package.
+     */
+    @JsonInclude(JsonInclude.Include.NON_DEFAULT)
+    @JsonSerialize(converter = StringSortedSetConverter::class)
+    val copyrightHolders: Set<String> = emptySet(),
+
+    /**
      * The set of licenses declared for this package. This does not necessarily correspond to the licenses as detected
      * by a scanner. Both need to be taken into account for any conclusions.
      */
@@ -140,6 +147,7 @@ data class Package(
             id = Identifier.EMPTY,
             purl = "",
             authors = emptySet(),
+            copyrightHolders = emptySet(),
             declaredLicenses = emptySet(),
             declaredLicensesProcessed = ProcessedDeclaredLicense.EMPTY,
             concludedLicense = null,
@@ -164,6 +172,7 @@ data class Package(
 
         return PackageCurationData(
             authors = authors.takeIf { it != other.authors },
+            copyrightHolders = copyrightHolders.takeIf { it != other.copyrightHolders },
             description = description.takeIf { it != other.description },
             homepageUrl = homepageUrl.takeIf { it != other.homepageUrl },
             binaryArtifact = binaryArtifact.takeIf { it != other.binaryArtifact },

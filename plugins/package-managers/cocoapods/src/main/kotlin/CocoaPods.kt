@@ -31,7 +31,6 @@ import java.io.File
 import java.io.IOException
 
 import org.apache.logging.log4j.kotlin.logger
-
 import org.ossreviewtoolkit.analyzer.AbstractPackageManagerFactory
 import org.ossreviewtoolkit.analyzer.PackageManager
 import org.ossreviewtoolkit.downloader.VersionControlSystem
@@ -151,6 +150,7 @@ class CocoaPods(
                 ),
                 definitionFilePath = VersionControlSystem.getPathInfo(definitionFile).path,
                 authors = emptySet(),
+                copyrightHolders = emptySet(),
                 declaredLicenses = emptySet(),
                 vcs = VcsInfo.EMPTY,
                 vcsProcessed = processProjectVcs(workingDir),
@@ -177,6 +177,7 @@ class CocoaPods(
         return Package(
             id = id,
             authors = emptySet(),
+            copyrightHolders = emptySet(),
             declaredLicenses = podspec.license.takeUnless { it.isEmpty() }?.let { setOf(it) } ?: emptySet(),
             description = podspec.summary,
             homepageUrl = podspec.homepage,

@@ -670,6 +670,7 @@ private fun createResolver(
 private fun createLicenseInfo(
     id: Identifier,
     authors: Set<String> = emptySet(),
+    copyrightHolders: Set<String> = emptySet(),
     declaredLicenses: Set<String> = emptySet(),
     detectedLicenses: List<Findings> = emptyList(),
     concludedLicense: SpdxExpression? = null
@@ -677,6 +678,7 @@ private fun createLicenseInfo(
     id = id,
     declaredLicenseInfo = DeclaredLicenseInfo(
         authors = authors,
+        copyrightHolders = copyrightHolders,
         licenses = declaredLicenses,
         processed = DeclaredLicenseProcessor.process(declaredLicenses),
         appliedCurations = emptyList()

@@ -45,6 +45,7 @@ import org.ossreviewtoolkit.model.VcsInfo
 import org.ossreviewtoolkit.model.config.PluginConfiguration
 import org.ossreviewtoolkit.model.utils.getPurlType
 import org.ossreviewtoolkit.model.utils.toPurl
+import org.ossreviewtoolkit.plugins.reporters.opossum.OpossumReporter.OpossumInput
 import org.ossreviewtoolkit.reporter.Reporter
 import org.ossreviewtoolkit.reporter.ReporterInput
 import org.ossreviewtoolkit.utils.common.packZip
@@ -354,6 +355,7 @@ class OpossumReporter : Reporter {
                 id = projectId,
                 url = project.homepageUrl,
                 license = project.declaredLicensesProcessed.spdxExpression,
+                // copyright from authors
                 copyright = project.authors.joinToString(separator = "\n"),
                 preselected = true
             )

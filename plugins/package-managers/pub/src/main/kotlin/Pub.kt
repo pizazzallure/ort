@@ -182,6 +182,7 @@ class Pub(
                     else -> throw IllegalArgumentException("Unsupported macOS architecture '$arch'.")
                 }
             }
+
             else -> throw IllegalArgumentException("Unsupported operating system.")
         }
 
@@ -502,6 +503,8 @@ class Pub(
             ),
             definitionFilePath = VersionControlSystem.getPathInfo(definitionFile).path,
             authors = authors,
+            // TODO: Check if package manager support native copyright holders
+            copyrightHolders = emptySet(),
             // Pub does not declare any licenses in the pubspec files, therefore we keep this empty.
             declaredLicenses = emptySet(),
             vcs = vcs,
@@ -626,6 +629,8 @@ class Pub(
                     packages[id] = Package(
                         id,
                         authors = authors,
+                        // TODO: Check if package manager support native copyright holders
+                        copyrightHolders = emptySet(),
                         // Pub does not declare any licenses in the pubspec files, therefore we keep this empty.
                         declaredLicenses = emptySet(),
                         description = description,
