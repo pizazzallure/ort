@@ -21,11 +21,17 @@ package org.ossreviewtoolkit.plugins.reporters.evaluatedmodel
 
 import com.fasterxml.jackson.annotation.JsonIdentityReference
 import com.fasterxml.jackson.annotation.JsonInclude
-import org.ossreviewtoolkit.model.*
+
+import java.util.SortedSet
+
+import org.ossreviewtoolkit.model.Identifier
+import org.ossreviewtoolkit.model.Package
+import org.ossreviewtoolkit.model.PackageCurationResult
+import org.ossreviewtoolkit.model.RemoteArtifact
+import org.ossreviewtoolkit.model.VcsInfo
 import org.ossreviewtoolkit.model.config.PathExclude
 import org.ossreviewtoolkit.model.config.ScopeExclude
 import org.ossreviewtoolkit.utils.spdx.SpdxExpression
-import java.util.*
 
 /**
  * The evaluated form of a [Package] used by the [EvaluatedModel].

@@ -21,19 +21,33 @@
 
 package org.ossreviewtoolkit.plugins.packagemanagers.cargo
 
+import java.io.File
+
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonNamingStrategy
+
 import net.peanuuutz.tomlkt.Toml
 import net.peanuuutz.tomlkt.decodeFromNativeReader
+
 import org.apache.logging.log4j.kotlin.logger
+
 import org.ossreviewtoolkit.analyzer.AbstractPackageManagerFactory
 import org.ossreviewtoolkit.analyzer.PackageManager
 import org.ossreviewtoolkit.analyzer.parseAuthorString
 import org.ossreviewtoolkit.downloader.VcsHost
 import org.ossreviewtoolkit.downloader.VersionControlSystem
-import org.ossreviewtoolkit.model.*
+import org.ossreviewtoolkit.model.Hash
+import org.ossreviewtoolkit.model.Identifier
+import org.ossreviewtoolkit.model.Package
+import org.ossreviewtoolkit.model.PackageLinkage
+import org.ossreviewtoolkit.model.PackageReference
+import org.ossreviewtoolkit.model.Project
+import org.ossreviewtoolkit.model.ProjectAnalyzerResult
+import org.ossreviewtoolkit.model.RemoteArtifact
+import org.ossreviewtoolkit.model.Scope
 import org.ossreviewtoolkit.model.config.AnalyzerConfiguration
 import org.ossreviewtoolkit.model.config.RepositoryConfiguration
+import org.ossreviewtoolkit.model.orEmpty
 import org.ossreviewtoolkit.utils.common.CommandLineTool
 import org.ossreviewtoolkit.utils.common.splitOnWhitespace
 import org.ossreviewtoolkit.utils.common.unquote
@@ -42,7 +56,6 @@ import org.ossreviewtoolkit.utils.ort.DeclaredLicenseProcessor
 import org.ossreviewtoolkit.utils.ort.ProcessedDeclaredLicense
 import org.ossreviewtoolkit.utils.spdx.SpdxConstants
 import org.ossreviewtoolkit.utils.spdx.SpdxOperator
-import java.io.File
 
 private val json = Json {
     ignoreUnknownKeys = true
@@ -242,9 +255,9 @@ private fun parseDeclaredLicenses(pkg: CargoMetadata.Package): Set<String> {
 }
 
 private fun processDeclaredLicenses(licenses: Set<String>): ProcessedDeclaredLicense =
-// While the previously used "/" was not explicit about the intended license operator, the community consensus
-// seems to be that an existing "/" should be interpreted as "OR", see e.g. the discussions at
-// https://github.com/rust-lang/cargo/issues/2039
+    // While the previously used "/" was not explicit about the intended license operator, the community consensus
+    // seems to be that an existing "/" should be interpreted as "OR", see e.g. the discussions at
+    // https://github.com/rust-lang/cargo/issues/2039
     // https://github.com/rust-lang/cargo/pull/4920
     DeclaredLicenseProcessor.process(licenses, operator = SpdxOperator.OR)
 

@@ -19,6 +19,9 @@
 
 package org.ossreviewtoolkit.model.licenses
 
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.ConcurrentMap
+
 import org.ossreviewtoolkit.model.Identifier
 import org.ossreviewtoolkit.model.OrtResult
 import org.ossreviewtoolkit.model.Provenance
@@ -26,8 +29,6 @@ import org.ossreviewtoolkit.model.config.LicenseFindingCuration
 import org.ossreviewtoolkit.model.config.PathExclude
 import org.ossreviewtoolkit.model.utils.filterByVcsPath
 import org.ossreviewtoolkit.utils.ort.ProcessedDeclaredLicense
-import java.util.concurrent.ConcurrentHashMap
-import java.util.concurrent.ConcurrentMap
 
 /**
  * The default [LicenseInfoProvider] that collects license information from an [ortResult].
