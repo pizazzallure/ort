@@ -21,6 +21,7 @@ package org.ossreviewtoolkit.model
 
 import com.fasterxml.jackson.annotation.JsonInclude
 import com.fasterxml.jackson.databind.annotation.JsonSerialize
+
 import org.ossreviewtoolkit.model.utils.toPurl
 import org.ossreviewtoolkit.utils.common.StringSortedSetConverter
 import org.ossreviewtoolkit.utils.ort.DeclaredLicenseProcessor
