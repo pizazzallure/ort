@@ -19,12 +19,24 @@
 
 package org.ossreviewtoolkit.plugins.packagemanagers.nuget.utils
 
+import java.io.File
+
 import org.ossreviewtoolkit.analyzer.PackageManager
 import org.ossreviewtoolkit.downloader.VersionControlSystem
-import org.ossreviewtoolkit.model.*
+import org.ossreviewtoolkit.model.Hash
+import org.ossreviewtoolkit.model.Identifier
+import org.ossreviewtoolkit.model.Issue
+import org.ossreviewtoolkit.model.Package
+import org.ossreviewtoolkit.model.PackageReference
+import org.ossreviewtoolkit.model.Project
+import org.ossreviewtoolkit.model.RemoteArtifact
+import org.ossreviewtoolkit.model.Scope
+import org.ossreviewtoolkit.model.Severity
+import org.ossreviewtoolkit.model.VcsInfo
+import org.ossreviewtoolkit.model.VcsType
+import org.ossreviewtoolkit.model.fromYaml
 import org.ossreviewtoolkit.model.utils.toPurl
 import org.ossreviewtoolkit.utils.ort.DeclaredLicenseProcessor
-import java.io.File
 
 private const val TYPE = "NuGet"
 

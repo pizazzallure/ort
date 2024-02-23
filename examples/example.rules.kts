@@ -107,8 +107,8 @@ fun RuleSet.unhandledLicenseRule() = packageRule("UNHANDLED_LICENSE") {
         // Throw an error message including guidance how to fix the issue.
         error(
             "The license $license is currently not covered by policy rules. " +
-                "The license was ${licenseSource.name.lowercase()} in package " +
-                "${pkg.metadata.id.toCoordinates()}",
+                    "The license was ${licenseSource.name.lowercase()} in package " +
+                    "${pkg.metadata.id.toCoordinates()}",
             howToFixDefault()
         )
     }
@@ -122,7 +122,7 @@ fun RuleSet.unmappedDeclaredLicenseRule() = packageRule("UNMAPPED_DECLARED_LICEN
     resolvedLicenseInfo.licenseInfo.declaredLicenseInfo.processed.unmapped.forEach { unmappedLicense ->
         warning(
             "The declared license '$unmappedLicense' could not be mapped to a valid license or parsed as an SPDX " +
-                "expression. The license was found in package ${pkg.metadata.id.toCoordinates()}.",
+                    "expression. The license was found in package ${pkg.metadata.id.toCoordinates()}.",
             howToFixDefault()
         )
     }
@@ -141,10 +141,10 @@ fun RuleSet.copyleftInSourceRule() = packageRule("COPYLEFT_IN_SOURCE") {
 
         val message = if (licenseSource == LicenseSource.DETECTED) {
             "The ScanCode copyleft categorized license $license was ${licenseSource.name.lowercase()} " +
-                "in package ${pkg.metadata.id.toCoordinates()}."
+                    "in package ${pkg.metadata.id.toCoordinates()}."
         } else {
             "The package ${pkg.metadata.id.toCoordinates()} has the ${licenseSource.name.lowercase()} ScanCode copyleft " +
-                "catalogized license $license."
+                    "catalogized license $license."
         }
 
         error(message, howToFixDefault())
@@ -166,14 +166,14 @@ fun RuleSet.copyleftInSourceLimitedRule() = packageRule("COPYLEFT_LIMITED_IN_SOU
         val message = if (licenseSource == LicenseSource.DETECTED) {
             if (pkg.metadata.id.type == "Unmanaged") {
                 "The ScanCode copyleft-limited categorized license $license was $licenseSourceName in package " +
-                    "${pkg.metadata.id.toCoordinates()}."
+                        "${pkg.metadata.id.toCoordinates()}."
             } else {
                 "The ScanCode copyleft-limited categorized license $license was $licenseSourceName in package " +
-                    "${pkg.metadata.id.toCoordinates()}."
+                        "${pkg.metadata.id.toCoordinates()}."
             }
         } else {
             "The package ${pkg.metadata.id.toCoordinates()} has the $licenseSourceName ScanCode copyleft-limited " +
-                "categorized license $license."
+                    "categorized license $license."
         }
 
         error(message, howToFixDefault())
@@ -193,7 +193,7 @@ fun RuleSet.dependencyInProjectSourceRule() = projectSourceRule("DEPENDENCY_IN_P
             issue(
                 Severity.ERROR,
                 "The directories ${offendingDirs.joinToString()} belong to the package manager(s) " +
-                    "${packageManagers.joinToString()} and must not be committed.",
+                        "${packageManagers.joinToString()} and must not be committed.",
                 "Please delete the directories: ${offendingDirs.joinToString()}."
             )
         }
@@ -227,7 +227,7 @@ fun RuleSet.highSeverityVulnerabilityInPackageRule() = packageRule("HIGH_SEVERIT
     issue(
         Severity.ERROR,
         "The package ${pkg.metadata.id.toCoordinates()} has a vulnerability with $scoringSystem severity > " +
-            maxAcceptedSeverity,
+                maxAcceptedSeverity,
         howToFixDefault()
     )
 }
@@ -241,7 +241,7 @@ fun RuleSet.copyleftInDependencyRule() = dependencyRule("COPYLEFT_IN_DEPENDENCY"
         issue(
             Severity.ERROR,
             "The project ${project.id.toCoordinates()} has a dependency licensed under the ScanCode " +
-                "copyleft categorized license $license.",
+                    "copyleft categorized license $license.",
             howToFixDefault()
         )
     }
@@ -262,7 +262,7 @@ fun RuleSet.copyleftLimitedInDependencyRule() = dependencyRule("COPYLEFT_LIMITED
         issue(
             Severity.WARNING,
             "The project ${project.id.toCoordinates()} has a statically linked direct dependency licensed " +
-                "under the ScanCode copyleft-left categorized license $license.",
+                    "under the ScanCode copyleft-left categorized license $license.",
             howToFixDefault()
         )
     }
@@ -278,8 +278,8 @@ fun RuleSet.deprecatedScopeExcludeReasonInOrtYmlRule() = ortResultRule("DEPRECAT
         warning(
             "The repository configuration is using the deprecated scope exclude reason '$offendingReason'.",
             "Please use only non-deprecated scope exclude reasons, see " +
-                "https://github.com/oss-review-toolkit/ort/blob/main/model/src/main/" +
-                "kotlin/config/ScopeExcludeReason.kt."
+                    "https://github.com/oss-review-toolkit/ort/blob/main/model/src/main/" +
+                    "kotlin/config/ScopeExcludeReason.kt."
         )
     }
 }

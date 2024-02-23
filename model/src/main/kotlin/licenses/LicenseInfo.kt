@@ -19,7 +19,12 @@
 
 package org.ossreviewtoolkit.model.licenses
 
-import org.ossreviewtoolkit.model.*
+import org.ossreviewtoolkit.model.CopyrightFinding
+import org.ossreviewtoolkit.model.Identifier
+import org.ossreviewtoolkit.model.LicenseFinding
+import org.ossreviewtoolkit.model.PackageCurationResult
+import org.ossreviewtoolkit.model.Provenance
+import org.ossreviewtoolkit.model.Repository
 import org.ossreviewtoolkit.model.config.LicenseFindingCuration
 import org.ossreviewtoolkit.model.config.PathExclude
 import org.ossreviewtoolkit.model.config.RepositoryConfiguration

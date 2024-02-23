@@ -20,22 +20,38 @@
 package org.ossreviewtoolkit.plugins.packagemanagers.gradle
 
 import OrtDependencyTreeModel
+
+import java.io.ByteArrayOutputStream
+import java.io.File
+import java.util.Properties
+import java.util.concurrent.TimeUnit
+
 import org.apache.logging.log4j.kotlin.logger
+
 import org.eclipse.aether.artifact.Artifact
 import org.eclipse.aether.repository.RemoteRepository
 import org.eclipse.aether.repository.WorkspaceReader
 import org.eclipse.aether.repository.WorkspaceRepository
+
 import org.gradle.tooling.GradleConnector
 import org.gradle.tooling.events.ProgressListener
 import org.gradle.tooling.internal.consumer.DefaultGradleConnector
+
 import org.ossreviewtoolkit.analyzer.AbstractPackageManagerFactory
 import org.ossreviewtoolkit.analyzer.PackageManager
 import org.ossreviewtoolkit.analyzer.PackageManagerResult
 import org.ossreviewtoolkit.downloader.VersionControlSystem
-import org.ossreviewtoolkit.model.*
+import org.ossreviewtoolkit.model.DependencyGraph
+import org.ossreviewtoolkit.model.Identifier
+import org.ossreviewtoolkit.model.Issue
+import org.ossreviewtoolkit.model.Project
+import org.ossreviewtoolkit.model.ProjectAnalyzerResult
+import org.ossreviewtoolkit.model.Severity
+import org.ossreviewtoolkit.model.VcsInfo
 import org.ossreviewtoolkit.model.config.AnalyzerConfiguration
 import org.ossreviewtoolkit.model.config.PackageManagerConfiguration
 import org.ossreviewtoolkit.model.config.RepositoryConfiguration
+import org.ossreviewtoolkit.model.createAndLogIssue
 import org.ossreviewtoolkit.model.utils.DependencyGraphBuilder
 import org.ossreviewtoolkit.plugins.packagemanagers.maven.utils.MavenSupport
 import org.ossreviewtoolkit.plugins.packagemanagers.maven.utils.identifier
@@ -44,10 +60,6 @@ import org.ossreviewtoolkit.utils.common.safeDeleteRecursively
 import org.ossreviewtoolkit.utils.common.splitOnWhitespace
 import org.ossreviewtoolkit.utils.common.temporaryProperties
 import org.ossreviewtoolkit.utils.ort.createOrtTempFile
-import java.io.ByteArrayOutputStream
-import java.io.File
-import java.util.*
-import java.util.concurrent.TimeUnit
 
 private val GRADLE_USER_HOME = Os.env["GRADLE_USER_HOME"]?.let { File(it) } ?: Os.userHomeDirectory.resolve(".gradle")
 
