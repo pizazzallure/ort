@@ -117,22 +117,6 @@ class LicenseInfoResolver(
                     it == license
                 }.keys
 
-                licenseInfo.declaredLicenseInfo.copyrightHolders.takeIf { it.isNotEmpty() }?.also {
-                    locations += ResolvedLicenseLocation(
-                        provenance = UnknownProvenance,
-                        location = UNDEFINED_TEXT_LOCATION,
-                        appliedCuration = null,
-                        matchingPathExcludes = emptyList(),
-                        copyrights = it.mapTo(mutableSetOf()) { copyrightHolder ->
-                            ResolvedCopyrightFinding(
-                                statement = copyrightHolder,
-                                location = UNDEFINED_TEXT_LOCATION,
-                                matchingPathExcludes = emptyList()
-                            )
-                        }
-                    )
-                }
-
                 licenseInfo.declaredLicenseInfo.authors.takeIf { it.isNotEmpty() && addAuthorsToCopyrights }?.also {
                     locations += ResolvedLicenseLocation(
                         provenance = UnknownProvenance,
