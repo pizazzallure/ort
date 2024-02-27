@@ -19,13 +19,24 @@
 
 package org.ossreviewtoolkit.model.utils
 
+import java.util.PriorityQueue
+
+import kotlin.math.max
+import kotlin.math.min
+
 import org.ossreviewtoolkit.model.CopyrightFinding
 import org.ossreviewtoolkit.model.LicenseFinding
 import org.ossreviewtoolkit.model.TextLocation
-import org.ossreviewtoolkit.utils.spdx.*
-import java.util.*
-import kotlin.math.max
-import kotlin.math.min
+import org.ossreviewtoolkit.utils.spdx.SpdxCompoundExpression
+import org.ossreviewtoolkit.utils.spdx.SpdxConstants
+import org.ossreviewtoolkit.utils.spdx.SpdxExpression
+import org.ossreviewtoolkit.utils.spdx.SpdxLicenseException
+import org.ossreviewtoolkit.utils.spdx.SpdxLicenseIdExpression
+import org.ossreviewtoolkit.utils.spdx.SpdxLicenseWithExceptionExpression
+import org.ossreviewtoolkit.utils.spdx.SpdxOperator
+import org.ossreviewtoolkit.utils.spdx.SpdxSimpleExpression
+import org.ossreviewtoolkit.utils.spdx.SpdxSingleLicenseExpression
+import org.ossreviewtoolkit.utils.spdx.toSpdx
 
 /**
  * A class for matching copyright findings to license findings. Copyright statements may be matched either to license

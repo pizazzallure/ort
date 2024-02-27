@@ -26,11 +26,17 @@ import com.fasterxml.jackson.annotation.JsonProperty
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize
 import com.fasterxml.jackson.databind.annotation.JsonSerialize
 import com.fasterxml.jackson.databind.util.StdConverter
+
+import java.time.Instant
+
 import org.ossreviewtoolkit.model.config.LicenseFilePatterns
-import org.ossreviewtoolkit.model.utils.*
+import org.ossreviewtoolkit.model.utils.CopyrightFindingSortedSetConverter
+import org.ossreviewtoolkit.model.utils.LicenseFindingSortedSetConverter
+import org.ossreviewtoolkit.model.utils.RootLicenseMatcher
+import org.ossreviewtoolkit.model.utils.SnippetFindingSortedSetConverter
+import org.ossreviewtoolkit.model.utils.AuthorFindingSortedSetConverter
 import org.ossreviewtoolkit.utils.common.FileMatcher
 import org.ossreviewtoolkit.utils.spdx.SpdxExpression
-import java.time.Instant
 
 /**
  * A short summary of the scan results.

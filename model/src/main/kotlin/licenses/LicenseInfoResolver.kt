@@ -19,14 +19,26 @@
 
 package org.ossreviewtoolkit.model.licenses
 
-import org.ossreviewtoolkit.model.*
+import java.util.concurrent.ConcurrentHashMap
+
+import org.ossreviewtoolkit.model.CopyrightFinding
+import org.ossreviewtoolkit.model.Identifier
+import org.ossreviewtoolkit.model.KnownProvenance
+import org.ossreviewtoolkit.model.LicenseSource
+import org.ossreviewtoolkit.model.Provenance
+import org.ossreviewtoolkit.model.RepositoryProvenance
+import org.ossreviewtoolkit.model.TextLocation
+import org.ossreviewtoolkit.model.UnknownProvenance
 import org.ossreviewtoolkit.model.config.CopyrightGarbage
 import org.ossreviewtoolkit.model.config.LicenseFilePatterns
 import org.ossreviewtoolkit.model.config.PathExclude
-import org.ossreviewtoolkit.model.utils.*
+import org.ossreviewtoolkit.model.utils.FileArchiver
+import org.ossreviewtoolkit.model.utils.FindingCurationMatcher
+import org.ossreviewtoolkit.model.utils.FindingsMatcher
+import org.ossreviewtoolkit.model.utils.RootLicenseMatcher
+import org.ossreviewtoolkit.model.utils.prependedPath
 import org.ossreviewtoolkit.utils.ort.createOrtTempDir
 import org.ossreviewtoolkit.utils.spdx.SpdxSingleLicenseExpression
-import java.util.concurrent.ConcurrentHashMap
 
 class LicenseInfoResolver(
     private val provider: LicenseInfoProvider,
