@@ -405,6 +405,21 @@ fun PackageRule.hasUnmatchedCopyrightsBetweenDetectedAndCurated(): RuleMatcher {
                 return false
             }
 
+            // if there is no curated copyrights, skip the check
+            if (pkg.curations.isEmpty()) {
+                return false
+            }
+            var hasCuratedCopyrightHolders: Boolean = false
+            pkg.curations.forEach {
+                val curatedCopyrightHolder = it.curation.copyrightHolders
+                if (curatedCopyrightHolder != null && curatedCopyrightHolder.isNotEmpty()) {
+                    hasCuratedCopyrightHolders = true
+                }
+            }
+            if (!hasCuratedCopyrightHolders) {
+                return false
+            }
+
             val scannerRun = ruleSet.ortResult.scanner ?: return false
             val packageProvenances = scannerRun.provenances.associateBy { it.id }
             val packageProvenance = packageProvenances.get(pkg.metadata.id)?.packageProvenance
