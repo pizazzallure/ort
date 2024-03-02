@@ -31,6 +31,7 @@ import org.ossreviewtoolkit.clients.fossid.model.result.MatchedLines
 import org.ossreviewtoolkit.clients.fossid.model.result.Snippet
 import org.ossreviewtoolkit.clients.fossid.model.summary.Summarizable
 import org.ossreviewtoolkit.model.ArtifactProvenance
+import org.ossreviewtoolkit.model.AuthorFinding
 import org.ossreviewtoolkit.model.CopyrightFinding
 import org.ossreviewtoolkit.model.Hash
 import org.ossreviewtoolkit.model.Issue
@@ -71,7 +72,8 @@ internal data class RawResults(
  */
 internal data class FindingsContainer(
     val licenseFindings: MutableSet<LicenseFinding>,
-    val copyrightFindings: MutableSet<CopyrightFinding>
+    val copyrightFindings: MutableSet<CopyrightFinding>,
+    val authorFindings: MutableSet<AuthorFinding>
 )
 
 /**
@@ -84,6 +86,9 @@ internal fun <T : Summarizable> List<T>.mapSummary(
 ): FindingsContainer {
     val licenseFindings = mutableSetOf<LicenseFinding>()
     val copyrightFindings = mutableSetOf<CopyrightFinding>()
+
+    // TODO: read author from scan result
+    val authorFindings = mutableSetOf<AuthorFinding>()
 
     val files = filterNot { it.getFileName() in ignoredFiles }
     files.forEach { summarizable ->
@@ -116,7 +121,8 @@ internal fun <T : Summarizable> List<T>.mapSummary(
 
     return FindingsContainer(
         licenseFindings = licenseFindings,
-        copyrightFindings = copyrightFindings
+        copyrightFindings = copyrightFindings,
+        authorFindings = authorFindings
     )
 }
 

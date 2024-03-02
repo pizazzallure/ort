@@ -19,6 +19,7 @@
 
 package org.ossreviewtoolkit.plugins.scanners.scancode
 
+
 import io.kotest.core.spec.style.FreeSpec
 import io.kotest.matchers.Matcher
 import io.kotest.matchers.collections.beEmpty
@@ -208,5 +209,12 @@ private fun containCopyrightsExactly(vararg copyrights: Pair<String, List<TextLo
         summary.copyrightFindings.groupBy { it.statement }.entries
             .map { (key, value) -> key to value.map { it.location } }
     }
+
+private fun containAuthorsExactly(vararg authors: Pair<String, List<TextLocation>>): Matcher<ScanSummary?> =
+    transformingCollectionMatcher(expected = authors.toList(), matcher = ::containExactlyInAnyOrder) { summary ->
+        summary.authorFindings.groupBy { it.author }.entries
+            .map { (key, value) -> key to value.map { it.location } }
+    }
+
 
 private fun getAssetFile(path: String): File = File("src/test/assets", path).absoluteFile

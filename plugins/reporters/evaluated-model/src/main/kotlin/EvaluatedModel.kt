@@ -93,6 +93,7 @@ data class EvaluatedModel(
     val pathExcludes: List<PathExclude>,
     val scopeExcludes: List<ScopeExclude>,
     val copyrights: List<CopyrightStatement>,
+    val authors: List<AuthorId>,
     val licenses: List<LicenseId>,
     val scopes: List<EvaluatedScope>,
     val issueResolutions: List<IssueResolution>,
@@ -123,6 +124,7 @@ data class EvaluatedModel(
     companion object {
         private val INT_ID_TYPES = listOf(
             CopyrightStatement::class.java,
+            AuthorId::class.java,
             EvaluatedIssue::class.java,
             EvaluatedPackage::class.java,
             EvaluatedPackagePath::class.java,
