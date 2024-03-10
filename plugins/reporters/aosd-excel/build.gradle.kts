@@ -31,6 +31,7 @@ dependencies {
     implementation(projects.utils.ortUtils)
     implementation(libs.kotlinx.coroutines)
     implementation("org.apache.poi:poi-ooxml:4.1.1")
+    implementation(projects.plugins.reporters.evaluatedModelReporter)
 
     testImplementation(libs.mockk)
 }
