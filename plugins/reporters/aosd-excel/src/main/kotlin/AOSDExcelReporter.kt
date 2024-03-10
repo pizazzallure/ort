@@ -9,11 +9,13 @@ import org.apache.poi.xssf.usermodel.XSSFFont
 import org.apache.poi.xssf.usermodel.XSSFRow
 import org.apache.poi.xssf.usermodel.XSSFWorkbook
 import org.ossreviewtoolkit.model.Identifier
+import org.ossreviewtoolkit.model.PackageCurationResult
 import org.ossreviewtoolkit.model.config.PluginConfiguration
 import org.ossreviewtoolkit.model.licenses.LicenseView
-import org.ossreviewtoolkit.model.licenses.ResolvedAuthorSource
 import org.ossreviewtoolkit.model.licenses.ResolvedCopyrightSource
 import org.ossreviewtoolkit.model.licenses.ResolvedLicenseInfo
+import org.ossreviewtoolkit.plugins.reporters.evaluatedmodel.EvaluatedFindingType
+import org.ossreviewtoolkit.plugins.reporters.evaluatedmodel.EvaluatedModel
 import org.ossreviewtoolkit.reporter.CustomLicenseTextProvider
 import org.ossreviewtoolkit.reporter.Reporter
 import org.ossreviewtoolkit.reporter.ReporterInput
@@ -31,11 +33,14 @@ private enum class ExcelColumn {
     USE_MODIFICATION,
     USE_START,
     USE_END,
-    USE_COMMENT
+    USE_COMMENT,
+    PACKAGE_SCOPE
 }
 
 class AOSDExcelReporter : Reporter {
     companion object : Logging {
+        const val OPTION_DEDUPLICATE_DEPENDENCY_TREE = "deduplicateDependencyTree"
+
         val WORKSHEET_NAME_LENGTH = 28
 
         private fun restrictWorksheetName(worksheetName: String) =
@@ -54,7 +59,6 @@ class AOSDExcelReporter : Reporter {
             .replace('?', '_')
     }
 
-
     override val type = "AOSDExcel"
     private val reportFilename = "aosd-report.xlsx"
     private var tooLongLicenseTexts = mutableMapOf<String, String>()
@@ -66,7 +70,9 @@ class AOSDExcelReporter : Reporter {
         val website: String,
         val licenseInfo: ResolvedLicenseInfo,
         val authors: Set<String>,
-        val copyrightHolders: Set<String>
+        val copyrightHolders: Set<String>,
+        val scopeNames: Set<String>,
+        val curations: List<PackageCurationResult>
     )
 
     data class ProjectInfo(
@@ -81,7 +87,12 @@ class AOSDExcelReporter : Reporter {
     override fun generateReport(input: ReporterInput, outputDir: File, config: PluginConfiguration): List<File> {
         val workbook = XSSFWorkbook()
 
-        getAllLicenseFindings(input).forEach { projectInfo ->
+        val evaluatedModel = EvaluatedModel.create(
+            input,
+            config.options[OPTION_DEDUPLICATE_DEPENDENCY_TREE].toBoolean()
+        )
+
+        getAllLicenseFindings(input, evaluatedModel).forEach { projectInfo ->
             val recordsSheet = workbook.createSheet(generateWorksheetName(projectInfo.projectId))
             val licenseFindings: Map<Identifier, AOSDReporterPackage> = projectInfo.licenseFindings
 
@@ -103,7 +114,7 @@ class AOSDExcelReporter : Reporter {
                 }
                 row.createUsageLinkageCell()
                 row.createUseModificationCell()
-
+                row.createPackageScopeCell(aosdReporterPackage.scopeNames)
                 rowNum++
             }
 
@@ -148,7 +159,9 @@ class AOSDExcelReporter : Reporter {
         return String.format("%s %02d", projectName, counter)
     }
 
-    private fun getAllLicenseFindings(input: ReporterInput): SortedSet<ProjectInfo> {
+    private fun getAllLicenseFindings(input: ReporterInput, evaluatedModel: EvaluatedModel): SortedSet<ProjectInfo> {
+        val evaluatedPackageMap = evaluatedModel.packages.associateBy { it.id }
+
         val projectInfoSet = TreeSet<ProjectInfo>()
 
         input.ortResult.getProjects()
@@ -162,18 +175,37 @@ class AOSDExcelReporter : Reporter {
                     val licenseFindings = dependencies.associateWith { id ->
                         // We know that a package exists for the reference.
                         logger.info("Associate depencency for package $id")
-                        val pkg = input.ortResult.getPackage(id)!!.metadata
+                        val curatedPackage = input.ortResult.getPackage(id)
+                        val pkg = curatedPackage!!.metadata
                         val pkgUrl = pkg.homepageUrl.takeUnless { it.isEmpty() } ?: "https://github.com/404"
-                        val licenseInfo = input.licenseInfoResolver.resolveLicenseInfo(pkg.id).filterExcluded()
-                        val licenses = licenseInfo.filter(LicenseView.CONCLUDED_OR_DETECTED).filterExcluded()
+                        val resolvedLicenseInfo = input.licenseInfoResolver.resolveLicenseInfo(pkg.id).filterExcluded()
+                        val licenseInfo = resolvedLicenseInfo.filter(LicenseView.CONCLUDED_OR_DETECTED).filterExcluded()
+                        val evaluatedPackage = evaluatedPackageMap.get(id)
+
+                        // the authors include detected and curated authors
+                        var authors = mutableSetOf<String>()
+                        authors.addAll(pkg.authors)
+
+                        var scopeNames = mutableSetOf<String>()
+                        if(evaluatedPackage != null) {
+                            scopeNames.addAll(evaluatedPackage.scopes.map { it.name })
+                            val authorFindings = evaluatedPackage.findings.filter { finding ->
+                                finding.type == EvaluatedFindingType.AUTHOR
+                            }
+                            authorFindings.forEach {
+                                it.author?.author?.let { it1 -> authors.add(it1) }
+                            }
+                        }
 
                         AOSDReporterPackage(
                             name = pkg.id.name,
                             version = pkg.id.version,
                             website = pkgUrl,
-                            licenseInfo = licenses,
-                            authors = pkg.authors,
-                            copyrightHolders = pkg.copyrightHolders
+                            licenseInfo = licenseInfo,
+                            authors = authors,
+                            copyrightHolders = pkg.copyrightHolders,
+                            scopeNames = scopeNames,
+                            curations = curatedPackage.curations
                         )
                     }
 
@@ -214,6 +246,20 @@ private fun XSSFRow.createLicenseTextCell(
     cellStyle.wrapText = true
     cell.cellStyle = cellStyle
     var licenseString = ""
+
+    val concludedLicense = reporterPackage.licenseInfo.licenseInfo.concludedLicenseInfo.concludedLicense
+    val curatedCopyrightHolders = reporterPackage.curations.map { it.curation }.map { it.copyrightHolders }
+    if(concludedLicense == null && curatedCopyrightHolders.isNotEmpty()) {
+        licenseString += "Curated Copyright Holders: "
+        licenseString += "\n\n"
+        curatedCopyrightHolders.forEach {
+            it?.forEach {
+                licenseString += it
+                licenseString += "\n"
+            }
+        }
+        licenseString += "\n"
+    }
 
     reporterPackage.licenseInfo.licenses.forEach {
 
@@ -260,12 +306,12 @@ private fun XSSFRow.createLicenseTextCell(
             }
         }
 
-        if (!reporterPackage.authors.isNullOrEmpty()) {
-            licenseString += "#Authors:\n"
-            licenseString += reporterPackage.authors.joinToString("\n")
-            licenseString += "\n\n"
-        }
+    }
 
+    if (!reporterPackage.authors.isNullOrEmpty()) {
+        licenseString += "#Authors:\n"
+        licenseString += reporterPackage.authors.joinToString("\n")
+        licenseString += "\n\n"
     }
 
     licenseString = licenseString.trim()
@@ -293,6 +339,11 @@ private fun XSSFRow.createSPDXCell(reporterPackage: AOSDExcelReporter.AOSDReport
 private fun XSSFRow.createSoftwareNameCell(component: Identifier) {
     val cell = createCell(ExcelColumn.SOFTWARE_NAME.ordinal)
     cell.setCellValue(component.excelName())
+}
+
+private fun XSSFRow.createPackageScopeCell(scopeNames: Set<String>) {
+    val cell = createCell(ExcelColumn.PACKAGE_SCOPE.ordinal)
+    cell.setCellValue(scopeNames.joinToString(", "))
 }
 
 private fun Identifier.excelName(): String {
