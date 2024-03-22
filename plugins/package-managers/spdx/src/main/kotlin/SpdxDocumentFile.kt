@@ -90,7 +90,7 @@ private fun SpdxDocument.isProject(): Boolean = projectPackage() != null
  * defined.
  */
 internal fun SpdxDocument.projectPackage(): SpdxPackage? =
-// An SpdxDocument that describes a project must have at least 2 packages, one for the project itself, and another
+    // An SpdxDocument that describes a project must have at least 2 packages, one for the project itself, and another
     // one for at least one dependency package.
     packages.takeIf { it.size > 1 || (it.size == 1 && externalDocumentRefs.isNotEmpty()) }
         // The package that describes a project must have an "empty" package filename (as the "filename" is the project
@@ -322,8 +322,6 @@ class SpdxDocumentFile(
             purl = purl,
             cpe = locateCpe(),
             authors = originator.wrapPresentInSet(),
-            // TODO: Check if package manager support native copyright holders
-            copyrightHolders = emptySet(),
             declaredLicenses = setOf(licenseDeclared),
             concludedLicense = getConcludedLicense(),
             description = packageDescription,
@@ -519,8 +517,6 @@ class SpdxDocumentFile(
             cpe = projectPackage.locateCpe(),
             definitionFilePath = VersionControlSystem.getPathInfo(definitionFile).path,
             authors = projectPackage.originator.wrapPresentInSet(),
-            // TODO: Check if package manager support native copyright holders
-            copyrightHolders = emptySet(),
             declaredLicenses = setOf(projectPackage.licenseDeclared),
             vcs = processProjectVcs(definitionFile.parentFile, VcsInfo.EMPTY),
             homepageUrl = projectPackage.homepage.mapNotPresentToEmpty(),

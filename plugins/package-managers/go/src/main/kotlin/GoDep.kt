@@ -137,7 +137,6 @@ class GoDep(
             val pkg = Package(
                 id = Identifier("Go", "", name, normalizeModuleVersion(version)),
                 authors = emptySet(),
-                copyrightHolders = emptySet(),
                 declaredLicenses = emptySet(),
                 description = "",
                 homepageUrl = "",
@@ -177,8 +176,6 @@ class GoDep(
                     ),
                     definitionFilePath = VersionControlSystem.getPathInfo(definitionFile).path,
                     authors = emptySet(),
-                    // TODO: Check if package manager support native copyright holders
-                    copyrightHolders = emptySet(),
                     declaredLicenses = emptySet(),
                     vcs = VcsInfo.EMPTY,
                     vcsProcessed = projectVcs,

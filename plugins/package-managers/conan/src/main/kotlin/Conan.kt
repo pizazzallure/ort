@@ -25,6 +25,7 @@ import com.fasterxml.jackson.module.kotlin.readValue
 import java.io.File
 
 import org.apache.logging.log4j.kotlin.logger
+
 import org.ossreviewtoolkit.analyzer.AbstractPackageManagerFactory
 import org.ossreviewtoolkit.analyzer.PackageManager
 import org.ossreviewtoolkit.analyzer.parseAuthorString
@@ -118,7 +119,7 @@ class Conan(
     private fun hasLockfile(file: String) = File(file).isFile
 
     override fun transformVersion(output: String) =
-    // Conan could report version strings like:
+        // Conan could report version strings like:
         // Conan version 1.18.0
         output.removePrefix("Conan version ")
 
@@ -188,7 +189,6 @@ class Conan(
                         id = projectPackage.id,
                         definitionFilePath = VersionControlSystem.getPathInfo(definitionFile).path,
                         authors = projectPackage.authors,
-                        copyrightHolders = projectPackage.copyrightHolders,
                         declaredLicenses = projectPackage.declaredLicenses,
                         vcs = projectPackage.vcs,
                         vcsProcessed = processProjectVcs(
@@ -316,8 +316,6 @@ class Conan(
         return Package(
             id = id,
             authors = parseAuthors(node),
-            // TODO: Check if package manager support native copyright holders
-            copyrightHolders = emptySet(),
             declaredLicenses = parseDeclaredLicenses(node),
             description = parsePackageField(node, workingDir, "description"),
             homepageUrl = homepageUrl,
@@ -457,8 +455,6 @@ class Conan(
                 version = inspectField(definitionFile.name, workingDir, "version")
             ),
             authors = parseAuthors(node),
-            // TODO: Check if package manager support native copyright holders
-            copyrightHolders = emptySet(),
             declaredLicenses = parseDeclaredLicenses(node),
             description = inspectField(definitionFile.name, workingDir, "description"),
             homepageUrl = node["homepage"].textValueOrEmpty(),
@@ -479,8 +475,6 @@ class Conan(
                 version = ""
             ),
             authors = parseAuthors(node),
-            // TODO: Check if package manager support native copyright holders
-            copyrightHolders = emptySet(),
             declaredLicenses = parseDeclaredLicenses(node),
             description = "",
             homepageUrl = node["homepage"].textValueOrEmpty(),

@@ -142,8 +142,6 @@ class Maven(
             id = projectId,
             definitionFilePath = VersionControlSystem.getPathInfo(definitionFile).path,
             authors = MavenSupport.parseAuthors(mavenProject),
-            // TODO: Check if package manager support native copyright holders
-            copyrightHolders = emptySet(),
             declaredLicenses = declaredLicenses,
             declaredLicensesProcessed = declaredLicensesProcessed,
             vcs = vcsFromPackage,

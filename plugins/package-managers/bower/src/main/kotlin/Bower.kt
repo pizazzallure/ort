@@ -48,6 +48,7 @@ import org.ossreviewtoolkit.utils.common.fieldNamesOrEmpty
 import org.ossreviewtoolkit.utils.common.fieldsOrEmpty
 import org.ossreviewtoolkit.utils.common.stashDirectories
 import org.ossreviewtoolkit.utils.common.textValueOrEmpty
+
 import org.semver4j.RangesList
 import org.semver4j.RangesListFactory
 
@@ -99,7 +100,6 @@ class Bower(
                 id = projectPackage.id,
                 definitionFilePath = VersionControlSystem.getPathInfo(definitionFile).path,
                 authors = projectPackage.authors,
-                copyrightHolders = projectPackage.copyrightHolders,
                 declaredLicenses = projectPackage.declaredLicenses,
                 vcs = projectPackage.vcs,
                 vcsProcessed = processProjectVcs(workingDir, projectPackage.vcs, projectPackage.homepageUrl),
@@ -171,8 +171,6 @@ private fun parsePackage(node: JsonNode) =
     Package(
         id = parsePackageId(node),
         authors = parseAuthors(node),
-        // TODO: Check if package manager support native copyright holders
-        copyrightHolders = emptySet(),
         declaredLicenses = parseDeclaredLicenses(node),
         description = node["pkgMeta"]["description"].textValueOrEmpty(),
         homepageUrl = node["pkgMeta"]["homepage"].textValueOrEmpty(),

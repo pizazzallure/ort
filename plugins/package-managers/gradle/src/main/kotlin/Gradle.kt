@@ -139,7 +139,7 @@ class Gradle(
         }
 
         override fun findVersions(artifact: Artifact) =
-        // Do not resolve versions of already locally available artifacts. This also ensures version resolution
+            // Do not resolve versions of already locally available artifacts. This also ensures version resolution
             // was done by Gradle.
             if (findArtifact(artifact)?.isFile == true) listOf(artifact.version) else emptyList()
 
@@ -283,8 +283,6 @@ class Gradle(
                     id = projectId,
                     definitionFilePath = VersionControlSystem.getPathInfo(definitionFile).path,
                     authors = emptySet(),
-                    // TODO: Check if package manager support native copyright holders
-                    copyrightHolders = emptySet(),
                     declaredLicenses = emptySet(),
                     vcs = VcsInfo.EMPTY,
                     vcsProcessed = processProjectVcs(definitionFile.parentFile),
