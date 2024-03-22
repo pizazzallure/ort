@@ -19,11 +19,11 @@
 
 import com.cloudbees.groovy.cps.NonCPS
 
+import groovy.transform.Field
+
 import java.io.IOException
 
 import org.jenkinsci.plugins.pipeline.modeldefinition.Utils
-
-final DOCKER_BUILD_ARGS = '--build-arg http_proxy=$http_proxy --build-arg https_proxy=$https_proxy --build-arg ORT_VERSION='
 
 // Disable the entry point to work around https://issues.jenkins-ci.org/browse/JENKINS-51307.
 final DOCKER_RUN_ARGS = '-e http_proxy -e https_proxy --entrypoint=""'
@@ -32,19 +32,38 @@ final DOCKER_RUN_ARGS = '-e http_proxy -e https_proxy --entrypoint=""'
 // existing output files).
 final ORT_FAILURE_STATUS_CODE = 2
 
+def projectVcsCredentials = []
+def ortConfigVcsCredentials = []
+
+@Field
+def ortVersion = 'JENKINS-SNAPSHOT'
+
+@NonCPS
+def getDockerBuildArgs() {
+    def defaultArgs = ['http_proxy=$http_proxy', 'https_proxy=$https_proxy', "ORT_VERSION=$ortVersion"]
+    def customArgs = params.CUSTOM_DOCKER_BUILD_ARGS.tokenize(',')
+    return (defaultArgs + customArgs).collect { "--build-arg ${it.trim()}" }.join(' ')
+}
+
 @NonCPS
 static sortProjectsByPathDepth(projects) {
     return projects.toSorted { it.definition_file_path.count("/") }
 }
 
-def projectVcsCredentials = []
-def ortConfigVcsCredentials = []
-def ortVersion = 'JENKINS-SNAPSHOT'
-
 pipeline {
     agent none
 
     parameters {
+        /*
+         * Parameters about the project to run ORT on.
+         */
+
+        string(
+            name: 'CUSTOM_DOCKER_BUILD_ARGS',
+            description: 'A comma-separated list of arguments to pass to the Docker build, e.g. "JAVA_VERSION=17,SCANCODE_VERSION=32.0.8".',
+            defaultValue: ''
+        )
+
         /*
          * Parameters about the project to run ORT on.
          */
@@ -104,6 +123,18 @@ pipeline {
         )
 
         string(
+            name: 'PLUGIN_JOB_NAME',
+            description: 'The name of the job to copy plugins from. The distribution must be at "build/distributions/*.tar".',
+            defaultValue: ''
+        )
+
+        buildSelector(
+            name: 'PLUGIN_BUILD_SELECTOR',
+            description: 'The selector for the build of the plugin job to copy plugins from.',
+            defaultSelector: lastSuccessful()
+        )
+
+        string(
             name: 'ENVIRONMENT_VARIABLES',
             description: 'Optional list of comma-separated key=value pairs of environment variables to set.',
             defaultValue: ''
@@ -130,9 +161,15 @@ pipeline {
             description: 'An optional existing analyzer result file to use instead of running the analyzer.'
         )
 
+        string(
+            name: 'ANALYZER_INPUT_PATH',
+            description: 'The path to analyze, relative to the repository root. May point to a definition file if only a single package manager is enabled.',
+            defaultValue: ''
+        )
+
         booleanParam(
             name: 'ALLOW_DYNAMIC_VERSIONS',
-            description: 'Allow dynamic versions of dependencies (support projects without lock files).',
+            description: 'Allow dynamic versions of dependencies (support projects without lockfiles).',
             defaultValue: false
         )
 
@@ -265,6 +302,32 @@ pipeline {
 
                     ortVersion = env.GIT_COMMIT.take(10)
                 }
+
+                sh '''
+                rm -fr cli/src/main/dist/plugin
+                '''.stripIndent().trim()
+            }
+        }
+
+        stage('Install plugins') {
+            agent any
+
+            when {
+                beforeAgent true
+
+                expression {
+                    !params.PLUGIN_JOB_NAME.allWhitespace
+                }
+            }
+
+            steps {
+                script {
+                    copyArtifacts(projectName: params.PLUGIN_JOB_NAME, selector: buildParameter(params.PLUGIN_BUILD_SELECTOR), filter: 'build/distributions/*.tar')
+                }
+
+                sh '''
+                tar -C cli/src/main/dist/plugin --strip-components=1 -xf build/distributions/*.tar && rm build/distributions/*.tar
+                '''.stripIndent().trim()
             }
         }
 
@@ -276,7 +339,7 @@ pipeline {
             agent {
                 dockerfile {
                     filename 'Dockerfile-legacy'
-                    additionalBuildArgs DOCKER_BUILD_ARGS + ortVersion
+                    additionalBuildArgs getDockerBuildArgs()
                     args DOCKER_RUN_ARGS
                 }
             }
@@ -294,7 +357,7 @@ pipeline {
                     ORT_OPTIONS="$ORT_OPTIONS --stacktrace"
                 fi
 
-                /opt/ort/bin/ort $ORT_OPTIONS --version
+                /opt/ort/bin/ort $ORT_OPTIONS requirements --list plugins
                 '''.stripIndent().trim()
             }
         }
@@ -303,7 +366,7 @@ pipeline {
             agent {
                 dockerfile {
                     filename 'Dockerfile-legacy'
-                    additionalBuildArgs DOCKER_BUILD_ARGS + ortVersion
+                    additionalBuildArgs getDockerBuildArgs()
                     args DOCKER_RUN_ARGS
                 }
             }
@@ -342,7 +405,7 @@ pipeline {
             agent {
                 dockerfile {
                     filename 'Dockerfile-legacy'
-                    additionalBuildArgs DOCKER_BUILD_ARGS + ortVersion
+                    additionalBuildArgs getDockerBuildArgs()
                     args DOCKER_RUN_ARGS
                 }
             }
@@ -419,7 +482,7 @@ pipeline {
             agent {
                 dockerfile {
                     filename 'Dockerfile-legacy'
-                    additionalBuildArgs DOCKER_BUILD_ARGS + ortVersion
+                    additionalBuildArgs getDockerBuildArgs()
                     args DOCKER_RUN_ARGS
                 }
             }
@@ -448,7 +511,7 @@ pipeline {
             agent {
                 dockerfile {
                     filename 'Dockerfile-legacy'
-                    additionalBuildArgs DOCKER_BUILD_ARGS + ortVersion
+                    additionalBuildArgs getDockerBuildArgs()
                     args DOCKER_RUN_ARGS
                 }
             }
@@ -494,7 +557,7 @@ pipeline {
                     /opt/ort/bin/set_gradle_proxy.sh
 
                     rm -fr out/results
-                    /opt/ort/bin/ort $ORT_OPTIONS analyze -i "$PROJECT_DIR/source" -o out/results/analyzer -l JENKINS_BUILD_URL=$BUILD_URL
+                    /opt/ort/bin/ort $ORT_OPTIONS analyze -i "$PROJECT_DIR/source/$ANALYZER_INPUT_PATH" -o out/results/analyzer -l JENKINS_BUILD_URL=$BUILD_URL
                     '''.stripIndent().trim()
 
                     if (status >= ORT_FAILURE_STATUS_CODE) unstable('Analyzer issues found.')
@@ -545,7 +608,7 @@ pipeline {
             agent {
                 dockerfile {
                     filename 'Dockerfile-legacy'
-                    additionalBuildArgs DOCKER_BUILD_ARGS + ortVersion
+                    additionalBuildArgs getDockerBuildArgs()
                     args DOCKER_RUN_ARGS
                 }
             }
@@ -674,7 +737,7 @@ pipeline {
             agent {
                 dockerfile {
                     filename 'Dockerfile-legacy'
-                    additionalBuildArgs DOCKER_BUILD_ARGS + ortVersion
+                    additionalBuildArgs getDockerBuildArgs()
                     args DOCKER_RUN_ARGS
                 }
             }
@@ -736,7 +799,7 @@ pipeline {
             agent {
                 dockerfile {
                     filename 'Dockerfile-legacy'
-                    additionalBuildArgs DOCKER_BUILD_ARGS + ortVersion
+                    additionalBuildArgs getDockerBuildArgs()
                     args DOCKER_RUN_ARGS
                 }
             }
@@ -806,7 +869,7 @@ pipeline {
             agent {
                 dockerfile {
                     filename 'Dockerfile-legacy'
-                    additionalBuildArgs DOCKER_BUILD_ARGS + ortVersion
+                    additionalBuildArgs getDockerBuildArgs()
                     args DOCKER_RUN_ARGS
                 }
             }

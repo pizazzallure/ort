@@ -21,14 +21,12 @@ package org.ossreviewtoolkit.plugins.packagemanagers.sbt
 
 import java.io.File
 import java.io.IOException
-import java.lang.invoke.MethodHandles
 import java.nio.file.StandardCopyOption
 import java.util.Properties
 
 import kotlin.io.path.moveTo
 
 import org.apache.logging.log4j.kotlin.logger
-import org.apache.logging.log4j.kotlin.loggerOf
 
 import org.ossreviewtoolkit.analyzer.AbstractPackageManagerFactory
 import org.ossreviewtoolkit.analyzer.PackageManager
@@ -56,37 +54,6 @@ class Sbt(
     analyzerConfig: AnalyzerConfiguration,
     repoConfig: RepositoryConfiguration
 ) : PackageManager(name, analysisRoot, analyzerConfig, repoConfig), CommandLineTool {
-    companion object {
-        // See https://github.com/sbt/sbt/blob/v1.5.1/launcher-package/integration-test/src/test/scala/RunnerTest.scala#L9.
-        private const val SBT_VERSION_PATTERN = "\\d(\\.\\d+){2}(-\\w+)?"
-
-        private val VERSION_REGEX = Regex("\\[info]\\s+($SBT_VERSION_PATTERN)")
-        private val PROJECT_REGEX = Regex("\\[info] \t [ *] (.+)")
-        private val POM_REGEX = Regex("\\[info] Wrote (.+\\.pom)")
-
-        // Batch mode (which suppresses interactive prompts) is not supported on Windows, compare
-        // https://github.com/sbt/sbt-launcher-package/blob/25c1b96/src/universal/bin/sbt.bat#L861 with
-        // https://github.com/sbt/sbt-launcher-package/blob/25c1b96/src/universal/bin/sbt#L449.
-        private val BATCH_MODE = "-batch".takeUnless { Os.isWindows }.orEmpty()
-
-        // Enable the CI mode which disables console colors and supershell, see
-        // https://www.scala-sbt.org/1.x/docs/Command-Line-Reference.html#Command+Line+Options.
-        private val CI_MODE = "-Dsbt.ci=true".addQuotesOnWindows()
-
-        // Disable console colors explicitly as in some cases CI_MODE is not enough.
-        private val NO_COLOR = "-Dsbt.color=false".addQuotesOnWindows()
-
-        // Disable the JLine terminal. Without this the JLine terminal can occasionally send a signal that causes the
-        // parent process to suspend, for example IntelliJ can be suspended while running the SbtTest.
-        private val DISABLE_JLINE = "-Djline.terminal=none".addQuotesOnWindows()
-
-        private val FIXED_USER_HOME = "-Duser.home=${Os.userHomeDirectory}".addQuotesOnWindows()
-
-        private val SBT_OPTIONS = arrayOf(BATCH_MODE, CI_MODE, NO_COLOR, DISABLE_JLINE, FIXED_USER_HOME)
-
-        private fun String.addQuotesOnWindows() = if (Os.isWindows) "\"$this\"" else this
-    }
-
     class Factory : AbstractPackageManagerFactory<Sbt>("SBT") {
         override val globsForDefinitionFiles = listOf("build.sbt", "build.scala")
 
@@ -182,7 +149,11 @@ class Sbt(
             targetDir.walk().maxDepth(1).filterTo(pomFiles) { it.extension == "pom" }
         }
 
-        return pomFiles.distinct().map { moveGeneratedPom(it) }
+        return pomFiles.distinct().map { pomFile ->
+            moveGeneratedPom(pomFile).onFailure {
+                logger.error { "Moving the POM file failed: ${it.message}" }
+            }.getOrDefault(pomFile)
+        }
     }
 
     override fun beforeResolution(definitionFiles: List<File>) {
@@ -235,17 +206,40 @@ class Sbt(
         throw NotImplementedError()
 }
 
-private val logger = loggerOf(MethodHandles.lookup().lookupClass())
+// See https://github.com/sbt/sbt/blob/v1.5.1/launcher-package/integration-test/src/test/scala/RunnerTest.scala#L9.
+private const val SBT_VERSION_PATTERN = "\\d(\\.\\d+){2}(-\\w+)?"
 
-private fun moveGeneratedPom(pomFile: File): File {
-    val targetDirParent = pomFile.absoluteFile.parentFile.searchUpwardsForSubdirectory("target") ?: return pomFile
+private val VERSION_REGEX = Regex("\\[info]\\s+($SBT_VERSION_PATTERN)")
+private val PROJECT_REGEX = Regex("\\[info] \t [ *] (.+)")
+private val POM_REGEX = Regex("\\[info] Wrote (.+\\.pom)")
+
+// Batch mode (which suppresses interactive prompts) is not supported on Windows, compare
+// https://github.com/sbt/sbt-launcher-package/blob/25c1b96/src/universal/bin/sbt.bat#L861 with
+// https://github.com/sbt/sbt-launcher-package/blob/25c1b96/src/universal/bin/sbt#L449.
+private val BATCH_MODE = "-batch".takeUnless { Os.isWindows }.orEmpty()
+
+// Enable the CI mode which disables console colors and supershell, see
+// https://www.scala-sbt.org/1.x/docs/Command-Line-Reference.html#Command+Line+Options.
+private val CI_MODE = "-Dsbt.ci=true".addQuotesOnWindows()
+
+// Disable console colors explicitly as in some cases CI_MODE is not enough.
+private val NO_COLOR = "-Dsbt.color=false".addQuotesOnWindows()
+
+// Disable the JLine terminal. Without this the JLine terminal can occasionally send a signal that causes the
+// parent process to suspend, for example IntelliJ can be suspended while running the SbtTest.
+private val DISABLE_JLINE = "-Djline.terminal=none".addQuotesOnWindows()
+
+private val FIXED_USER_HOME = "-Duser.home=${Os.userHomeDirectory}".addQuotesOnWindows()
+
+private val SBT_OPTIONS = arrayOf(BATCH_MODE, CI_MODE, NO_COLOR, DISABLE_JLINE, FIXED_USER_HOME)
+
+private fun String.addQuotesOnWindows() = if (Os.isWindows) "\"$this\"" else this
+
+private fun moveGeneratedPom(pomFile: File): Result<File> {
+    val targetDirParent = pomFile.parentFile.searchUpwardsForSubdirectory("target")
+        ?: return Result.failure(IllegalArgumentException("No target subdirectory found for '$pomFile'."))
     val targetFilename = pomFile.relativeTo(targetDirParent).invariantSeparatorsPath.replace('/', '-')
     val targetFile = targetDirParent.resolve(targetFilename)
 
-    if (runCatching { pomFile.toPath().moveTo(targetFile.toPath(), StandardCopyOption.ATOMIC_MOVE) }.isFailure) {
-        logger.error { "Moving '${pomFile.absolutePath}' to '${targetFile.absolutePath}' failed." }
-        return pomFile
-    }
-
-    return targetFile
+    return runCatching { pomFile.toPath().moveTo(targetFile.toPath(), StandardCopyOption.ATOMIC_MOVE).toFile() }
 }

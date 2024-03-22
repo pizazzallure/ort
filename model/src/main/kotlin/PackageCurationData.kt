@@ -104,7 +104,14 @@ data class PackageCurationData(
      * applied by [DeclaredLicenseProcessor.process].
      */
     @JsonInclude(JsonInclude.Include.NON_EMPTY)
-    val declaredLicenseMapping: Map<String, SpdxExpression> = emptyMap()
+    val declaredLicenseMapping: Map<String, SpdxExpression> = emptyMap(),
+
+    /**
+     * The considered source code origins in order of priority. If not null, this must not be empty and not contain any
+     * duplicates.
+     */
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    val sourceCodeOrigins: List<SourceCodeOrigin>? = null
 ) {
     /**
      * Apply this [PackageCuration] to [targetPackage] by overriding all values of [targetPackage] with non-null values
@@ -145,7 +152,8 @@ data class PackageCurationData(
             vcs = original.vcs,
             vcsProcessed = vcsProcessed,
             isMetadataOnly = isMetadataOnly ?: original.isMetadataOnly,
-            isModified = isModified ?: original.isModified
+            isModified = isModified ?: original.isModified,
+            sourceCodeOrigins = sourceCodeOrigins ?: original.sourceCodeOrigins
         )
 
         val declaredLicenseMappingDiff = buildMap {
@@ -184,7 +192,9 @@ data class PackageCurationData(
             isMetadataOnly = isMetadataOnly ?: other.isMetadataOnly,
             isModified = isModified ?: other.isModified,
             declaredLicenseMapping = declaredLicenseMapping.zip(other.declaredLicenseMapping) { value, otherValue ->
+                @Suppress("UnsafeCallOnNullableType")
                 (value ?: otherValue)!!
-            }
+            },
+            sourceCodeOrigins = sourceCodeOrigins ?: other.sourceCodeOrigins
         )
 }

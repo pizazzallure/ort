@@ -128,7 +128,7 @@ open class Npm(
 
     private val npmViewCache = ConcurrentHashMap<String, Deferred<JsonNode>>()
 
-    protected open fun hasLockFile(projectDir: File) = NodePackageManager.NPM.hasLockFile(projectDir)
+    protected open fun hasLockfile(projectDir: File) = NodePackageManager.NPM.hasLockfile(projectDir)
 
     /**
      * Check if [this] represents a workspace within a `node_modules` directory.
@@ -328,7 +328,9 @@ open class Npm(
                         }
                     }
 
-                    vcsFromPackage = parseNpmVcsInfo(details)
+                    // Do not replace but merge, because it happens that `package.json` has VCS info while
+                    // `npm view` doesn't, for example for dependencies hosted on GitLab package registry.
+                    vcsFromPackage = vcsFromPackage.merge(parseNpmVcsInfo(details))
                 }.onFailure { e ->
                     logger.debug { "Unable to get package details from a remote registry: ${e.collectMessages()}" }
                 }
@@ -419,6 +421,7 @@ open class Npm(
     private fun getModuleDependencies(moduleDir: File, scopes: Set<String>): Set<NpmModuleInfo> {
         val workspaceModuleDirs = findWorkspaceSubmodules(moduleDir)
 
+        @Suppress("UnsafeCallOnNullableType")
         return buildSet {
             addAll(getModuleInfo(moduleDir, scopes)!!.dependencies)
 
@@ -569,7 +572,7 @@ open class Npm(
      * Install dependencies using the given package manager command.
      */
     private fun installDependencies(workingDir: File): List<Issue> {
-        requireLockfile(workingDir) { hasLockFile(workingDir) }
+        requireLockfile(workingDir) { hasLockfile(workingDir) }
 
         // Install all NPM dependencies to enable NPM to list dependencies.
         val process = runInstall(workingDir)
@@ -598,7 +601,7 @@ open class Npm(
             "--legacy-peer-deps".takeIf { legacyPeerDeps }
         )
 
-        val subcommand = if (hasLockFile(workingDir)) "ci" else "install"
+        val subcommand = if (hasLockfile(workingDir)) "ci" else "install"
         return ProcessCapture(workingDir, command(workingDir), subcommand, *options.toTypedArray())
     }
 }

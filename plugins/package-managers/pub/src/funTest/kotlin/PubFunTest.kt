@@ -25,9 +25,9 @@ import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.should
 import io.kotest.matchers.string.haveSubstring
 
-import org.ossreviewtoolkit.analyzer.managers.analyze
-import org.ossreviewtoolkit.analyzer.managers.create
-import org.ossreviewtoolkit.analyzer.managers.resolveSingleProject
+import org.ossreviewtoolkit.analyzer.analyze
+import org.ossreviewtoolkit.analyzer.create
+import org.ossreviewtoolkit.analyzer.resolveSingleProject
 import org.ossreviewtoolkit.model.AnalyzerResult
 import org.ossreviewtoolkit.model.Hash
 import org.ossreviewtoolkit.model.HashAlgorithm
@@ -43,14 +43,14 @@ class PubFunTest : WordSpec({
         "resolve dart http dependencies correctly".config(enabled = false) {
             val definitionFile = getAssetFile("projects/external/dart-http/pubspec.yaml")
             val expectedResultFile = getAssetFile("projects/external/dart-http-expected-output.yml")
-            val lockFile = definitionFile.resolveSibling("pubspec.lock").also {
+            val lockfile = definitionFile.resolveSibling("pubspec.lock").also {
                 getAssetFile("projects/external/dart-http-pubspec.lock").copyTo(it, overwrite = true)
             }
 
             val result = try {
                 create("Pub", allowDynamicVersions = true).resolveSingleProject(definitionFile)
             } finally {
-                lockFile.delete()
+                lockfile.delete()
             }
 
             result.toYaml() should matchExpectedResult(expectedResultFile, definitionFile)

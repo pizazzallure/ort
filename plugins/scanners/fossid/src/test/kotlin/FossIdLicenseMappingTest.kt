@@ -26,11 +26,6 @@ import io.kotest.matchers.should
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldStartWith
 
-import org.ossreviewtoolkit.clients.fossid.model.identification.common.LicenseMatchType
-import org.ossreviewtoolkit.clients.fossid.model.identification.markedAsIdentified.File
-import org.ossreviewtoolkit.clients.fossid.model.identification.markedAsIdentified.License
-import org.ossreviewtoolkit.clients.fossid.model.identification.markedAsIdentified.LicenseFile
-import org.ossreviewtoolkit.clients.fossid.model.identification.markedAsIdentified.MarkedAsIdentifiedFile
 import org.ossreviewtoolkit.clients.fossid.model.result.LicenseCategory
 import org.ossreviewtoolkit.clients.fossid.model.result.MatchType
 import org.ossreviewtoolkit.clients.fossid.model.result.Snippet
@@ -46,7 +41,7 @@ private const val FILE_PATH_SNIPPET = "filePathSnippet"
 class FossIdLicenseMappingTest : WordSpec({
     "FossIdScanResults" should {
         "create an issue when a license in an identified file cannot be mapped" {
-            val sampleFile = createMarkAsIdentifiedFile("invalid license")
+            val sampleFile = createMarkAsIdentifiedFile("invalid license", FILE_PATH)
             val issues = mutableListOf<Issue>()
 
             val findings = listOf(sampleFile).mapSummary(emptyMap(), issues, emptyMap())
@@ -62,7 +57,8 @@ class FossIdLicenseMappingTest : WordSpec({
             val rawResults = createSnippet("Apache 2.0")
             val issues = mutableListOf<Issue>()
 
-            val findings = mapSnippetFindings(rawResults, issues)
+            val mapping = mapOf("Apache 2.0" to "Apache-2.0")
+            val findings = mapSnippetFindings(rawResults, issues, mapping, emptyList(), mutableSetOf())
 
             issues should beEmpty()
             findings should haveSize(1)
@@ -77,7 +73,7 @@ class FossIdLicenseMappingTest : WordSpec({
             val rawResults = createSnippet("Apache-2.0")
             val issues = mutableListOf<Issue>()
 
-            val findings = mapSnippetFindings(rawResults, issues)
+            val findings = mapSnippetFindings(rawResults, issues, emptyMap(), emptyList(), mutableSetOf())
 
             issues should beEmpty()
             findings should haveSize(1)
@@ -92,13 +88,13 @@ class FossIdLicenseMappingTest : WordSpec({
             val rawResults = createSnippet("invalid license")
             val issues = mutableListOf<Issue>()
 
-            val findings = mapSnippetFindings(rawResults, issues)
+            val findings = mapSnippetFindings(rawResults, issues, emptyMap(), emptyList(), mutableSetOf())
 
             issues should haveSize(1)
             issues.first() shouldNotBeNull {
                 message shouldStartWith
-                    "Failed to map license 'invalid license' as an SPDX expression."
-                severity shouldBe Severity.HINT
+                    "Failed to parse license 'invalid license' as an SPDX expression"
+                severity shouldBe Severity.ERROR
             }
             findings should haveSize(1)
             findings.first() shouldNotBeNull {
@@ -109,47 +105,6 @@ class FossIdLicenseMappingTest : WordSpec({
         }
     }
 })
-
-private fun createMarkAsIdentifiedFile(license: String): MarkedAsIdentifiedFile {
-    val fileLicense = License(
-        1,
-        LicenseMatchType.FILE,
-        1,
-        1,
-        1,
-        created = "created",
-        updated = "updated",
-        licenseId = 1
-    ).also {
-        it.file = LicenseFile(
-            license,
-            null,
-            null,
-            null,
-            null,
-            null
-        )
-    }
-
-    return MarkedAsIdentifiedFile(
-        "comment",
-        emptyMap(),
-        1,
-        "copyright",
-        1,
-        1
-    ).also {
-        it.file = File(
-            "fileId",
-            "fileMd5",
-            FILE_PATH,
-            "fileSha1",
-            "fileSha256",
-            0,
-            mutableMapOf(1 to fileLicense)
-        )
-    }
-}
 
 private fun createSnippet(license: String): RawResults {
     val snippet = Snippet(

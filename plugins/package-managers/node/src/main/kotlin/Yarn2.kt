@@ -377,7 +377,9 @@ class Yarn2(
                                 // to the fact it relies on package.json parsing and only the project ones are
                                 // available), the dependencies of a package are always searched in the 'Dependencies'
                                 // scope, instead of the scope of this package.
+                                @Suppress("UnsafeCallOnNullableType")
                                 val dependenciesInDependenciesScope = allDependencies[YarnDependencyType.DEPENDENCIES]!!
+
                                 YarnModuleInfo(
                                     packageDependency.id,
                                     packageDependency,
@@ -656,7 +658,7 @@ class Yarn2(
     private fun cleanYarn2VersionString(rawVersion: String): String {
         // 'Patch' locators are complex expressions such as
         // resolve@npm%3A2.0.0-next.3#~builtin<compat/resolve>%3A%3Aversion=2.0.0-next.3&hash=07638b
-        // Therefore, the version has to be extracted (here '2.0.0-next.3).
+        // Therefore, the version has to be extracted (here '2.0.0-next.3').
         var result = rawVersion.substringAfter("version=")
             .substringBefore("&")
 

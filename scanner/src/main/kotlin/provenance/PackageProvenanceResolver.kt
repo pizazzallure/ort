@@ -47,11 +47,12 @@ import org.ossreviewtoolkit.utils.ort.showStackTrace
  */
 interface PackageProvenanceResolver {
     /**
-     * Resolve the [KnownProvenance] of [pkg] based on the provided [sourceCodeOriginPriority].
+     * Resolve the [Provenance] of [pkg] based on [Package.sourceCodeOrigins] if specified, or else on
+     * [defaultSourceCodeOrigins]. Each source code origins are listed in order of priority.
      *
      * Throws an [IOException] if the provenance cannot be resolved.
      */
-    fun resolveProvenance(pkg: Package, sourceCodeOriginPriority: List<SourceCodeOrigin>): KnownProvenance
+    fun resolveProvenance(pkg: Package, defaultSourceCodeOrigins: List<SourceCodeOrigin>): KnownProvenance
 }
 
 /**
@@ -62,15 +63,17 @@ class DefaultPackageProvenanceResolver(
     private val workingTreeCache: WorkingTreeCache
 ) : PackageProvenanceResolver {
     /**
-     * Resolve the [Provenance] of [pkg] based on the provided [sourceCodeOriginPriority]. For source artifacts it is
+     * Resolve the [Provenance] of [pkg] based on [Package.sourceCodeOrigins] if specified, or else on
+     * [defaultSourceCodeOrigins]. Each source code origins are listed in order of priority. For source artifacts it is
      * verified that the [RemoteArtifact] does exist. For a VCS it is verified that the revision exists. If the revision
      * provided by the [package][pkg] metadata does not exist or is missing, the function tries to guess the tag based
      * on the name and version of the [package][pkg].
      */
-    override fun resolveProvenance(pkg: Package, sourceCodeOriginPriority: List<SourceCodeOrigin>): KnownProvenance {
+    override fun resolveProvenance(pkg: Package, defaultSourceCodeOrigins: List<SourceCodeOrigin>): KnownProvenance {
         val errors = mutableMapOf<SourceCodeOrigin, Throwable>()
+        val sourceCodeOrigins = pkg.sourceCodeOrigins ?: defaultSourceCodeOrigins
 
-        sourceCodeOriginPriority.forEach { sourceCodeOrigin ->
+        sourceCodeOrigins.forEach { sourceCodeOrigin ->
             runCatching {
                 when (sourceCodeOrigin) {
                     SourceCodeOrigin.ARTIFACT -> {
@@ -98,7 +101,7 @@ class DefaultPackageProvenanceResolver(
         val message = buildString {
             append(
                 "Could not resolve provenance for package '${pkg.id.toCoordinates()}' for source code origins " +
-                    "$sourceCodeOriginPriority."
+                    "$defaultSourceCodeOrigins."
             )
 
             errors.forEach { (origin, throwable) ->
@@ -142,7 +145,7 @@ class DefaultPackageProvenanceResolver(
 
         if (responseCode == HttpURLConnection.HTTP_OK) {
             val artifactProvenance = ArtifactProvenance(pkg.sourceArtifact)
-            storage.putProvenance(pkg.id, pkg.sourceArtifact, ResolvedArtifactProvenance(artifactProvenance))
+            storage.writeProvenance(pkg.id, pkg.sourceArtifact, ResolvedArtifactProvenance(artifactProvenance))
             return artifactProvenance
         }
 
@@ -252,7 +255,7 @@ class DefaultPackageProvenanceResolver(
                 val repositoryProvenance = RepositoryProvenance(pkg.vcsProcessed, workingTree.getRevision())
 
                 vcs.isFixedRevision(workingTree, revision).onSuccess { isFixedRevision ->
-                    storage.putProvenance(
+                    storage.writeProvenance(
                         pkg.id,
                         pkg.vcsProcessed,
                         ResolvedRepositoryProvenance(repositoryProvenance, revision, isFixedRevision)
@@ -265,7 +268,7 @@ class DefaultPackageProvenanceResolver(
             val message = "Could not resolve revision for package '${pkg.id.toCoordinates()}' with " +
                 "${pkg.vcsProcessed}:\n${messages.joinToString("\n") { "\t$it" }}"
 
-            storage.putProvenance(pkg.id, pkg.vcsProcessed, UnresolvedPackageProvenance(message))
+            storage.writeProvenance(pkg.id, pkg.vcsProcessed, UnresolvedPackageProvenance(message))
 
             throw IOException(message)
         }

@@ -28,9 +28,9 @@ import io.kotest.matchers.maps.haveSize
 import io.kotest.matchers.should
 import io.kotest.matchers.shouldBe
 
-import org.ossreviewtoolkit.analyzer.managers.analyze
-import org.ossreviewtoolkit.analyzer.managers.create
-import org.ossreviewtoolkit.analyzer.managers.resolveSingleProject
+import org.ossreviewtoolkit.analyzer.analyze
+import org.ossreviewtoolkit.analyzer.create
+import org.ossreviewtoolkit.analyzer.resolveSingleProject
 import org.ossreviewtoolkit.downloader.VersionControlSystem
 import org.ossreviewtoolkit.model.Identifier
 import org.ossreviewtoolkit.model.Project
@@ -174,6 +174,25 @@ class SpdxDocumentFileFunTest : WordSpec({
                     }
 
                     packages.map { it.id } should containExactlyInAnyOrder(idZlib, idMyLib, idCurl, idOpenSsl)
+                }
+            }
+        }
+
+        "retrieve nested DEPENDS_ON dependencies" {
+            val idCurl = Identifier("SpdxDocumentFile::curl:7.70.0")
+            val idOpenSsl = Identifier("SpdxDocumentFile:OpenSSL Development Team:openssl:1.1.1g")
+            val idZlib = Identifier("SpdxDocumentFile::zlib:1.2.11")
+
+            val projectFile = projectDir.resolve("DEPENDS_ON-packages/project-xyz.spdx.yml")
+            val definitionFiles = listOf(projectFile)
+
+            val result = create("SpdxDocumentFile").resolveDependencies(definitionFiles, emptyMap())
+
+            result.projectResults[projectFile] shouldNotBeNull {
+                with(single()) {
+                    val resolvedProject = project.withResolvedScopes(result.dependencyGraph)
+                    resolvedProject.scopes.map { it.name } should containExactlyInAnyOrder("default")
+                    packages.map { it.id } should containExactlyInAnyOrder(idZlib, idCurl, idOpenSsl)
                 }
             }
         }

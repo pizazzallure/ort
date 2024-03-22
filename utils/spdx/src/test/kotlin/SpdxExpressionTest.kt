@@ -37,31 +37,8 @@ import org.ossreviewtoolkit.utils.spdx.SpdxExpression.Strictness
 import org.ossreviewtoolkit.utils.spdx.SpdxLicense.*
 import org.ossreviewtoolkit.utils.spdx.SpdxLicenseException.*
 
+@Suppress("LargeClass")
 class SpdxExpressionTest : WordSpec({
-    "toString()" should {
-        "return the textual SPDX expression" {
-            val expression = "a+ AND (b WITH exception1 OR c+) AND d WITH exception2"
-
-            expression.toSpdx() should beString(expression)
-        }
-
-        "not include unnecessary parenthesis" {
-            val expression = "(a AND (b AND c) AND (d OR (e WITH exception)))"
-
-            expression.toSpdx() should beString("a AND b AND c AND (d OR e WITH exception)")
-        }
-
-        "always add parentheses around groups with different operators" {
-            val expression1 = "a AND b AND c OR d AND e AND f"
-            val expression2 = "(a OR b OR c) AND (d OR e OR f)"
-            val expression3 = "(a OR b AND c) AND (d AND e OR f)"
-
-            expression1.toSpdx() should beString("(a AND b AND c) OR (d AND e AND f)")
-            expression2.toSpdx() should beString("(a OR b OR c) AND (d OR e OR f)")
-            expression3.toSpdx() should beString("(a OR (b AND c)) AND ((d AND e) OR f)")
-        }
-    }
-
     "A dummy SpdxExpression" should {
         val dummyExpression = "a+ AND (b WITH exception1 OR c+) AND d WITH exception2"
 
@@ -79,19 +56,16 @@ class SpdxExpressionTest : WordSpec({
             val deserializedExpression = serializedExpression.fromYaml<SpdxExpression>()
 
             deserializedExpression shouldBe SpdxCompoundExpression(
-                SpdxCompoundExpression(
-                    SpdxLicenseIdExpression("a", true),
-                    SpdxOperator.AND,
-                    SpdxCompoundExpression(
-                        SpdxLicenseWithExceptionExpression(
-                            SpdxLicenseIdExpression("b"),
-                            "exception1"
-                        ),
-                        SpdxOperator.OR,
-                        SpdxLicenseIdExpression("c", true)
-                    )
-                ),
                 SpdxOperator.AND,
+                SpdxLicenseIdExpression("a", true),
+                SpdxCompoundExpression(
+                    SpdxOperator.OR,
+                    SpdxLicenseWithExceptionExpression(
+                        SpdxLicenseIdExpression("b"),
+                        "exception1"
+                    ),
+                    SpdxLicenseIdExpression("c", true)
+                ),
                 SpdxLicenseWithExceptionExpression(
                     SpdxLicenseIdExpression("d"),
                     "exception2"
@@ -250,7 +224,7 @@ class SpdxExpressionTest : WordSpec({
         }
     }
 
-    "An SpdxExpression with SPDX constants" should {
+    "parse()" should {
         "parse NONE correctly" {
             SpdxExpression.parse(SpdxConstants.NONE, Strictness.ALLOW_CURRENT).toString() shouldBe SpdxConstants.NONE
         }
@@ -259,9 +233,155 @@ class SpdxExpressionTest : WordSpec({
             SpdxExpression.parse(SpdxConstants.NOASSERTION, Strictness.ALLOW_CURRENT).toString() shouldBe
                 SpdxConstants.NOASSERTION
         }
-    }
 
-    "The expression parser" should {
+        "parse a license id correctly" {
+            val actualExpression = "spdx.license-id".toSpdx()
+            val expectedExpression = SpdxLicenseIdExpression("spdx.license-id")
+
+            actualExpression shouldBe expectedExpression
+        }
+
+        "parse a license id starting with a digit correctly" {
+            val actualExpression = "0license".toSpdx()
+            val expectedExpression = SpdxLicenseIdExpression("0license")
+
+            actualExpression shouldBe expectedExpression
+        }
+
+        "parse a license id with any later version correctly" {
+            val actualExpression = "license+".toSpdx()
+            val expectedExpression = SpdxLicenseIdExpression("license", orLaterVersion = true)
+
+            actualExpression shouldBe expectedExpression
+        }
+
+        "parse a document ref correctly" {
+            val actualExpression = "DocumentRef-document:LicenseRef-license".toSpdx()
+            val expectedExpression = SpdxLicenseReferenceExpression("DocumentRef-document:LicenseRef-license")
+
+            actualExpression shouldBe expectedExpression
+        }
+
+        "parse a license ref correctly" {
+            val actualExpression = "LicenseRef-license".toSpdx()
+            val expectedExpression = SpdxLicenseReferenceExpression("LicenseRef-license")
+
+            actualExpression shouldBe expectedExpression
+        }
+
+        "parse a complex expression correctly" {
+            val actualExpression = SpdxExpression.parse(
+                "license1+ and ((license2 with exception1) OR license3+ AND license4 WITH exception2)"
+            )
+            val expectedExpression = SpdxCompoundExpression(
+                SpdxOperator.AND,
+                SpdxLicenseIdExpression("license1", orLaterVersion = true),
+                SpdxCompoundExpression(
+                    SpdxOperator.OR,
+                    SpdxLicenseWithExceptionExpression(
+                        SpdxLicenseIdExpression("license2"),
+                        "exception1"
+                    ),
+                    SpdxCompoundExpression(
+                        SpdxOperator.AND,
+                        SpdxLicenseIdExpression("license3", orLaterVersion = true),
+                        SpdxLicenseWithExceptionExpression(
+                            SpdxLicenseIdExpression("license4"),
+                            "exception2"
+                        )
+                    )
+                )
+            )
+
+            actualExpression shouldBe expectedExpression
+        }
+
+        "bind + stronger than WITH" {
+            val actualExpression = "license+ WITH exception".toSpdx()
+            val expectedExpression = SpdxLicenseWithExceptionExpression(
+                SpdxLicenseIdExpression("license", orLaterVersion = true),
+                "exception"
+            )
+
+            actualExpression shouldBe expectedExpression
+        }
+
+        "bind WITH stronger than AND" {
+            val actualExpression = "license1 AND license2 WITH exception".toSpdx()
+            val expectedExpression = SpdxCompoundExpression(
+                SpdxOperator.AND,
+                SpdxLicenseIdExpression("license1"),
+                SpdxLicenseWithExceptionExpression(
+                    SpdxLicenseIdExpression("license2"),
+                    "exception"
+                )
+            )
+
+            actualExpression shouldBe expectedExpression
+        }
+
+        "bind AND stronger than OR" {
+            val actualExpression = "license1 OR license2 AND license3".toSpdx()
+            val expectedExpression = SpdxCompoundExpression(
+                SpdxOperator.OR,
+                SpdxLicenseIdExpression("license1"),
+                SpdxCompoundExpression(
+                    SpdxOperator.AND,
+                    SpdxLicenseIdExpression("license2"),
+                    SpdxLicenseIdExpression("license3")
+                )
+            )
+
+            actualExpression shouldBe expectedExpression
+        }
+
+        "respect parentheses for binding strength of operators" {
+            val actualExpression = "(license1 OR license2) AND license3".toSpdx()
+            val expectedExpression = SpdxCompoundExpression(
+                SpdxOperator.AND,
+                SpdxCompoundExpression(
+                    SpdxOperator.OR,
+                    SpdxLicenseIdExpression("license1"),
+                    SpdxLicenseIdExpression("license2")
+                ),
+                SpdxLicenseIdExpression("license3")
+            )
+
+            actualExpression shouldBe expectedExpression
+        }
+
+        "fail if + is used in an exception expression" {
+            val exception = shouldThrow<SpdxException> {
+                "license WITH exception+".toSpdx()
+            }
+
+            exception.message shouldBe "Unexpected token 'PLUS(position=23)'."
+        }
+
+        "fail if a compound expression is used before WITH" {
+            val exception = shouldThrow<SpdxException> {
+                "(license1 AND license2) WITH exception".toSpdx()
+            }
+
+            exception.message shouldBe "Unexpected token 'WITH(position=25)'."
+        }
+
+        "fail on an invalid symbol" {
+            val exception = shouldThrow<SpdxException> {
+                "/".toSpdx()
+            }
+
+            exception.message shouldBe "Unexpected character '/' at position 1."
+        }
+
+        "fail on a syntax error" {
+            val exception = shouldThrow<SpdxException> {
+                "((".toSpdx()
+            }
+
+            exception.message shouldBe "Unexpected token 'null'."
+        }
+
         "work for deprecated license identifiers" {
             assertSoftly {
                 "eCos-2.0".toSpdx() shouldBe SpdxLicenseIdExpression("eCos-2.0")
@@ -270,7 +390,21 @@ class SpdxExpressionTest : WordSpec({
                 "wxWindows".toSpdx() shouldBe SpdxLicenseIdExpression("wxWindows")
             }
         }
+    }
 
+    "creating a compound expression" should {
+        "fail if the expression has less than two children" {
+            shouldThrow<IllegalArgumentException> {
+                SpdxCompoundExpression(SpdxOperator.AND, emptyList())
+            }
+
+            shouldThrow<IllegalArgumentException> {
+                SpdxCompoundExpression(SpdxOperator.AND, listOf(SpdxLicenseIdExpression("license")))
+            }
+        }
+    }
+
+    "normalize()" should {
         "normalize the case of SPDX licenses" {
             SpdxLicense.entries.filterNot { it.deprecated }.forEach {
                 it.id.lowercase().toSpdx().normalize() shouldBe it.toExpression()
@@ -426,7 +560,7 @@ class SpdxExpressionTest : WordSpec({
 
             choices.map { it.toString() } should containExactlyInAnyOrder(
                 "a AND a",
-                "a AND b",
+                "b AND a",
                 "b AND b"
             )
         }
@@ -481,6 +615,41 @@ class SpdxExpressionTest : WordSpec({
                 "(MIT OR BSD-3-Clause OR GPL-2.0-only)"
 
             license.toSpdx().isValidChoice("MIT".toSpdx()) shouldBe true
+        }
+    }
+
+    "isSubExpression()" should {
+        "return true for the same simple expression" {
+            val mit = "MIT".toSpdx() as SpdxSimpleExpression
+
+            mit.isSubExpression(mit) shouldBe true
+        }
+
+        "return true for the same single expression" {
+            val mit = "GPL-2.0-only WITH Classpath-exception-2.0".toSpdx() as SpdxSingleLicenseExpression
+
+            mit.isSubExpression(mit) shouldBe true
+        }
+
+        "return true for the same compound expression" {
+            val mit = "CDDL-1.1 OR GPL-2.0-only".toSpdx() as SpdxCompoundExpression
+
+            mit.isSubExpression(mit) shouldBe true
+        }
+
+        "work correctly for compound expressions with exceptions" {
+            val gplWithException = "CDDL-1.1 OR GPL-2.0-only WITH Classpath-exception-2.0".toSpdx()
+            val gpl = "CDDL-1.1 OR GPL-2.0-only".toSpdx()
+
+            gplWithException.isSubExpression(gpl) shouldBe false
+        }
+
+        "work correctly for nested compound expressions" {
+            val expression = "(CDDL-1.1 OR GPL-2.0-only) AND (CDDL-1.1 OR GPL-2.0-only WITH Classpath-exception-2.0)"
+                .toSpdx()
+            val subExpression = "CDDL-1.1 OR GPL-2.0-only".toSpdx()
+
+            expression.isSubExpression(subExpression) shouldBe true
         }
     }
 
@@ -689,6 +858,30 @@ class SpdxExpressionTest : WordSpec({
             "a AND b".toSpdx().hashCode() shouldBe "b AND a".toSpdx().hashCode()
             "a OR b".toSpdx().hashCode() shouldBe "b OR a".toSpdx().hashCode()
             "a AND (b OR c)".toSpdx().hashCode() shouldBe "(a AND b) OR (a AND c)".toSpdx().hashCode()
+        }
+    }
+
+    "toString()" should {
+        "return the textual SPDX expression" {
+            val expression = "a+ AND (b WITH exception1 OR c+) AND d WITH exception2"
+
+            expression.toSpdx() should beString(expression)
+        }
+
+        "not include unnecessary parenthesis" {
+            val expression = "(a AND (b AND c) AND (d OR (e WITH exception)))"
+
+            expression.toSpdx() should beString("a AND b AND c AND (d OR e WITH exception)")
+        }
+
+        "always add parentheses around groups with different operators" {
+            val expression1 = "a AND b AND c OR d AND e AND f"
+            val expression2 = "(a OR b OR c) AND (d OR e OR f)"
+            val expression3 = "(a OR b AND c) AND (d AND e OR f)"
+
+            expression1.toSpdx() should beString("(a AND b AND c) OR (d AND e AND f)")
+            expression2.toSpdx() should beString("(a OR b OR c) AND (d OR e OR f)")
+            expression3.toSpdx() should beString("(a OR (b AND c)) AND ((d AND e) OR f)")
         }
     }
 })

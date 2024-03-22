@@ -42,14 +42,16 @@ import org.ossreviewtoolkit.model.Severity
 import org.ossreviewtoolkit.model.Snippet as OrtSnippet
 import org.ossreviewtoolkit.model.SnippetFinding
 import org.ossreviewtoolkit.model.TextLocation
+import org.ossreviewtoolkit.model.config.snippet.SnippetChoice
+import org.ossreviewtoolkit.model.config.snippet.SnippetChoiceReason
 import org.ossreviewtoolkit.model.createAndLogIssue
+import org.ossreviewtoolkit.model.jsonMapper
 import org.ossreviewtoolkit.model.mapLicense
 import org.ossreviewtoolkit.model.utils.PurlType
-import org.ossreviewtoolkit.utils.common.alsoIfNull
 import org.ossreviewtoolkit.utils.common.collapseToRanges
 import org.ossreviewtoolkit.utils.common.collectMessages
 import org.ossreviewtoolkit.utils.common.prettyPrintRanges
-import org.ossreviewtoolkit.utils.ort.DeclaredLicenseProcessor
+import org.ossreviewtoolkit.utils.ort.ORT_NAME
 import org.ossreviewtoolkit.utils.spdx.SpdxConstants
 import org.ossreviewtoolkit.utils.spdx.toSpdx
 
@@ -93,28 +95,39 @@ internal fun <T : Summarizable> List<T>.mapSummary(
     val files = filterNot { it.getFileName() in ignoredFiles }
     files.forEach { summarizable ->
         val summary = summarizable.toSummary()
-        val location = TextLocation(summary.path, TextLocation.UNKNOWN_LINE, TextLocation.UNKNOWN_LINE)
+        var fileComment: OrtComment? = null
 
-        summary.licences.forEach {
-            runCatching {
-                // TODO: The detected license mapping must be applied here, because FossID can return license strings
-                //       which cannot be parsed to an SpdxExpression. A better solution could be to automatically
-                //       convert the strings into a form that can be parsed, then the mapping could be applied globally.
-                LicenseFinding(it.identifier.mapLicense(detectedLicenseMapping), location)
-            }.onSuccess { licenseFinding ->
-                licenseFindings += licenseFinding.copy(license = licenseFinding.license.normalize())
-            }.onFailure { spdxException ->
-                issues += FossId.createAndLogIssue(
-                    source = "FossId",
-                    message = "Failed to parse license '${it.identifier}' as an SPDX expression: " +
-                        spdxException.collectMessages()
-                )
+        if (summarizable is MarkedAsIdentifiedFile) {
+            summarizable.comments.values.firstOrNull {
+                it.comment.contains(ORT_NAME)
+            }?.also {
+                runCatching {
+                    fileComment = jsonMapper.readValue(it.comment, OrtComment::class.java)
+                }.onFailure {
+                    logger.error { "Cannot deserialize comment for ${summary.path}: ${it.message}." }
+                }
+            }
+        }
+
+        val defaultLocation = TextLocation(summary.path, TextLocation.UNKNOWN_LINE, TextLocation.UNKNOWN_LINE)
+
+        summary.licences.forEach { licenseAddedInTheUI ->
+            mapLicense(licenseAddedInTheUI.identifier, defaultLocation, issues, detectedLicenseMapping)?.let {
+                licenseFindings += it
+            }
+        }
+
+        fileComment?.ort?.licenses?.forEach { (licenseInORTComment, locations) ->
+            locations.forEach { location ->
+                mapLicense(licenseInORTComment, location, issues, detectedLicenseMapping)?.let {
+                    licenseFindings += it
+                }
             }
         }
 
         summarizable.getCopyright().let {
             if (it.isNotEmpty()) {
-                copyrightFindings += CopyrightFinding(it, location)
+                copyrightFindings += CopyrightFinding(it, defaultLocation)
             }
         }
     }
@@ -127,23 +140,47 @@ internal fun <T : Summarizable> List<T>.mapSummary(
 }
 
 /**
- * Map the raw snippets to ORT [SnippetFinding]s. If a snippet license cannot be parsed, an issues is added to [issues].
+ * Convert a [license] at [location] from FossID to a valid [LicenseFinding]. If the license cannot be mapped, null is
+ * returned and an issue is added to [issues].
  */
-internal fun mapSnippetFindings(rawResults: RawResults, issues: MutableList<Issue>): Set<SnippetFinding> {
+private fun mapLicense(
+    license: String,
+    location: TextLocation,
+    issues: MutableList<Issue>,
+    detectedLicenseMapping: Map<String, String>
+): LicenseFinding? {
+    return runCatching {
+        // TODO: The detected license mapping must be applied here, because FossID can return license strings
+        //       which cannot be parsed to an SpdxExpression. A better solution could be to automatically
+        //       convert the strings into a form that can be parsed, then the mapping could be applied globally.
+        LicenseFinding(license.mapLicense(detectedLicenseMapping), location)
+    }.onSuccess { licenseFinding ->
+        licenseFinding.copy(license = licenseFinding.license.normalize())
+    }.onFailure { spdxException ->
+        issues += FossId.createAndLogIssue(
+            source = "FossId",
+            message = "Failed to parse license '$license' as an SPDX expression: ${spdxException.collectMessages()}"
+        )
+    }.getOrNull()
+}
+
+/**
+ * Map the raw snippets to ORT [SnippetFinding]s. If a snippet license cannot be parsed, an issues is added to [issues].
+ * [LicenseFinding]s due to chosen snippets will be added to [snippetLicenseFindings].
+ */
+internal fun mapSnippetFindings(
+    rawResults: RawResults,
+    issues: MutableList<Issue>,
+    detectedLicenseMapping: Map<String, String>,
+    snippetChoices: List<SnippetChoice>,
+    snippetLicenseFindings: MutableSet<LicenseFinding>
+): Set<SnippetFinding> {
+    val remainingSnippetChoices = snippetChoices.toMutableList()
+
     return rawResults.listSnippets.flatMap { (file, rawSnippets) ->
         val findings = mutableMapOf<TextLocation, MutableSet<OrtSnippet>>()
 
         rawSnippets.forEach { snippet ->
-            val license = snippet.artifactLicense?.let { artifactLicense ->
-                DeclaredLicenseProcessor.process(artifactLicense).alsoIfNull {
-                    issues += FossId.createAndLogIssue(
-                        source = "FossId",
-                        message = "Failed to map license '$artifactLicense' as an SPDX expression.",
-                        severity = Severity.HINT
-                    )
-                }
-            } ?: SpdxConstants.NOASSERTION.toSpdx()
-
             // FossID does not return the hash of the remote artifact. Instead, it returns the MD5 hash of the
             // matched file in the remote artifact as part of the "match_file_id" property.
             val url = checkNotNull(snippet.url) {
@@ -187,23 +224,153 @@ internal fun mapSnippetFindings(rawResults: RawResults, issues: MutableList<Issu
                 }
             }
 
+            val ortSnippetLocation = snippetLocation ?: TextLocation(snippet.file, TextLocation.UNKNOWN_LINE)
+
+            val license = snippet.artifactLicense?.let { artifactLicense ->
+                mapLicense(artifactLicense, ortSnippetLocation, issues, detectedLicenseMapping)?.license?.normalize()
+            } ?: SpdxConstants.NOASSERTION.toSpdx()
+
             val ortSnippet = OrtSnippet(
                 snippet.score.toFloat(),
-                snippetLocation ?: TextLocation(snippet.file, TextLocation.UNKNOWN_LINE),
+                ortSnippetLocation,
                 snippetProvenance,
                 purl,
                 license,
                 additionalSnippetData
             )
 
-            sourceLocations.forEach {
-                findings.getOrPut(it) { mutableSetOf(ortSnippet) } += ortSnippet
+            sourceLocations.forEach { sourceLocation ->
+                val isSnippetChoice = when {
+                    snippetChoices.any { it.given.sourceLocation == sourceLocation && it.choice.purl == purl } -> {
+                        logger.info {
+                            "Ignoring snippet $purl for file ${sourceLocation.prettyPrint()}, " +
+                                "as this is a chosen snippet."
+                        }
+                        true
+                    }
+
+                    snippetChoices.any { it.given.sourceLocation == sourceLocation } -> {
+                        logger.info {
+                            "Ignoring snippet $purl for file ${sourceLocation.prettyPrint()}, " +
+                                "as there is a snippet choice for this source location."
+                        }
+                        true
+                    }
+
+                    else -> false
+                }
+
+                val isLocationWithFalsePositives = remainingSnippetChoices.removeIf {
+                    it.given.sourceLocation == sourceLocation &&
+                        it.choice.reason == SnippetChoiceReason.NO_RELEVANT_FINDING
+                }
+
+                if (isLocationWithFalsePositives) {
+                    logger.info {
+                        "Ignoring snippet $purl for file ${sourceLocation.prettyPrint()}, " +
+                            "as this is a location with only false positives."
+                    }
+                }
+
+                if (!isSnippetChoice && !isLocationWithFalsePositives) {
+                    findings.getOrPut(sourceLocation) { mutableSetOf(ortSnippet) } += ortSnippet
+                }
+
+                getLicenseFindingFromSnippetChoice(
+                    remainingSnippetChoices,
+                    sourceLocation,
+                    ortSnippet
+                )?.let { finding -> snippetLicenseFindings += finding }
             }
         }
 
         findings.map { SnippetFinding(it.key, it.value) }
-    }.toSet()
+    }.toSet().also {
+        remainingSnippetChoices.forEach { snippetChoice ->
+            // The issue is created only if the chosen snippet does not correspond to a file marked by a previous run.
+            val isNotOldMarkedAsIdentifiedFile = rawResults.markedAsIdentifiedFiles.none { markedFile ->
+                markedFile.file.path == snippetChoice.given.sourceLocation.path
+            }
+
+            if (isNotOldMarkedAsIdentifiedFile) {
+                val message =
+                    "The configuration contains a snippet choice for the snippet ${snippetChoice.choice.purl} at " +
+                        "${snippetChoice.given.sourceLocation.prettyPrint()}, but the FossID result contains no such " +
+                        "snippet."
+                logger.warn(message)
+                issues += Issue(
+                    source = "FossId",
+                    message = message,
+                    severity = Severity.WARNING
+                )
+            }
+        }
+    }
 }
+
+/**
+ * Check if [snippet] is a chosen snippet for the given [sourceLocation]. If it is, remove it from
+ * [remainingSnippetChoices] and return a [LicenseFinding]. Otherwise, return null.
+ */
+private fun getLicenseFindingFromSnippetChoice(
+    remainingSnippetChoices: MutableList<SnippetChoice>,
+    sourceLocation: TextLocation,
+    snippet: OrtSnippet
+): LicenseFinding? {
+    val isSnippetChoice = remainingSnippetChoices.removeIf { snippetChoice ->
+        snippetChoice.given.sourceLocation == sourceLocation && snippetChoice.choice.purl == snippet.purl
+    }
+
+    return if (isSnippetChoice) {
+        logger.info {
+            "Adding snippet choice for ${sourceLocation.prettyPrint()} " +
+                "with license ${snippet.licenses} to the license findings."
+        }
+        LicenseFinding(snippet.licenses, sourceLocation)
+    } else {
+        null
+    }
+}
+
+/**
+ * Check all [markedAsIdentifiedFiles] if their snippet choices locations count or non-relevant snippets locations count
+ * matches the ones stored in the [OrtComment]: When not, it means some of this configuration has been removed and the
+ * files should be considered as pending again. Such files are returned.
+ */
+internal fun listUnmatchedSnippetChoices(
+    markedAsIdentifiedFiles: List<MarkedAsIdentifiedFile>,
+    snippetChoices: List<SnippetChoice>
+): List<String> =
+    markedAsIdentifiedFiles.filterNot { markedAsIdentifiedFile ->
+        val markedFileName = markedAsIdentifiedFile.getFileName()
+        val snippetChoicesByName = snippetChoices.filter {
+            it.given.sourceLocation.path == markedFileName
+        }
+        val comment = markedAsIdentifiedFile.comments.values.firstOrNull {
+            it.comment.contains(ORT_NAME)
+        }?.runCatching {
+            jsonMapper.readValue(this.comment, OrtComment::class.java)
+        }?.onFailure {
+            logger.warn {
+                "File $markedFileName is marked as identified but it does not have a valid comment. " +
+                    "It will be ignored. Exception: ${it.message}."
+            }
+        }?.getOrDefault(null)
+
+        when {
+            comment != null -> {
+                val snippetChoicesCount = snippetChoicesByName.count {
+                    it.choice.reason == SnippetChoiceReason.ORIGINAL_FINDING
+                }
+                val notRelevantSnippetsCount = snippetChoicesByName.count {
+                    it.choice.reason == SnippetChoiceReason.NO_RELEVANT_FINDING
+                }
+                snippetChoicesCount == comment.ort.snippetChoicesCount &&
+                    notRelevantSnippetsCount == comment.ort.notRelevantSnippetsCount
+            }
+            else -> true
+        }
+    }.map { it.getFileName() }
 
 /**
  * Return the [PurlType] as determined from the given [url], or [PurlType.GENERIC] if there is no match.
@@ -230,4 +397,11 @@ private fun urlToPackageType(url: String): PurlType =
                 }
             }
         }
+    }
+
+internal fun TextLocation.prettyPrint(): String =
+    if (startLine == TextLocation.UNKNOWN_LINE && endLine == TextLocation.UNKNOWN_LINE) {
+        "$path#FULL"
+    } else {
+        "$path#$startLine-$endLine"
     }

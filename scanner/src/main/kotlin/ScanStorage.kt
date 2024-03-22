@@ -39,16 +39,9 @@ sealed interface ScanStorageReader
  */
 interface PackageBasedScanStorageReader : ScanStorageReader {
     /**
-     * Read all [ScanResult]s for the provided [package][pkg]. The package scan results are converted to a
-     * [NestedProvenanceScanResult] using the provided [nestedProvenance].
-     *
-     * Throws a [ScanStorageException] if an error occurs while reading from the storage.
-     */
-    fun read(pkg: Package, nestedProvenance: NestedProvenance): List<NestedProvenanceScanResult>
-
-    /**
-     * Read all [ScanResult]s for the provided [package][pkg] matching the [provenance][KnownProvenance.matches] and the
-     * [scannerMatcher]. The package scan results are converted to a [NestedProvenanceScanResult] using the provided
+     * Read all [ScanResult]s for the provided [package][pkg]. The results have to match the
+     * [provenance][KnownProvenance.matches] of the package and can optionally be filtered by the provided
+     * [scannerMatcher]. The results are converted to a [NestedProvenanceScanResult] using the provided
      * [nestedProvenance].
      *
      * Throws a [ScanStorageException] if an error occurs while reading from the storage.
@@ -56,7 +49,7 @@ interface PackageBasedScanStorageReader : ScanStorageReader {
     fun read(
         pkg: Package,
         nestedProvenance: NestedProvenance,
-        scannerMatcher: ScannerMatcher
+        scannerMatcher: ScannerMatcher? = null
     ): List<NestedProvenanceScanResult>
 }
 
@@ -68,19 +61,13 @@ interface ProvenanceBasedScanStorageReader : ScanStorageReader {
      * Read all [ScanResult]s for the provided [provenance]. If the [provenance] is an [ArtifactProvenance], the URL and
      * the hash value must match. If the [provenance] is a [RepositoryProvenance], the VCS type and URL, and the
      * resolved revision must match. The VCS revision is ignored, because the resolved revision already defines what was
-     * scanned.
+     * scanned. Scan results can optionally be filtered by the provided [scannerMatcher].
      *
      * A [ScanStorageException] is thrown if:
      * * An error occurs while reading from the storage.
      * * The [provenance] is a [RepositoryProvenance] with a non-empty VCS path.
      */
-    fun read(provenance: KnownProvenance): List<ScanResult>
-
-    /**
-     * Like [read], but also filters by the provided [scannerMatcher].
-     */
-    fun read(provenance: KnownProvenance, scannerMatcher: ScannerMatcher): List<ScanResult> =
-        read(provenance).filter { scannerMatcher.matches(it.scanner) }
+    fun read(provenance: KnownProvenance, scannerMatcher: ScannerMatcher? = null): List<ScanResult>
 }
 
 /**

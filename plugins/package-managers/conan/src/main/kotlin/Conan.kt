@@ -115,7 +115,7 @@ class Conan(
 
     override fun command(workingDir: File?) = "conan"
 
-    private fun hasLockFile(file: String) = File(file).isFile
+    private fun hasLockfile(file: String) = File(file).isFile
 
     override fun transformVersion(output: String) =
     // Conan could report version strings like:
@@ -153,7 +153,7 @@ class Conan(
 
             // TODO: Support lockfiles which are located in a different directory than the definition file.
             val lockfileName = options[OPTION_LOCKFILE_NAME]
-            requireLockfile(workingDir) { lockfileName?.let { hasLockFile(workingDir.resolve(it).path) } ?: false }
+            requireLockfile(workingDir) { lockfileName?.let { hasLockfile(workingDir.resolve(it).path) } ?: false }
 
             val jsonFile = createOrtTempDir().resolve("info.json")
             if (lockfileName != null) {
@@ -494,5 +494,5 @@ class Conan(
      * author name; otherwise, return an empty set.
      */
     private fun parseAuthors(node: JsonNode): Set<String> =
-        parseAuthorString(node["author"]?.textValue(), '<', '(')?.let { setOf(it) } ?: emptySet()
+        setOfNotNull(parseAuthorString(node["author"]?.textValue(), '<', '('))
 }

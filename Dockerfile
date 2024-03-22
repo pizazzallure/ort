@@ -137,8 +137,8 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     tk-dev \
     && sudo rm -rf /var/lib/apt/lists/*
 
-ARG PYTHON_VERSION=3.11.5
-ARG PYENV_GIT_TAG=v2.3.25
+ARG PYTHON_VERSION=3.11.8
+ARG PYENV_GIT_TAG=v2.3.36
 
 ENV PYENV_ROOT=/opt/python
 ENV PATH=$PATH:$PYENV_ROOT/shims:$PYENV_ROOT/bin
@@ -146,7 +146,7 @@ RUN curl -kSs https://pyenv.run | bash \
     && pyenv install -v $PYTHON_VERSION \
     && pyenv global $PYTHON_VERSION
 
-ARG CONAN_VERSION=1.61.0
+ARG CONAN_VERSION=1.63.0
 ARG PYTHON_INSPECTOR_VERSION=0.10.0
 ARG PYTHON_PIPENV_VERSION=2023.10.24
 ARG PYTHON_POETRY_VERSION=1.7.0
