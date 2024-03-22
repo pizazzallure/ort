@@ -44,7 +44,6 @@ import org.apache.commons.compress.archivers.zip.ZipFile
 import org.apache.commons.compress.compressors.bzip2.BZip2CompressorInputStream
 import org.apache.commons.compress.compressors.gzip.GzipCompressorInputStream
 import org.apache.commons.compress.compressors.xz.XZCompressorInputStream
-import org.apache.commons.compress.utils.SeekableInMemoryByteChannel
 import org.apache.logging.log4j.kotlin.logger
 
 enum class ArchiveType(extension: String, vararg aliases: String) {
@@ -126,7 +125,7 @@ fun File.unpackTryAllTypes(targetDirectory: File, filter: (ArchiveEntry) -> Bool
  * and all entries not matched by the given [filter].
  */
 fun File.unpack7Zip(targetDirectory: File, filter: (ArchiveEntry) -> Boolean = { true }) {
-    SevenZFile(this).use { zipFile ->
+    SevenZFile.Builder().setFile(this).get().use { zipFile ->
         val canonicalTargetDirectory = targetDirectory.canonicalFile
 
         while (true) {
@@ -159,16 +158,10 @@ fun File.unpack7Zip(targetDirectory: File, filter: (ArchiveEntry) -> Boolean = {
 }
 
 /**
- * Unpack the [ByteArray] assuming it is a Zip archive, ignoring entries not matched by [filter].
- */
-fun ByteArray.unpackZip(targetDirectory: File, filter: (ArchiveEntry) -> Boolean = { true }) =
-    ZipFile(SeekableInMemoryByteChannel(this)).unpack(targetDirectory, filter)
-
-/**
  * Unpack the [File] assuming it is a Zip archive ignoring all entries not matched by [filter].
  */
 fun File.unpackZip(targetDirectory: File, filter: (ArchiveEntry) -> Boolean = { true }) =
-    ZipFile(this).unpack(targetDirectory, filter)
+    ZipFile.Builder().setFile(this).get().unpack(targetDirectory, filter)
 
 /**
  * Unpack the [ZipFile]. In contrast to [InputStream.unpackZip] this properly parses the ZIP's central directory, see
@@ -258,9 +251,7 @@ fun InputStream.unpackZip(targetDirectory: File) =
 fun InputStream.unpackTar(targetDirectory: File, filter: (ArchiveEntry) -> Boolean = { true }) =
     TarArchiveInputStream(this).unpack(
         targetDirectory,
-        { entry ->
-            (entry as TarArchiveEntry).isDirectory || !entry.isFile || File(entry.name).isAbsolute || !filter(entry)
-        },
+        { entry -> !(entry as TarArchiveEntry).isFile || File(entry.name).isAbsolute || !filter(entry) },
         { entry -> (entry as TarArchiveEntry).mode }
     )
 

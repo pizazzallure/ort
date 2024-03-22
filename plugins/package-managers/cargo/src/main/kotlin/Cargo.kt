@@ -86,7 +86,7 @@ class Cargo(
     override fun command(workingDir: File?) = "cargo"
 
     override fun transformVersion(output: String) =
-    // The version string can be something like:
+        // The version string can be something like:
         // cargo 1.35.0 (6f3e9c367 2019-04-04)
         output.removePrefix("cargo ").substringBefore(' ')
 
@@ -109,7 +109,7 @@ class Cargo(
             return emptyMap()
         }
 
-        val contents = lockfile.reader().use { toml.decodeFromNativeReader<CargoLockFile>(it) }
+        val contents = lockfile.reader().use { toml.decodeFromNativeReader<CargoLockfile>(it) }
         return when (contents.version) {
             3 -> {
                 contents.packages.mapNotNull { pkg ->
@@ -218,8 +218,6 @@ class Cargo(
             id = projectPkg.id,
             definitionFilePath = VersionControlSystem.getPathInfo(definitionFile).path,
             authors = authors,
-            // TODO: Check if package manager support native copyright holders
-            copyrightHolders = emptySet(),
             declaredLicenses = projectPkg.declaredLicenses,
             declaredLicensesProcessed = processDeclaredLicenses(projectPkg.declaredLicenses),
             vcs = projectPkg.vcs,
@@ -275,8 +273,6 @@ private fun parsePackage(pkg: CargoMetadata.Package, hashes: Map<String, String>
             version = pkg.version
         ),
         authors = pkg.authors.mapNotNullTo(mutableSetOf()) { parseAuthorString(it) },
-        // TODO: Check if package manager support native copyright holders
-        copyrightHolders = emptySet(),
         declaredLicenses = declaredLicenses,
         declaredLicensesProcessed = declaredLicensesProcessed,
         description = pkg.description.orEmpty(),

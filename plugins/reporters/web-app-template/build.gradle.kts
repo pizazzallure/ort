@@ -71,22 +71,6 @@ tasks.addRule("Pattern: yarn<Command>") {
  */
 
 tasks {
-    kotlinNodeJsSetup {
-        outputs.cacheIf { nodeExecutable.isFile }
-
-        doFirst {
-            logger.quiet("Setting up Node.js / NPM in '$nodeDir'...")
-        }
-    }
-
-    kotlinYarnSetup {
-        outputs.cacheIf { yarnJs.isFile }
-
-        doFirst {
-            logger.quiet("Setting up Yarn in '$yarnDir'...")
-        }
-    }
-
     "yarnInstall" {
         description = "Use Yarn to install the Node.js dependencies."
         group = "Node"
@@ -104,7 +88,7 @@ tasks {
         group = "Node"
 
         inputs.files(".rescriptsrc.js")
-        inputs.files(project.tasks["yarnInstall"].outputs)
+        inputs.files(project.tasks["yarnInstall"].outputs.files)
         inputs.dir("public")
         inputs.dir("src")
 

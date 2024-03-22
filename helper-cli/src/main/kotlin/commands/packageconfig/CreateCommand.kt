@@ -43,7 +43,7 @@ import org.ossreviewtoolkit.model.config.PackageConfiguration
 import org.ossreviewtoolkit.model.config.VcsMatcher
 import org.ossreviewtoolkit.model.licenses.LicenseClassifications
 import org.ossreviewtoolkit.model.readValue
-import org.ossreviewtoolkit.scanner.storages.FileBasedStorage
+import org.ossreviewtoolkit.scanner.storages.PackageBasedFileStorage
 import org.ossreviewtoolkit.utils.common.expandTilde
 import org.ossreviewtoolkit.utils.common.safeMkdirs
 import org.ossreviewtoolkit.utils.ort.storage.LocalFileStorage
@@ -119,7 +119,7 @@ internal class CreateCommand : CliktCommand(
     override fun run() {
         outputDir.safeMkdirs()
 
-        val scanResultsStorage = FileBasedStorage(LocalFileStorage(scanResultsStorageDir))
+        val scanResultsStorage = PackageBasedFileStorage(LocalFileStorage(scanResultsStorageDir))
         val scanResults = scanResultsStorage.read(Package.EMPTY.copy(id = packageId)).getOrThrow().run {
             listOfNotNull(
                 find { it.provenance is RepositoryProvenance },
@@ -208,11 +208,13 @@ internal class CreateCommand : CliktCommand(
             )
 
         nonOffendingLicenseCategories.flatMapTo(result) { categoryName ->
-            licenseClassifications.licensesByCategory[categoryName] ?: throw UsageError(
-                message = "The given license category '$categoryName' was not found in " +
-                    "'${licenseClassificationsFile!!.absolutePath}'.",
-                statusCode = 2
-            )
+            @Suppress("UnsafeCallOnNullableType")
+            licenseClassifications.licensesByCategory[categoryName]
+                ?: throw UsageError(
+                    message = "The given license category '$categoryName' was not found in " +
+                        "'${licenseClassificationsFile!!.absolutePath}'.",
+                    statusCode = 2
+                )
         }
 
         return result

@@ -32,12 +32,14 @@ import org.apache.logging.log4j.kotlin.logger
 import org.gradle.tooling.GradleConnector
 import org.gradle.tooling.events.ProgressListener
 import org.gradle.tooling.internal.consumer.DefaultGradleConnector
+import org.gradle.tooling.model.build.BuildEnvironment
 
 import org.ossreviewtoolkit.analyzer.AbstractPackageManagerFactory
 import org.ossreviewtoolkit.analyzer.PackageManager
 import org.ossreviewtoolkit.downloader.VcsHost
 import org.ossreviewtoolkit.downloader.VersionControlSystem
 import org.ossreviewtoolkit.model.Hash
+import org.ossreviewtoolkit.model.HashAlgorithm
 import org.ossreviewtoolkit.model.Identifier
 import org.ossreviewtoolkit.model.Issue
 import org.ossreviewtoolkit.model.Package
@@ -59,12 +61,15 @@ import org.ossreviewtoolkit.model.utils.parseRepoManifestPath
 import org.ossreviewtoolkit.utils.common.Os
 import org.ossreviewtoolkit.utils.common.safeMkdirs
 import org.ossreviewtoolkit.utils.common.splitOnWhitespace
+import org.ossreviewtoolkit.utils.common.unquote
 import org.ossreviewtoolkit.utils.common.withoutPrefix
 import org.ossreviewtoolkit.utils.ort.DeclaredLicenseProcessor
 import org.ossreviewtoolkit.utils.ort.downloadText
 import org.ossreviewtoolkit.utils.ort.okHttpClient
 import org.ossreviewtoolkit.utils.ort.ortToolsDirectory
 import org.ossreviewtoolkit.utils.spdx.SpdxOperator
+
+import org.semver4j.Semver
 
 /**
  * The names of Gradle (Groovy, Kotlin script) build files for a Gradle project.
@@ -152,16 +157,27 @@ class GradleInspector(
             val jvmArgs = gradleProperties["org.gradle.jvmargs"].orEmpty()
                 .replace("MaxPermSize", "MaxMetaspaceSize") // Replace a deprecated JVM argument.
                 .splitOnWhitespace()
+                .map { it.unquote() }
+
+            val environment = connection.model(BuildEnvironment::class.java).get()
+            val buildGradleVersion = Semver.coerce(environment.gradle.gradleVersion)
+
+            logger.info { "The project at '$projectDir' uses Gradle version $buildGradleVersion." }
 
             // In order to debug the plugin, pass the "-Dorg.gradle.debug=true" option to the JVM running ORT. This will
             // then block execution of the plugin until a remote debug session is attached to port 5005 (by default),
             // also see https://docs.gradle.org/current/userguide/troubleshooting.html#sec:troubleshooting_build_logic.
             val model = connection.model(OrtDependencyTreeModel::class.java)
-                .addProgressListener(ProgressListener { logger.debug { it.displayName } })
+                .apply {
+                    // Work around https://github.com/gradle/gradle/issues/28464.
+                    if (logger.delegate.isDebugEnabled && buildGradleVersion?.isEqualTo("8.5.0") != true) {
+                        addProgressListener(ProgressListener { logger.debug(it.displayName) })
+                    }
+                }
                 .setJvmArguments(jvmArgs)
                 .setStandardOutput(stdout)
                 .setStandardError(stderr)
-                .withArguments("--init-script", initScriptFile.path)
+                .withArguments("-Duser.home=${Os.userHomeDirectory}", "--init-script", initScriptFile.path)
                 .get()
 
             if (stdout.size() > 0) {
@@ -228,8 +244,6 @@ class GradleInspector(
             id = projectId,
             definitionFilePath = VersionControlSystem.getPathInfo(definitionFile).path,
             authors = emptySet(),
-            // TODO: Check if package manager support native copyright holders
-            copyrightHolders = emptySet(),
             declaredLicenses = emptySet(),
             vcs = VcsInfo.EMPTY,
             vcsProcessed = processProjectVcs(definitionFile.parentFile),
@@ -276,8 +290,6 @@ class GradleInspector(
             Package(
                 id = id,
                 authors = model.authors,
-                // TODO: Check if package manager support native copyright holders
-                copyrightHolders = emptySet(),
                 declaredLicenses = model.licenses,
                 declaredLicensesProcessed = DeclaredLicenseProcessor.process(
                     model.licenses,
@@ -352,15 +364,15 @@ private fun Collection<OrtDependency>.toPackageRefs(
     }
 
 /**
- * Create a [RemoteArtifact] based on the given [pomUrl], [classifier], [extension] and hash [algorithm]. The hash value
- * is retrieved remotely.
+ * Create a [RemoteArtifact] based on the given [pomUrl], [classifier] and [extension]. The hash value is retrieved
+ * remotely.
  */
-private fun createRemoteArtifact(
+private fun GradleInspector.createRemoteArtifact(
     pomUrl: String?,
     classifier: String? = null,
-    extension: String? = null,
-    algorithm: String = "sha1"
+    extension: String? = null
 ): RemoteArtifact {
+    val algorithm = "sha1"
     val artifactBaseUrl = pomUrl?.removeSuffix(".pom") ?: return RemoteArtifact.EMPTY
 
     val artifactUrl = buildString {
@@ -373,7 +385,15 @@ private fun createRemoteArtifact(
     val checksum = okHttpClient.downloadText("$artifactUrl.$algorithm")
         .getOrElse { return RemoteArtifact.EMPTY }
 
-    return RemoteArtifact(artifactUrl, parseChecksum(checksum, algorithm))
+    val hash = parseChecksum(checksum, algorithm)
+
+    // Ignore file with zero byte size, because it cannot be a valid archive.
+    if (hash.value == HashAlgorithm.SHA1.emptyValue) {
+        logger.info { "Ignoring zero byte size artifact: $artifactUrl" }
+        return RemoteArtifact.EMPTY
+    }
+
+    return RemoteArtifact(artifactUrl, hash)
 }
 
 /**
@@ -392,6 +412,7 @@ private val USER_HOST_REGEX = Regex("scm:(?<user>[^:@]+)@(?<host>[^:]+)[:/](?<pa
 
 private fun OrtDependency.toVcsInfo() =
     mavenModel?.vcs?.run {
+        @Suppress("UnsafeCallOnNullableType")
         SCM_REGEX.matchEntire(connection)?.let { match ->
             val type = match.groups["type"]!!.value
             val url = match.groups["url"]!!.value
@@ -452,6 +473,7 @@ private fun OrtDependency.handleValidScmInfo(type: String, url: String, tag: Str
     }
 
 private fun OrtDependency.handleInvalidScmInfo(connection: String, tag: String) =
+    @Suppress("UnsafeCallOnNullableType")
     USER_HOST_REGEX.matchEntire(connection)?.let { match ->
         // Some projects omit the provider and use the SCP-like Git URL syntax, for example
         // "scm:git@github.com:facebook/facebook-android-sdk.git".

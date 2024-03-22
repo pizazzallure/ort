@@ -36,6 +36,7 @@ import org.eclipse.aether.repository.WorkspaceRepository
 import org.gradle.tooling.GradleConnector
 import org.gradle.tooling.events.ProgressListener
 import org.gradle.tooling.internal.consumer.DefaultGradleConnector
+import org.gradle.tooling.model.build.BuildEnvironment
 
 import org.ossreviewtoolkit.analyzer.AbstractPackageManagerFactory
 import org.ossreviewtoolkit.analyzer.PackageManager
@@ -59,7 +60,10 @@ import org.ossreviewtoolkit.utils.common.Os
 import org.ossreviewtoolkit.utils.common.safeDeleteRecursively
 import org.ossreviewtoolkit.utils.common.splitOnWhitespace
 import org.ossreviewtoolkit.utils.common.temporaryProperties
+import org.ossreviewtoolkit.utils.common.unquote
 import org.ossreviewtoolkit.utils.ort.createOrtTempFile
+
+import org.semver4j.Semver
 
 private val GRADLE_USER_HOME = Os.env["GRADLE_USER_HOME"]?.let { File(it) } ?: Os.userHomeDirectory.resolve(".gradle")
 
@@ -135,7 +139,7 @@ class Gradle(
         }
 
         override fun findVersions(artifact: Artifact) =
-        // Do not resolve versions of already locally available artifacts. This also ensures version resolution
+            // Do not resolve versions of already locally available artifacts. This also ensures version resolution
             // was done by Gradle.
             if (findArtifact(artifact)?.isFile == true) listOf(artifact.version) else emptyList()
 
@@ -192,9 +196,10 @@ class Gradle(
         // Gradle's default maximum heap is 512 MiB which is too low for bigger projects,
         // see https://docs.gradle.org/current/userguide/build_environment.html#sec:configuring_jvm_memory.
         // Set the value to empirically determined 8 GiB if no value is set in "~/.gradle/gradle.properties".
-        val jvmArgs = gradleProperties.find { (key, _) ->
-            key == "org.gradle.jvmargs"
-        }?.second?.splitOnWhitespace().orEmpty().toMutableList()
+        val jvmArgs = gradleProperties.toMap().get("org.gradle.jvmargs").orEmpty()
+            .replace("MaxPermSize", "MaxMetaspaceSize") // Replace a deprecated JVM argument.
+            .splitOnWhitespace()
+            .mapTo(mutableListOf()) { it.unquote() }
 
         if (jvmArgs.none { it.contains(JAVA_MAX_HEAP_SIZE_OPTION, ignoreCase = true) }) {
             jvmArgs += "$JAVA_MAX_HEAP_SIZE_OPTION$JAVA_MAX_HEAP_SIZE_VALUE"
@@ -210,10 +215,19 @@ class Gradle(
                 val stdout = ByteArrayOutputStream()
                 val stderr = ByteArrayOutputStream()
 
-                val dependencyTreeModel = connection
-                    .model(OrtDependencyTreeModel::class.java)
+                val environment = connection.model(BuildEnvironment::class.java).get()
+                val buildGradleVersion = Semver.coerce(environment.gradle.gradleVersion)
+
+                logger.info { "The project at '$projectDir' uses Gradle version $buildGradleVersion." }
+
+                val dependencyTreeModel = connection.model(OrtDependencyTreeModel::class.java)
+                    .apply {
+                        // Work around https://github.com/gradle/gradle/issues/28464.
+                        if (logger.delegate.isDebugEnabled && buildGradleVersion?.isEqualTo("8.5.0") != true) {
+                            addProgressListener(ProgressListener { logger.debug(it.displayName) })
+                        }
+                    }
                     .addJvmArguments(jvmArgs)
-                    .addProgressListener(ProgressListener { logger.debug { it.displayName } })
                     .setStandardOutput(stdout)
                     .setStandardError(stderr)
                     .withArguments("-Duser.home=${Os.userHomeDirectory}", "--init-script", initScriptFile.path)
@@ -269,8 +283,6 @@ class Gradle(
                     id = projectId,
                     definitionFilePath = VersionControlSystem.getPathInfo(definitionFile).path,
                     authors = emptySet(),
-                    // TODO: Check if package manager support native copyright holders
-                    copyrightHolders = emptySet(),
                     declaredLicenses = emptySet(),
                     vcs = VcsInfo.EMPTY,
                     vcsProcessed = processProjectVcs(definitionFile.parentFile),

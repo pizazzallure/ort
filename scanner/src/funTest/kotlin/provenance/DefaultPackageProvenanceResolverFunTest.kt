@@ -22,7 +22,9 @@ package org.ossreviewtoolkit.scanner.provenance
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.Spec
 import io.kotest.core.spec.style.WordSpec
+import io.kotest.matchers.should
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.types.beInstanceOf
 
 import java.io.IOException
 
@@ -191,6 +193,32 @@ class DefaultPackageProvenanceResolverFunTest : WordSpec() {
                     ArtifactProvenance(pkg.sourceArtifact)
             }
         }
+
+        "source code origins from package" should {
+            "override the default" {
+                val pkg = Package.EMPTY.copy(
+                    sourceArtifact = RemoteArtifact(
+                        url = sourceArtifactUrl,
+                        hash = Hash.NONE
+                    ),
+                    vcsProcessed = VcsInfo(
+                        type = VcsType.GIT,
+                        url = repositoryUrl,
+                        revision = "ad0367b7b9920144a47b8d30cc0c84cea102b821"
+                    )
+                )
+
+                resolver.resolveProvenance(
+                    pkg.copy(sourceCodeOrigins = listOf(SourceCodeOrigin.VCS)),
+                    listOf(SourceCodeOrigin.ARTIFACT, SourceCodeOrigin.VCS)
+                ) should beInstanceOf<RepositoryProvenance>()
+
+                resolver.resolveProvenance(
+                    pkg.copy(sourceCodeOrigins = listOf(SourceCodeOrigin.ARTIFACT)),
+                    listOf(SourceCodeOrigin.VCS, SourceCodeOrigin.ARTIFACT)
+                ) should beInstanceOf<ArtifactProvenance>()
+            }
+        }
     }
 }
 
@@ -202,11 +230,15 @@ internal class DummyProvenanceStorage : PackageProvenanceStorage {
 
     override fun readProvenances(id: Identifier): List<PackageProvenanceResolutionResult> = emptyList()
 
-    override fun putProvenance(id: Identifier, vcs: VcsInfo, result: PackageProvenanceResolutionResult) { /* no-op */ }
+    override fun writeProvenance(id: Identifier, vcs: VcsInfo, result: PackageProvenanceResolutionResult) {
+        /* no-op */
+    }
 
-    override fun putProvenance(
+    override fun writeProvenance(
         id: Identifier,
         sourceArtifact: RemoteArtifact,
         result: PackageProvenanceResolutionResult
     ) { /* no-op */ }
+
+    override fun deleteProvenances(id: Identifier) { /* no-op */ }
 }

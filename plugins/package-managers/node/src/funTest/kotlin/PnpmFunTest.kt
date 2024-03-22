@@ -22,9 +22,9 @@ package org.ossreviewtoolkit.plugins.packagemanagers.node
 import io.kotest.core.spec.style.WordSpec
 import io.kotest.matchers.should
 
-import org.ossreviewtoolkit.analyzer.managers.analyze
-import org.ossreviewtoolkit.analyzer.managers.create
-import org.ossreviewtoolkit.analyzer.managers.resolveSingleProject
+import org.ossreviewtoolkit.analyzer.analyze
+import org.ossreviewtoolkit.analyzer.create
+import org.ossreviewtoolkit.analyzer.resolveSingleProject
 import org.ossreviewtoolkit.model.toYaml
 import org.ossreviewtoolkit.utils.test.getAssetFile
 import org.ossreviewtoolkit.utils.test.matchExpectedResult
@@ -45,9 +45,9 @@ class PnpmFunTest : WordSpec({
             val definitionFile = getAssetFile("projects/synthetic/pnpm-workspaces/packages.json")
             val expectedResultFile = getAssetFile("projects/synthetic/pnpm-workspaces-expected-output.yml")
 
-            val ortResult = analyze(definitionFile.parentFile, packageManagers = setOf(Pnpm.Factory()))
+            val result = analyze(definitionFile.parentFile, packageManagers = setOf(Pnpm.Factory()))
 
-            patchActualResult(ortResult.toYaml(), patchStartAndEndTime = true) should
+            patchActualResult(result.toYaml(), patchStartAndEndTime = true) should
                 matchExpectedResult(expectedResultFile, definitionFile)
         }
     }

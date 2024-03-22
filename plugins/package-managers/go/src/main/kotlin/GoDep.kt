@@ -26,9 +26,6 @@ import java.net.URI
 import kotlin.io.path.copyToRecursively
 import kotlin.io.path.createDirectories
 
-import net.peanuuutz.tomlkt.Toml
-import net.peanuuutz.tomlkt.decodeFromNativeReader
-
 import org.apache.logging.log4j.kotlin.logger
 
 import org.ossreviewtoolkit.analyzer.AbstractPackageManagerFactory
@@ -60,10 +57,8 @@ import org.ossreviewtoolkit.utils.common.toUri
 import org.ossreviewtoolkit.utils.ort.createOrtTempDir
 import org.ossreviewtoolkit.utils.ort.showStackTrace
 
-private val toml = Toml { ignoreUnknownKeys = true }
-
 /**
- * A map of legacy package manager file names "dep" can import, and their respective lock file names, if any.
+ * A map of legacy package manager file names "dep" can import, and their respective lockfile names, if any.
  */
 private val GO_LEGACY_MANIFESTS = mapOf(
     // The [Glide](https://github.com/Masterminds/glide) package manager uses a dedicated `glide.yaml` rules file for
@@ -120,10 +115,9 @@ class GoDep(
         val packageRefs = mutableSetOf<PackageReference>()
 
         for (project in projects) {
-            // parseProjects() made sure that all entries contain these keys
-            val name = project.getValue("name")
-            val revision = project.getValue("revision")
-            val version = project.getValue("version")
+            val name = project.name
+            val revision = project.revision
+            val version = project.version ?: revision
 
             val issues = mutableListOf<Issue>()
 
@@ -143,7 +137,6 @@ class GoDep(
             val pkg = Package(
                 id = Identifier("Go", "", name, normalizeModuleVersion(version)),
                 authors = emptySet(),
-                copyrightHolders = emptySet(),
                 declaredLicenses = emptySet(),
                 description = "",
                 homepageUrl = "",
@@ -183,8 +176,6 @@ class GoDep(
                     ),
                     definitionFilePath = VersionControlSystem.getPathInfo(definitionFile).path,
                     authors = emptySet(),
-                    // TODO: Check if package manager support native copyright holders
-                    copyrightHolders = emptySet(),
                     declaredLicenses = emptySet(),
                     vcs = VcsInfo.EMPTY,
                     vcsProcessed = projectVcs,
@@ -222,7 +213,7 @@ class GoDep(
         return destination
     }
 
-    private fun parseProjects(workingDir: File, gopath: File): List<Map<String, String>> {
+    private fun parseProjects(workingDir: File, gopath: File): List<GoDepLockfile.Project> {
         val lockfile = workingDir.resolve("Gopkg.lock")
 
         requireLockfile(workingDir) { lockfile.isFile }
@@ -233,20 +224,7 @@ class GoDep(
             run("ensure", workingDir = workingDir, environment = mapOf("GOPATH" to gopath.path))
         }
 
-        val contents = lockfile.reader().use { toml.decodeFromNativeReader<GoDepLockFile>(it) }
-        if (contents.projects.isEmpty()) {
-            logger.warn { "The lockfile '$lockfile' does not contain any projects." }
-            return emptyList()
-        }
-
-        val projects = mutableListOf<Map<String, String>>()
-
-        contents.projects.forEach { project ->
-            val version = project.version ?: project.revision
-            projects += mapOf("name" to project.name, "revision" to project.revision, "version" to version)
-        }
-
-        return projects
+        return parseGoDepLockfile(lockfile).projects
     }
 }
 

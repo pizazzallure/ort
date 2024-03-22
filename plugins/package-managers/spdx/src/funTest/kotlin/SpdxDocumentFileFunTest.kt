@@ -28,9 +28,9 @@ import io.kotest.matchers.maps.haveSize
 import io.kotest.matchers.should
 import io.kotest.matchers.shouldBe
 
-import org.ossreviewtoolkit.analyzer.managers.analyze
-import org.ossreviewtoolkit.analyzer.managers.create
-import org.ossreviewtoolkit.analyzer.managers.resolveSingleProject
+import org.ossreviewtoolkit.analyzer.analyze
+import org.ossreviewtoolkit.analyzer.create
+import org.ossreviewtoolkit.analyzer.resolveSingleProject
 import org.ossreviewtoolkit.downloader.VersionControlSystem
 import org.ossreviewtoolkit.model.Identifier
 import org.ossreviewtoolkit.model.Project
@@ -88,7 +88,6 @@ class SpdxDocumentFileFunTest : WordSpec({
                     cpe = "cpe:2.3:a:http:curl:7.70.0:*:*:*:*:*:*:*",
                     definitionFilePath = vcsDir.getPathToRoot(curlPackageFile),
                     authors = setOf("Daniel Stenberg (daniel@haxx.se)"),
-                    copyrightHolders = setOf("Copyright Holder"),
                     declaredLicenses = setOf("curl"),
                     vcs = VcsInfo(
                         type = VcsType.GIT,
@@ -110,7 +109,6 @@ class SpdxDocumentFileFunTest : WordSpec({
                     cpe = "cpe:2.3:a:a-name:openssl:1.1.1g:*:*:*:*:*:*:*",
                     definitionFilePath = vcsDir.getPathToRoot(opensslPackageFile),
                     authors = setOf("OpenSSL Development Team"),
-                    copyrightHolders = setOf("Copyright Holder"),
                     declaredLicenses = setOf("Apache-2.0"),
                     vcs = VcsInfo(
                         type = VcsType.GIT,
@@ -132,7 +130,6 @@ class SpdxDocumentFileFunTest : WordSpec({
                     cpe = "cpe:/a:compress:zlib:1.2.11:::en-us",
                     definitionFilePath = vcsDir.getPathToRoot(zlibPackageFile),
                     authors = setOf("Jean-loup Gailly", "Mark Adler"),
-                    copyrightHolders = setOf("Copyright Holder"),
                     declaredLicenses = setOf("Zlib"),
                     vcs = VcsInfo(
                         type = VcsType.GIT,
@@ -174,6 +171,25 @@ class SpdxDocumentFileFunTest : WordSpec({
                     }
 
                     packages.map { it.id } should containExactlyInAnyOrder(idZlib, idMyLib, idCurl, idOpenSsl)
+                }
+            }
+        }
+
+        "retrieve nested DEPENDS_ON dependencies" {
+            val idCurl = Identifier("SpdxDocumentFile::curl:7.70.0")
+            val idOpenSsl = Identifier("SpdxDocumentFile:OpenSSL Development Team:openssl:1.1.1g")
+            val idZlib = Identifier("SpdxDocumentFile::zlib:1.2.11")
+
+            val projectFile = projectDir.resolve("DEPENDS_ON-packages/project-xyz.spdx.yml")
+            val definitionFiles = listOf(projectFile)
+
+            val result = create("SpdxDocumentFile").resolveDependencies(definitionFiles, emptyMap())
+
+            result.projectResults[projectFile] shouldNotBeNull {
+                with(single()) {
+                    val resolvedProject = project.withResolvedScopes(result.dependencyGraph)
+                    resolvedProject.scopes.map { it.name } should containExactlyInAnyOrder("default")
+                    packages.map { it.id } should containExactlyInAnyOrder(idZlib, idCurl, idOpenSsl)
                 }
             }
         }

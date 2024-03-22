@@ -22,10 +22,9 @@ package org.ossreviewtoolkit.plugins.packagemanagers.swiftpm
 import io.kotest.core.spec.style.WordSpec
 import io.kotest.matchers.should
 
-import org.ossreviewtoolkit.analyzer.managers.create
-import org.ossreviewtoolkit.analyzer.managers.resolveSingleProject
-import org.ossreviewtoolkit.analyzer.managers.withInvariantIssues
-import org.ossreviewtoolkit.model.config.AnalyzerConfiguration
+import org.ossreviewtoolkit.analyzer.create
+import org.ossreviewtoolkit.analyzer.resolveSingleProject
+import org.ossreviewtoolkit.analyzer.withInvariantIssues
 import org.ossreviewtoolkit.model.toYaml
 import org.ossreviewtoolkit.utils.test.getAssetFile
 import org.ossreviewtoolkit.utils.test.matchExpectedResult
@@ -53,10 +52,21 @@ class SwiftPmFunTest : WordSpec({
         }
     }
 
-    "Analyzing a lockfile with unsupported file format version 3" should {
+    "Analyzing a lockfile with file format version 3" should {
         "return the correct result" {
             val definitionFile = getAssetFile("projects/synthetic/only-lockfile-v3/Package.resolved")
             val expectedResultFile = getAssetFile("projects/synthetic/expected-output-only-lockfile-v3.yml")
+
+            val result = create(PROJECT_TYPE).resolveSingleProject(definitionFile)
+
+            result.withInvariantIssues().toYaml() should matchExpectedResult(expectedResultFile, definitionFile)
+        }
+    }
+
+    "Analyzing a lockfile with unsupported file format version 4" should {
+        "return the correct result" {
+            val definitionFile = getAssetFile("projects/synthetic/only-lockfile-v4/Package.resolved")
+            val expectedResultFile = getAssetFile("projects/synthetic/expected-output-only-lockfile-v4.yml")
 
             val result = create(PROJECT_TYPE).resolveSingleProject(definitionFile)
 
@@ -82,10 +92,22 @@ class SwiftPmFunTest : WordSpec({
                 "projects/synthetic/expected-output-project-without-lockfile.yml"
             )
 
-            val result = create(PROJECT_TYPE, AnalyzerConfiguration(allowDynamicVersions = false))
-                .resolveSingleProject(definitionFile, resolveScopes = true)
+            val result = create(PROJECT_TYPE).resolveSingleProject(definitionFile, resolveScopes = true)
 
             result.withInvariantIssues().toYaml() should matchExpectedResult(expectedResultFile, definitionFile)
+        }
+    }
+
+    "Analyzing a definition file without dependencies" should {
+        "return the correct result" {
+            // Note: SwiftPM does not create a lockfile if there are no dependencies which is a corner case.
+            val definitionFile = getAssetFile("projects/synthetic/project-without-deps/Package.swift")
+            val expectedResultFile = getAssetFile("projects/synthetic/expected-output-project-without-deps.yml")
+
+            val result = create(PROJECT_TYPE, allowDynamicVersions = true)
+                .resolveSingleProject(definitionFile, resolveScopes = true)
+
+            result.toYaml() should matchExpectedResult(expectedResultFile, definitionFile)
         }
     }
 })

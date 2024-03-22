@@ -21,6 +21,7 @@ package org.ossreviewtoolkit.plugins.packagemanagers.stack
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import com.fasterxml.jackson.module.kotlin.readValue
+
 import java.io.File
 import java.io.IOException
 
@@ -212,7 +213,6 @@ class Stack(
             id = projectId,
             definitionFilePath = VersionControlSystem.getPathInfo(definitionFile).path,
             authors = projectPackage.authors,
-            copyrightHolders = projectPackage.copyrightHolders,
             declaredLicenses = projectPackage.declaredLicenses,
             vcs = projectPackage.vcs,
             vcsProcessed = processProjectVcs(workingDir, projectPackage.vcs, projectPackage.homepageUrl),
@@ -260,7 +260,6 @@ class Stack(
                     val nestedMap = parseKeyValue(i, keyPrefix + keyValue[0].replace(" ", "-") + "-")
                     map += nestedMap
                 }
-
                 2 -> {
                     // Handle lines with a colon.
                     val key = (keyPrefix + keyValue[0]).lowercase()
@@ -348,9 +347,7 @@ class Stack(
                 .map(String::trim)
                 .filter(String::isNotEmpty)
                 .mapNotNullTo(mutableSetOf(), ::parseAuthorString),
-            // TODO: Check if package manager support native copyright holders
-            copyrightHolders = emptySet(),
-            declaredLicenses = map["license"]?.let { setOf(it) } ?: emptySet(),
+            declaredLicenses = setOfNotNull(map["license"]),
             description = map["description"].orEmpty(),
             homepageUrl = homepageUrl,
             binaryArtifact = RemoteArtifact.EMPTY,

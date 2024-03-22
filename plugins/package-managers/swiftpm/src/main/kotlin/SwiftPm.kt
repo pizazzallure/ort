@@ -23,23 +23,22 @@ import java.io.File
 
 import org.ossreviewtoolkit.analyzer.AbstractPackageManagerFactory
 import org.ossreviewtoolkit.analyzer.PackageManager
-import org.ossreviewtoolkit.analyzer.PackageManagerResult
 import org.ossreviewtoolkit.downloader.VcsHost
 import org.ossreviewtoolkit.downloader.VersionControlSystem
-import org.ossreviewtoolkit.model.DependencyGraph
 import org.ossreviewtoolkit.model.Identifier
 import org.ossreviewtoolkit.model.Issue
 import org.ossreviewtoolkit.model.Package
 import org.ossreviewtoolkit.model.PackageLinkage
+import org.ossreviewtoolkit.model.PackageReference
 import org.ossreviewtoolkit.model.Project
 import org.ossreviewtoolkit.model.ProjectAnalyzerResult
 import org.ossreviewtoolkit.model.RemoteArtifact
+import org.ossreviewtoolkit.model.Scope
 import org.ossreviewtoolkit.model.VcsInfo
+import org.ossreviewtoolkit.model.VcsType
 import org.ossreviewtoolkit.model.config.AnalyzerConfiguration
 import org.ossreviewtoolkit.model.config.RepositoryConfiguration
 import org.ossreviewtoolkit.model.orEmpty
-import org.ossreviewtoolkit.model.utils.DependencyGraphBuilder
-import org.ossreviewtoolkit.model.utils.DependencyHandler
 import org.ossreviewtoolkit.utils.common.CommandLineTool
 import org.ossreviewtoolkit.utils.common.Os
 import org.ossreviewtoolkit.utils.common.toUri
@@ -62,8 +61,6 @@ class SwiftPm(
     analyzerConfig: AnalyzerConfiguration,
     repoConfig: RepositoryConfiguration
 ) : PackageManager(name, analysisRoot, analyzerConfig, repoConfig), CommandLineTool {
-    private val graphBuilder = DependencyGraphBuilder(SwiftPmDependencyHandler())
-
     class Factory : AbstractPackageManagerFactory<SwiftPm>(PROJECT_TYPE) {
         override val globsForDefinitionFiles = listOf(PACKAGE_SWIFT_NAME, PACKAGE_RESOLVED_NAME)
 
@@ -77,9 +74,6 @@ class SwiftPm(
     override fun command(workingDir: File?) = if (Os.isWindows) "swift.exe" else "swift"
 
     override fun transformVersion(output: String) = output.substringAfter("version ").substringBefore(" (")
-
-    override fun createPackageManagerResult(projectResults: Map<File, List<ProjectAnalyzerResult>>) =
-        PackageManagerResult(projectResults, graphBuilder.build(), graphBuilder.packages())
 
     override fun mapDefinitionFiles(definitionFiles: List<File>): List<File> {
         return definitionFiles.filterNot { file -> file.path.contains(".build/checkouts") }
@@ -102,15 +96,23 @@ class SwiftPm(
      */
     private fun resolveLockfileDependencies(packageResolvedFile: File): List<ProjectAnalyzerResult> {
         val issues = mutableListOf<Issue>()
+        val packages = mutableSetOf<Package>()
+        val scopeDependencies = mutableSetOf<Scope>()
 
-        val pins = parseLockfile(packageResolvedFile).onFailure {
+        parseLockfile(packageResolvedFile).onSuccess { pins ->
+            pins.mapTo(packages) { it.toPackage() }
+            scopeDependencies += Scope(
+                name = DEPENDENCIES_SCOPE_NAME,
+                dependencies = packages.mapTo(mutableSetOf()) { it.toReference(linkage = PackageLinkage.DYNAMIC) }
+            )
+        }.onFailure {
             issues += Issue(source = managerName, message = it.message.orEmpty())
-        }.getOrDefault(emptySet())
+        }
 
         return listOf(
             ProjectAnalyzerResult(
-                project = projectFromDefinitionFile(packageResolvedFile),
-                packages = pins.mapTo(mutableSetOf()) { it.toPackage() },
+                project = projectFromDefinitionFile(packageResolvedFile, scopeDependencies),
+                packages = packages,
                 issues = issues
             )
         )
@@ -122,9 +124,41 @@ class SwiftPm(
      * Also, this method provides parent-child associations for parsed dependencies.
      */
     private fun resolveDefinitionFileDependencies(packageSwiftFile: File): List<ProjectAnalyzerResult> {
-        val project = projectFromDefinitionFile(packageSwiftFile)
+        val swiftPackage = getSwiftPackage(packageSwiftFile)
 
-        // TODO: Issues might be thrown into stderr. Parse them and add it them to the result as well.
+        val issues = mutableListOf<Issue>()
+        val packages = mutableSetOf<Package>()
+        val scopeDependencies = mutableSetOf<Scope>()
+        val pinsByIdentity = mutableMapOf<String, PinV2>()
+
+        val lockfile = packageSwiftFile.resolveSibling(PACKAGE_RESOLVED_NAME)
+        if (lockfile.isFile) {
+            // The command `swift package show-dependencies` does not create a (non-existing) lockfile in case there
+            // are no non-local dependencies.
+            parseLockfile(lockfile).onSuccess { pins ->
+                pins.associateByTo(pinsByIdentity) { it.identity }
+            }.onFailure {
+                issues += Issue(source = managerName, message = it.message.orEmpty())
+            }
+        }
+
+        swiftPackage.getTransitiveDependencies().mapTo(packages) { it.toPackage(pinsByIdentity) }
+        scopeDependencies += Scope(
+            name = DEPENDENCIES_SCOPE_NAME,
+            dependencies = swiftPackage.dependencies.mapTo(mutableSetOf()) { it.toPackageReference(pinsByIdentity) }
+        )
+
+        return listOf(
+            ProjectAnalyzerResult(
+                project = projectFromDefinitionFile(packageSwiftFile, scopeDependencies),
+                packages = packages,
+                issues = issues
+            )
+        )
+    }
+
+    private fun getSwiftPackage(packageSwiftFile: File): SwiftPackage {
+        // TODO: Handle errors from stderr.
         val result = run(
             packageSwiftFile.parentFile,
             "package",
@@ -133,24 +167,10 @@ class SwiftPm(
             "json"
         ).stdout
 
-        val swiftPackage = parseSwiftPackage(result)
-        val qualifiedScopeName = DependencyGraph.qualifyScope(scopeName = DEPENDENCIES_SCOPE_NAME, project = project)
-
-        swiftPackage.dependencies.onEach { graphBuilder.addDependency(qualifiedScopeName, it) }
-            .map { libraryDependency -> libraryDependency.toPackage() }
-            .also { graphBuilder.addPackages(it) }
-
-        return listOf(
-            ProjectAnalyzerResult(
-                project = project.copy(scopeNames = setOf(DEPENDENCIES_SCOPE_NAME)),
-                // Packages are set by the dependency handler.
-                packages = emptySet(),
-                issues = emptyList()
-            )
-        )
+        return parseSwiftPackage(result)
     }
 
-    private fun projectFromDefinitionFile(definitionFile: File): Project {
+    private fun projectFromDefinitionFile(definitionFile: File, scopeDependencies: Set<Scope>): Project {
         val vcsInfo = VersionControlSystem.forDirectory(definitionFile.parentFile)?.getInfo().orEmpty()
 
         val projectIdentifier = Identifier(
@@ -163,33 +183,50 @@ class SwiftPm(
         return Project(
             vcs = VcsInfo.EMPTY,
             id = projectIdentifier,
-            authors = emptySet(),
-            copyrightHolders = emptySet(),
             declaredLicenses = emptySet(),
             homepageUrl = "",
+            scopeDependencies = scopeDependencies,
             vcsProcessed = processProjectVcs(definitionFile.parentFile),
             definitionFilePath = VersionControlSystem.getPathInfo(definitionFile).path
         )
     }
 }
 
-private val SwiftPackage.id: Identifier
-    get() = Identifier(
+private fun SwiftPackage.toId(pinsByIdentity: Map<String, PinV2>): Identifier =
+    pinsByIdentity[identity]?.toId() ?: Identifier(
         type = PACKAGE_TYPE,
         namespace = "",
         name = getCanonicalName(url),
-        version = version
+        version = version.takeUnless { it == "unspecified" }.orEmpty()
     )
 
-private fun SwiftPackage.toPackage(): Package {
-    val vcsInfoFromUrl = VcsHost.parseUrl(url)
-    val vcsInfo = vcsInfoFromUrl.takeUnless { it.revision.isBlank() } ?: vcsInfoFromUrl.copy(revision = version)
+private fun SwiftPackage.toVcsInfo(pinsByIdentity: Map<String, PinV2>): VcsInfo =
+    pinsByIdentity[identity]?.toVcsInfo() ?: VcsHost.parseUrl(url)
 
-    return createPackage(id, vcsInfo)
+private fun SwiftPackage.toPackage(pinsByIdentity: Map<String, PinV2>): Package =
+    createPackage(toId(pinsByIdentity), toVcsInfo(pinsByIdentity))
+
+private fun SwiftPackage.toPackageReference(pinsByIdentity: Map<String, PinV2>): PackageReference =
+    PackageReference(
+        id = toId(pinsByIdentity),
+        dependencies = dependencies.mapTo(mutableSetOf()) { it.toPackageReference(pinsByIdentity) }
+    )
+
+private fun SwiftPackage.getTransitiveDependencies(): Set<SwiftPackage> {
+    val queue = dependencies.toMutableList()
+    val result = mutableSetOf<SwiftPackage>()
+
+    while (queue.isNotEmpty()) {
+        val swiftPackage = queue.removeFirst()
+        result += swiftPackage
+        queue += swiftPackage.dependencies
+    }
+
+    return result
 }
 
-private fun PinV2.toPackage(): Package {
-    val id = Identifier(
+private fun PinV2.toId(): Identifier =
+    Identifier(
         type = PACKAGE_TYPE,
         namespace = "",
         name = getCanonicalName(location),
@@ -203,19 +240,17 @@ private fun PinV2.toPackage(): Package {
         }.orEmpty()
     )
 
-    val vcsInfoFromUrl = VcsHost.parseUrl(location)
-    val vcsInfo = if (vcsInfoFromUrl.revision.isBlank() && state != null) {
-        when {
-            !state.revision.isNullOrBlank() -> vcsInfoFromUrl.copy(revision = state.revision)
-            !state.version.isNullOrBlank() -> vcsInfoFromUrl.copy(revision = state.version)
-            else -> vcsInfoFromUrl
-        }
-    } else {
-        vcsInfoFromUrl
-    }
+private fun PinV2.toVcsInfo(): VcsInfo {
+    if (kind != PinV2.Kind.REMOTE_SOURCE_CONTROL) return VcsInfo.EMPTY
 
-    return createPackage(id, vcsInfo)
+    return VcsInfo(
+        type = VcsType.GIT,
+        url = normalizeVcsUrl(location),
+        revision = state?.revision.orEmpty()
+    )
 }
+
+private fun PinV2.toPackage(): Package = createPackage(toId(), toVcsInfo())
 
 private fun createPackage(id: Identifier, vcsInfo: VcsInfo) =
     Package(
@@ -240,14 +275,4 @@ internal fun getCanonicalName(repositoryUrl: String): String {
     return normalizedUrl.toUri {
         it.host + it.path.removeSuffix(".git")
     }.getOrDefault(normalizedUrl).lowercase()
-}
-
-private class SwiftPmDependencyHandler : DependencyHandler<SwiftPackage> {
-    override fun identifierFor(dependency: SwiftPackage): Identifier = dependency.id
-
-    override fun dependenciesFor(dependency: SwiftPackage): Collection<SwiftPackage> = dependency.dependencies
-
-    override fun linkageFor(dependency: SwiftPackage): PackageLinkage = PackageLinkage.DYNAMIC
-
-    override fun createPackage(dependency: SwiftPackage, issues: MutableList<Issue>): Package = dependency.toPackage()
 }

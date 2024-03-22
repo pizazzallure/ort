@@ -26,6 +26,7 @@ import java.io.File
 import java.io.IOException
 
 import org.apache.logging.log4j.kotlin.logger
+
 import org.ossreviewtoolkit.analyzer.AbstractPackageManagerFactory
 import org.ossreviewtoolkit.analyzer.PackageManager
 import org.ossreviewtoolkit.downloader.VersionControlSystem
@@ -49,6 +50,7 @@ import org.ossreviewtoolkit.utils.common.CommandLineTool
 import org.ossreviewtoolkit.utils.common.Os
 import org.ossreviewtoolkit.utils.common.collectMessages
 import org.ossreviewtoolkit.utils.common.fieldNamesOrEmpty
+import org.ossreviewtoolkit.utils.common.isNotEmpty
 import org.ossreviewtoolkit.utils.common.splitOnWhitespace
 import org.ossreviewtoolkit.utils.common.textValueOrEmpty
 import org.ossreviewtoolkit.utils.ort.showStackTrace
@@ -116,7 +118,7 @@ class Composer(
 
         val manifest = definitionFile.readTree()
         val hasDependencies = manifest.fields().asSequence().any { (key, value) ->
-            key.startsWith("require") && value.count() > 0
+            key.startsWith("require") && value.isNotEmpty()
         }
 
         if (!hasDependencies) {
@@ -126,11 +128,11 @@ class Composer(
             return listOf(result)
         }
 
-        val lockFile = ensureLockFile(workingDir)
+        val lockfile = ensureLockfile(workingDir)
 
-        logger.info { "Parsing lock file at '$lockFile'..." }
+        logger.info { "Parsing lockfile at '$lockfile'..." }
 
-        val json = jsonMapper.readTree(lockFile)
+        val json = jsonMapper.readTree(lockfile)
         val packages = parseInstalledPackages(json)
 
         // Let's also determine the "virtual" (replaced and provided) packages. These can be declared as
@@ -155,18 +157,18 @@ class Composer(
     private fun parseScope(
         scopeName: String,
         manifest: JsonNode,
-        lockFile: JsonNode,
+        lockfile: JsonNode,
         packages: Map<String, Package>,
         virtualPackages: Set<String>
     ): Scope {
         val requiredPackages = manifest[scopeName].fieldNamesOrEmpty().asSequence()
-        val dependencies = buildDependencyTree(requiredPackages, lockFile, packages, virtualPackages)
+        val dependencies = buildDependencyTree(requiredPackages, lockfile, packages, virtualPackages)
         return Scope(scopeName, dependencies)
     }
 
     private fun buildDependencyTree(
         dependencies: Sequence<String>,
-        lockFile: JsonNode,
+        lockfile: JsonNode,
         packages: Map<String, Package>,
         virtualPackages: Set<String>,
         dependencyBranch: List<String> = emptyList()
@@ -189,9 +191,9 @@ class Composer(
             }
 
             try {
-                val runtimeDependencies = getRuntimeDependencies(packageName, lockFile)
+                val runtimeDependencies = getRuntimeDependencies(packageName, lockfile)
                 val transitiveDependencies = buildDependencyTree(
-                    runtimeDependencies, lockFile, packages, virtualPackages, dependencyBranch + packageName
+                    runtimeDependencies, lockfile, packages, virtualPackages, dependencyBranch + packageName
                 )
                 packageReferences += packageInfo.toReference(dependencies = transitiveDependencies)
             } catch (e: IOException) {
@@ -230,8 +232,6 @@ class Composer(
             ),
             definitionFilePath = VersionControlSystem.getPathInfo(definitionFile).path,
             authors = parseAuthors(json),
-            // TODO: Check if package manager support native copyright holders
-            copyrightHolders = emptySet(),
             declaredLicenses = parseDeclaredLicenses(json),
             vcs = vcs,
             vcsProcessed = processProjectVcs(definitionFile.parentFile, vcs, homepageUrl),
@@ -264,8 +264,6 @@ class Composer(
                         version = version
                     ),
                     authors = parseAuthors(pkgInfo),
-                    // TODO: Check if package manager support native copyright holders
-                    copyrightHolders = emptySet(),
                     declaredLicenses = parseDeclaredLicenses(pkgInfo),
                     description = pkgInfo["description"].textValueOrEmpty(),
                     homepageUrl = homepageUrl,
@@ -279,12 +277,12 @@ class Composer(
         return packages
     }
 
-    private fun ensureLockFile(workingDir: File): File {
-        val lockFile = workingDir.resolve(COMPOSER_LOCK_FILE)
+    private fun ensureLockfile(workingDir: File): File {
+        val lockfile = workingDir.resolve(COMPOSER_LOCK_FILE)
 
-        val hasLockFile = lockFile.isFile
-        requireLockfile(workingDir) { hasLockFile }
-        if (hasLockFile) return lockFile
+        val hasLockfile = lockfile.isFile
+        requireLockfile(workingDir) { hasLockfile }
+        if (hasLockfile) return lockfile
 
         val composerVersion = Semver(getVersion(workingDir))
         val args = listOfNotNull(
@@ -295,7 +293,7 @@ class Composer(
 
         run(workingDir, *args.toTypedArray())
 
-        return lockFile
+        return lockfile
     }
 }
 
@@ -309,9 +307,9 @@ private fun String.isPlatformDependency(): Boolean =
 private val COMPOSER_PLATFORM_TYPES = setOf("composer", "composer-plugin-api", "composer-runtime-api")
 private val PHP_PLATFORM_TYPES = setOf("php", "php-64bit", "php-ipv6", "php-zts", "php-debug")
 
-private fun getRuntimeDependencies(packageName: String, lockFile: JsonNode): Sequence<String> {
+private fun getRuntimeDependencies(packageName: String, lockfile: JsonNode): Sequence<String> {
     listOf("packages", "packages-dev").forEach {
-        lockFile[it]?.forEach { packageInfo ->
+        lockfile[it]?.forEach { packageInfo ->
             if (packageInfo["name"].textValueOrEmpty() == packageName) {
                 val requiredPackages = packageInfo["require"]
                 if (requiredPackages != null && requiredPackages.isObject) {
@@ -346,7 +344,7 @@ private fun parseVcsInfo(packageInfo: JsonNode): VcsInfo =
     }.orEmpty()
 
 /**
- * Get all names of "virtual" (replaced or provided) packages in the package or lock file.
+ * Get all names of "virtual" (replaced or provided) packages in the package or lockfile.
  *
  * While Composer also takes the versions of the virtual packages into account, we simply use priorities here. Since
  * Composer can't handle the same package in multiple version, we can assume that as soon as a package is found in
@@ -357,16 +355,16 @@ private fun parseVcsInfo(packageInfo: JsonNode): VcsInfo =
 private fun parseVirtualPackageNames(
     packages: Map<String, Package>,
     manifest: JsonNode,
-    lockFile: JsonNode
+    lockfile: JsonNode
 ): Set<String> {
     val replacedNames = mutableSetOf<String>()
 
-    // The contents of the manifest file, which can also define replacements, is not included in the lock file, so
+    // The contents of the manifest file, which can also define replacements, is not included in the lockfile, so
     // we parse the manifest file as well.
     replacedNames += parseVirtualNames(manifest)
 
     listOf("packages", "packages-dev").forEach { type ->
-        lockFile[type]?.flatMap { pkgInfo ->
+        lockfile[type]?.flatMap { pkgInfo ->
             parseVirtualNames(pkgInfo)
         }?.let {
             replacedNames += it

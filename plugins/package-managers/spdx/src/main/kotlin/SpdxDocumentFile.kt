@@ -71,14 +71,7 @@ private val SPDX_LINKAGE_RELATIONSHIPS = mapOf(
     SpdxRelationship.Type.STATIC_LINK to PackageLinkage.STATIC
 )
 
-private val SPDX_SCOPE_RELATIONSHIPS = listOf(
-    SpdxRelationship.Type.BUILD_DEPENDENCY_OF,
-    SpdxRelationship.Type.DEV_DEPENDENCY_OF,
-    SpdxRelationship.Type.OPTIONAL_DEPENDENCY_OF,
-    SpdxRelationship.Type.PROVIDED_DEPENDENCY_OF,
-    SpdxRelationship.Type.RUNTIME_DEPENDENCY_OF,
-    SpdxRelationship.Type.TEST_DEPENDENCY_OF
-)
+private val SPDX_SCOPE_RELATIONSHIPS = SpdxRelationship.Type.entries.filter { it.name.endsWith("_DEPENDENCY_OF") }
 
 private val SPDX_VCS_PREFIXES = mapOf(
     "git+" to VcsType.GIT,
@@ -97,7 +90,7 @@ private fun SpdxDocument.isProject(): Boolean = projectPackage() != null
  * defined.
  */
 internal fun SpdxDocument.projectPackage(): SpdxPackage? =
-// An SpdxDocument that describes a project must have at least 2 packages, one for the project itself, and another
+    // An SpdxDocument that describes a project must have at least 2 packages, one for the project itself, and another
     // one for at least one dependency package.
     packages.takeIf { it.size > 1 || (it.size == 1 && externalDocumentRefs.isNotEmpty()) }
         // The package that describes a project must have an "empty" package filename (as the "filename" is the project
@@ -329,8 +322,6 @@ class SpdxDocumentFile(
             purl = purl,
             cpe = locateCpe(),
             authors = originator.wrapPresentInSet(),
-            // TODO: Check if package manager support native copyright holders
-            copyrightHolders = emptySet(),
             declaredLicenses = setOf(licenseDeclared),
             concludedLicense = getConcludedLicense(),
             description = packageDescription,
@@ -428,13 +419,7 @@ class SpdxDocumentFile(
                             packages += dependency.toPackage(doc.getDefinitionFile(source), doc)
                             PackageReference(
                                 id = dependency.toIdentifier(),
-                                dependencies = getDependencies(
-                                    source,
-                                    doc,
-                                    packages,
-                                    SpdxRelationship.Type.DEPENDENCY_OF,
-                                    dependsOnCase
-                                ),
+                                dependencies = getDependencies(source, doc, packages),
                                 issues = issues,
                                 linkage = getLinkageForDependency(dependency, target, doc.relationships)
                             )
@@ -532,8 +517,6 @@ class SpdxDocumentFile(
             cpe = projectPackage.locateCpe(),
             definitionFilePath = VersionControlSystem.getPathInfo(definitionFile).path,
             authors = projectPackage.originator.wrapPresentInSet(),
-            // TODO: Check if package manager support native copyright holders
-            copyrightHolders = emptySet(),
             declaredLicenses = setOf(projectPackage.licenseDeclared),
             vcs = processProjectVcs(definitionFile.parentFile, VcsInfo.EMPTY),
             homepageUrl = projectPackage.homepage.mapNotPresentToEmpty(),

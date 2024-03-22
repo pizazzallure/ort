@@ -69,7 +69,7 @@ fun ScanCodeResult.toScanSummary(preferFileLicense: Boolean = false): ScanSummar
 
     val outputFormatVersion = header.outputFormatVersion?.let { Semver(it) }
     if (outputFormatVersion != null && outputFormatVersion.major > MAX_SUPPORTED_OUTPUT_FORMAT_MAJOR_VERSION) {
-        issues += ScanCode.createAndLogIssue(
+        issues += createAndLogIssue(
             source = ScanCode.SCANNER_NAME,
             message = "The output format version $outputFormatVersion exceeds the supported major version " +
                 "$MAX_SUPPORTED_OUTPUT_FORMAT_MAJOR_VERSION. Results may be incomplete or incorrect.",
@@ -180,6 +180,7 @@ private fun mapTimeoutErrors(issues: MutableList<Issue>): Boolean {
 
     var onlyTimeoutErrors = true
 
+    @Suppress("UnsafeCallOnNullableType")
     val mappedIssues = issues.map { fullError ->
         val match = TIMEOUT_ERROR_REGEX.matchEntire(fullError.message)
         if (match != null) {
@@ -211,10 +212,12 @@ private fun mapUnknownErrors(issues: MutableList<Issue>): Boolean {
 
     var onlyMemoryErrors = true
 
+    @Suppress("UnsafeCallOnNullableType")
     val mappedIssues = issues.map { fullError ->
         UNKNOWN_ERROR_REGEX.matchEntire(fullError.message)?.let { match ->
             val file = match.groups["file"]!!.value
             val error = match.groups["error"]!!.value
+
             if (error == "MemoryError") {
                 fullError.copy(message = "ERROR: MemoryError while scanning file '$file'.")
             } else {

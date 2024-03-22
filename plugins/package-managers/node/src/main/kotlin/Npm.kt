@@ -33,6 +33,7 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
+
 import org.apache.logging.log4j.kotlin.logger
 
 import org.ossreviewtoolkit.analyzer.AbstractPackageManagerFactory
@@ -128,7 +129,7 @@ open class Npm(
 
     private val npmViewCache = ConcurrentHashMap<String, Deferred<JsonNode>>()
 
-    protected open fun hasLockFile(projectDir: File) = NodePackageManager.NPM.hasLockFile(projectDir)
+    protected open fun hasLockfile(projectDir: File) = NodePackageManager.NPM.hasLockfile(projectDir)
 
     /**
      * Check if [this] represents a workspace within a `node_modules` directory.
@@ -328,7 +329,9 @@ open class Npm(
                         }
                     }
 
-                    vcsFromPackage = parseNpmVcsInfo(details)
+                    // Do not replace but merge, because it happens that `package.json` has VCS info while
+                    // `npm view` doesn't, for example for dependencies hosted on GitLab package registry.
+                    vcsFromPackage = vcsFromPackage.merge(parseNpmVcsInfo(details))
                 }.onFailure { e ->
                     logger.debug { "Unable to get package details from a remote registry: ${e.collectMessages()}" }
                 }
@@ -345,9 +348,6 @@ open class Npm(
         val module = Package(
             id = id,
             authors = authors,
-            // NPM Do not support native copyright holder in package configuration
-            // https://docs.npmjs.com/cli/v10/configuring-npm/package-json
-            copyrightHolders = emptySet(),
             declaredLicenses = declaredLicenses,
             description = description,
             homepageUrl = homepageUrl,
@@ -419,6 +419,7 @@ open class Npm(
     private fun getModuleDependencies(moduleDir: File, scopes: Set<String>): Set<NpmModuleInfo> {
         val workspaceModuleDirs = findWorkspaceSubmodules(moduleDir)
 
+        @Suppress("UnsafeCallOnNullableType")
         return buildSet {
             addAll(getModuleInfo(moduleDir, scopes)!!.dependencies)
 
@@ -555,9 +556,6 @@ open class Npm(
             ),
             definitionFilePath = VersionControlSystem.getPathInfo(packageJson).path,
             authors = authors,
-            // NPM Do not support native copyright holder in package configuration
-            // https://docs.npmjs.com/cli/v10/configuring-npm/package-json
-            copyrightHolders = emptySet(),
             declaredLicenses = declaredLicenses,
             vcs = vcsFromPackage,
             vcsProcessed = processProjectVcs(projectDir, vcsFromPackage, homepageUrl),
@@ -569,7 +567,7 @@ open class Npm(
      * Install dependencies using the given package manager command.
      */
     private fun installDependencies(workingDir: File): List<Issue> {
-        requireLockfile(workingDir) { hasLockFile(workingDir) }
+        requireLockfile(workingDir) { hasLockfile(workingDir) }
 
         // Install all NPM dependencies to enable NPM to list dependencies.
         val process = runInstall(workingDir)
@@ -598,7 +596,7 @@ open class Npm(
             "--legacy-peer-deps".takeIf { legacyPeerDeps }
         )
 
-        val subcommand = if (hasLockFile(workingDir)) "ci" else "install"
+        val subcommand = if (hasLockfile(workingDir)) "ci" else "install"
         return ProcessCapture(workingDir, command(workingDir), subcommand, *options.toTypedArray())
     }
 }

@@ -38,7 +38,6 @@ import org.ossreviewtoolkit.model.Package
 import org.ossreviewtoolkit.model.Severity
 import org.ossreviewtoolkit.model.config.PluginConfiguration
 import org.ossreviewtoolkit.model.createAndLogIssue
-import org.ossreviewtoolkit.model.utils.toPurl
 import org.ossreviewtoolkit.model.vulnerabilities.Vulnerability
 import org.ossreviewtoolkit.model.vulnerabilities.VulnerabilityReference
 import org.ossreviewtoolkit.utils.common.Options
@@ -63,6 +62,8 @@ private const val BULK_REQUEST_SIZE = 100
  *
  * * **`serverUrl`:** The base URL of the VulnerableCode REST API. By default, the public VulnerableCode instance is
  *   used.
+ * * **`readTimeout`:** The read timeout in seconds for requests to the VulnerableCode server. The default timeout is
+ *   10 seconds.
  *
  * #### [Secrets][PluginConfiguration.secrets]
  *
@@ -128,7 +129,7 @@ class VulnerableCode(name: String, config: VulnerableCodeConfiguration) : Advice
         val endTime = Instant.now()
 
         return packages.mapNotNullTo(mutableListOf()) { pkg ->
-            allVulnerabilities[pkg.id.toPurl()]?.let { packageVulnerabilities ->
+            allVulnerabilities[pkg.purl]?.let { packageVulnerabilities ->
                 val vulnerabilities = packageVulnerabilities.map { it.toModel(issues) }
                 val summary = AdvisorSummary(startTime, endTime, issues)
                 pkg to AdvisorResult(details, summary, vulnerabilities = vulnerabilities)

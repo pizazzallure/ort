@@ -20,7 +20,6 @@
 package org.ossreviewtoolkit.scanner
 
 import java.io.File
-import java.io.IOException
 import java.time.Instant
 
 import kotlin.time.measureTime
@@ -115,7 +114,8 @@ class Scanner(
                 ortResult.labels + labels,
                 PackageType.PROJECT,
                 ortResult.repository.config.excludes,
-                scannerConfig.detectedLicenseMapping
+                scannerConfig.detectedLicenseMapping,
+                snippetChoices = ortResult.repository.config.snippetChoices
             )
         )
 
@@ -127,7 +127,8 @@ class Scanner(
                 ortResult.labels,
                 PackageType.PACKAGE,
                 ortResult.repository.config.excludes,
-                scannerConfig.detectedLicenseMapping
+                scannerConfig.detectedLicenseMapping,
+                snippetChoices = ortResult.repository.config.snippetChoices
             )
         )
 
@@ -706,13 +707,13 @@ class Scanner(
                 try {
                     dir = provenanceDownloader.downloadRecursively(nestedProvenance)
                     archiver.archive(dir, nestedProvenance.root)
-                } catch (e: IOException) {
+                } catch (e: DownloadException) {
                     controller.addIssue(
                         pkg.id,
                         Issue(
                             source = "Scanner",
-                            message = "Could not create file archive for " +
-                                "'${pkg.id.toCoordinates()}': ${e.collectMessages()}"
+                            message = "Could not create file archive for '${pkg.id.toCoordinates()}': "
+                                + e.collectMessages()
                         )
                     )
                 } finally {

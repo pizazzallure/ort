@@ -165,11 +165,11 @@ class Bundler(
         // [2]: https://github.com/jruby/jruby/discussions/7403
 
         val lockfiles = definitionFiles.map { it.resolveSibling(BUNDLER_LOCKFILE_NAME) }.filter { it.isFile }
-        val lockFilesBundlerVersion = lockfiles.mapNotNull {
+        val lockfilesBundlerVersion = lockfiles.mapNotNull {
             parseBundlerVersionFromLockfile(it)
         }.sortedWith(AlphaNumericComparator).lastOrNull()
 
-        val bundlerVersion = options[OPTION_BUNDLER_VERSION] ?: lockFilesBundlerVersion
+        val bundlerVersion = options[OPTION_BUNDLER_VERSION] ?: lockfilesBundlerVersion
 
         if (bundlerVersion != null) {
             val duration = measureTime {
@@ -219,8 +219,6 @@ class Bundler(
                 id = projectId,
                 definitionFilePath = VersionControlSystem.getPathInfo(definitionFile).path,
                 authors = authors,
-                // TODO: Check if package manager support native copyright holders
-                copyrightHolders = emptySet(),
                 declaredLicenses = declaredLicenses,
                 vcs = VcsInfo.EMPTY,
                 vcsProcessed = processProjectVcs(workingDir, VcsInfo.EMPTY, homepageUrl),
@@ -346,8 +344,6 @@ class Bundler(
         return Package(
             id = gemId,
             authors = gemSpec.authors,
-            // TODO: Check if package manager support native copyright holders
-            copyrightHolders = emptySet(),
             declaredLicenses = gemSpec.declaredLicenses,
             description = gemSpec.description,
             homepageUrl = gemSpec.homepageUrl,
@@ -475,7 +471,7 @@ internal data class GemSpec(
                 }
 
                 text?.trim()?.takeIf { it.isNotEmpty() }
-            } ?: emptySet()
+            }.orEmpty()
     }
 
     fun merge(other: GemSpec): GemSpec {

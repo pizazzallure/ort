@@ -22,6 +22,7 @@ package org.ossreviewtoolkit.model
 import com.fasterxml.jackson.annotation.JsonInclude
 import com.fasterxml.jackson.databind.annotation.JsonSerialize
 
+import org.ossreviewtoolkit.model.utils.requireNotEmptyNoDuplicates
 import org.ossreviewtoolkit.model.utils.toPurl
 import org.ossreviewtoolkit.utils.common.StringSortedSetConverter
 import org.ossreviewtoolkit.utils.ort.DeclaredLicenseProcessor
@@ -136,7 +137,14 @@ data class Package(
      * e.g., in case of a fork of an upstream Open Source project.
      */
     @JsonInclude(JsonInclude.Include.NON_DEFAULT)
-    val isModified: Boolean = false
+    val isModified: Boolean = false,
+
+    /**
+     * The considered source code origins and their priority order to use for this package. If null, the configured
+     * default is used. If not null, this must not be empty and not contain any duplicates.
+     */
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    val sourceCodeOrigins: List<SourceCodeOrigin>? = null
 ) {
     companion object {
         /**
@@ -160,6 +168,10 @@ data class Package(
         )
     }
 
+    init {
+        sourceCodeOrigins?.requireNotEmptyNoDuplicates()
+    }
+
     /**
      * Compares this package with [other] and creates a [PackageCurationData] containing the values from this package
      * which are different in [other]. All equal values are set to null. Only the fields present in
@@ -179,7 +191,8 @@ data class Package(
             sourceArtifact = sourceArtifact.takeIf { it != other.sourceArtifact },
             vcs = vcsProcessed.takeIf { it != other.vcsProcessed }?.toCuration(),
             isMetadataOnly = isMetadataOnly.takeIf { it != other.isMetadataOnly },
-            isModified = isModified.takeIf { it != other.isModified }
+            isModified = isModified.takeIf { it != other.isModified },
+            sourceCodeOrigins = sourceCodeOrigins.takeIf { it != other.sourceCodeOrigins }
         )
     }
 

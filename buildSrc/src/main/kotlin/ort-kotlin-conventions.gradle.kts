@@ -21,11 +21,6 @@ import io.gitlab.arturbosch.detekt.Detekt
 import io.gitlab.arturbosch.detekt.report.ReportMergeTask
 
 import org.gradle.accessors.dm.LibrariesForLibs
-import org.gradle.api.JavaVersion
-import org.gradle.api.attributes.TestSuiteType
-import org.gradle.api.plugins.jvm.JvmTestSuite
-import org.gradle.api.tasks.compile.JavaCompile
-import org.gradle.api.tasks.testing.Test
 import org.gradle.api.tasks.testing.logging.TestExceptionFormat
 import org.gradle.api.tasks.testing.logging.TestLogEvent
 import org.gradle.kotlin.dsl.dependencies
@@ -39,6 +34,8 @@ import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 private val Project.libs: LibrariesForLibs
     get() = extensions.getByType()
+
+val javaLanguageVersion: String by project
 
 plugins {
     // Apply core plugins.
@@ -92,12 +89,10 @@ configurations.all {
     }
 }
 
-// Note: Kotlin DSL cannot directly access configurations that are created by applying a plugin in the very same
-// project, thus put configuration names in quotes to leverage lazy lookup.
 dependencies {
-    "detektPlugins"(project(":detekt-rules"))
+    detektPlugins(project(":detekt-rules"))
 
-    "detektPlugins"("io.gitlab.arturbosch.detekt:detekt-formatting:${libs.versions.detektPlugin.get()}")
+    detektPlugins(libs.plugin.detekt.formatting)
 
     implementation(libs.log4j.api.kotlin)
 }
@@ -112,16 +107,27 @@ detekt {
     basePath = rootDir.path
 }
 
-val javaVersion = JavaVersion.current()
-val maxKotlinJvmTarget = runCatching { JvmTarget.fromTarget(javaVersion.majorVersion) }
-    .getOrDefault(JvmTarget.entries.max())
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(javaLanguageVersion)
+    }
+}
+
+tasks.withType<Jar>().configureEach {
+    manifest {
+        attributes["Build-Jdk"] = javaToolchains.compilerFor(java.toolchain).map { it.metadata.jvmVersion }
+    }
+}
+
+val maxKotlinJvmTarget = runCatching { JvmTarget.fromTarget(javaLanguageVersion) }
+    .getOrDefault(enumValues<JvmTarget>().max())
 
 val mergeDetektReportsTaskName = "mergeDetektReports"
 val mergeDetektReports = if (rootProject.tasks.findByName(mergeDetektReportsTaskName) != null) {
     rootProject.tasks.named<ReportMergeTask>(mergeDetektReportsTaskName)
 } else {
     rootProject.tasks.register<ReportMergeTask>(mergeDetektReportsTaskName) {
-        output = rootProject.layout.buildDirectory.dir("reports/detekt/merged.sarif").get().asFile
+        output = rootProject.layout.buildDirectory.file("reports/detekt/merged.sarif")
     }
 }
 
@@ -129,6 +135,10 @@ tasks.withType<Detekt>().configureEach detekt@{
     jvmTarget = maxKotlinJvmTarget.target
 
     dependsOn(":detekt-rules:assemble")
+
+    exclude {
+        "/build/generated/" in it.file.absolutePath
+    }
 
     reports {
         html.required = false
@@ -150,18 +160,16 @@ tasks.withType<Detekt>().configureEach detekt@{
     finalizedBy(mergeDetektReports)
 }
 
-tasks.withType<JavaCompile>().configureEach {
-    // Align this with Kotlin to avoid errors, see https://youtrack.jetbrains.com/issue/KT-48745.
-    sourceCompatibility = maxKotlinJvmTarget.target
-    targetCompatibility = maxKotlinJvmTarget.target
-}
-
 tasks.withType<KotlinCompile>().configureEach {
-    val customCompilerArgs = listOf(
-        "-opt-in=kotlin.contracts.ExperimentalContracts",
-        "-opt-in=kotlin.io.path.ExperimentalPathApi",
-        "-opt-in=kotlin.time.ExperimentalTime"
-    )
+    val hasSerialization = plugins.hasPlugin(libs.plugins.kotlinSerialization.get().pluginId)
+
+    val customCompilerArgs = buildList {
+        add("-opt-in=kotlin.contracts.ExperimentalContracts")
+        add("-opt-in=kotlin.io.encoding.ExperimentalEncodingApi")
+        add("-opt-in=kotlin.io.path.ExperimentalPathApi")
+        add("-opt-in=kotlin.time.ExperimentalTime")
+        if (hasSerialization) add("-opt-in=kotlinx.serialization.ExperimentalSerializationApi")
+    }
 
     compilerOptions {
         allWarningsAsErrors = true

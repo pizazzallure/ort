@@ -9,7 +9,7 @@ on:
       - main
 
 env:
-  GRADLE_OPTS: -Dorg.gradle.daemon=false
+  GRADLE_OPTS: -Dorg.gradle.daemon=false -Dkotest.assertions.multi-line-diff=unified
 
 jobs:
   build:
@@ -17,11 +17,6 @@ jobs:
     steps:
     - name: Checkout Repository
       uses: actions/checkout@v4
-    - name: Setup Java
-      uses: actions/setup-java@v4
-      with:
-        distribution: temurin
-        java-version: 17
     - name: Build all classes
       uses: gradle/gradle-build-action@v3
       with:
@@ -33,11 +28,6 @@ jobs:
     steps:
     - name: Checkout Repository
       uses: actions/checkout@v4
-    - name: Setup Java
-      uses: actions/setup-java@v4
-      with:
-        distribution: temurin
-        java-version: 17
     - name: Build the web-app-reporter
       uses: gradle/gradle-build-action@v3
       with:
@@ -56,11 +46,6 @@ jobs:
       with:
         languages: java
         tools: latest
-    - name: Setup Java
-      uses: actions/setup-java@v4
-      with:
-        distribution: temurin
-        java-version: 17
     - name: Build all classes
       uses: gradle/gradle-build-action@v3
       with:
@@ -74,11 +59,6 @@ jobs:
     steps:
     - name: Checkout Repository
       uses: actions/checkout@v4
-    - name: Setup Java
-      uses: actions/setup-java@v4
-      with:
-        distribution: temurin
-        java-version: 17
     - name: Run unit tests
       uses: gradle/gradle-build-action@v3
       with:
@@ -87,6 +67,7 @@ jobs:
     - name: Upload code coverage data
       uses: codecov/codecov-action@v4
       with:
+        token: ${{ secrets.CODECOV_TOKEN }}
         flags: test
   funTest-non-docker:
     needs: build-web-app-reporter
@@ -123,11 +104,6 @@ jobs:
           # Install ScanCode for license texts.
           curl -Os https://raw.githubusercontent.com/nexB/scancode-toolkit/v$SCANCODE_VERSION/requirements.txt
           pip install --no-cache-dir --constraint requirements.txt scancode-toolkit==$SCANCODE_VERSION
-    - name: Setup Java
-      uses: actions/setup-java@v4
-      with:
-        distribution: temurin
-        java-version: 17
     - name: Run functional tests that do not require external tools
       uses: gradle/gradle-build-action@v3
       with:
@@ -136,6 +112,7 @@ jobs:
     - name: Upload code coverage data
       uses: codecov/codecov-action@v4
       with:
+        token: ${{ secrets.CODECOV_TOKEN }}
         flags: funTest-non-docker
   funTest-docker:
     runs-on: ubuntu-22.04
@@ -147,11 +124,6 @@ jobs:
       uses: actions/checkout@v4
       with:
         submodules: recursive
-    - name: Setup Java
-      uses: actions/setup-java@v4
-      with:
-        distribution: temurin
-        java-version: 17
     - name: Run functional tests that do require external tools
       uses: gradle/gradle-build-action@v3
       with:
@@ -160,4 +132,5 @@ jobs:
     - name: Upload code coverage data
       uses: codecov/codecov-action@v4
       with:
+        token: ${{ secrets.CODECOV_TOKEN }}
         flags: funTest-docker

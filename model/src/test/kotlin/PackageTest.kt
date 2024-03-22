@@ -26,7 +26,7 @@ import io.kotest.matchers.should
 import io.kotest.matchers.shouldBe
 
 class PackageTest : StringSpec({
-    "diff throws an exception if the identifiers are not equals" {
+    "diff throws an exception if the identifiers are not equal" {
         val pkg = Package.EMPTY.copy(id = Identifier("type1", "namespace1", "name1", "version1"))
         val other = Package.EMPTY.copy(id = Identifier("type2", "namespace2", "name2", "version2"))
 
@@ -52,7 +52,8 @@ class PackageTest : StringSpec({
             sourceArtifact = RemoteArtifact("url", Hash.create("hash")),
             vcs = VcsInfo(VcsType.forName("type"), "url", "revision"),
             isMetadataOnly = false,
-            isModified = false
+            isModified = false,
+            sourceCodeOrigins = null
         )
 
         val other = Package(
@@ -71,7 +72,8 @@ class PackageTest : StringSpec({
             sourceArtifact = RemoteArtifact("other url", Hash.create("other hash")),
             vcs = VcsInfo(VcsType.forName("other type"), "other url", "other revision"),
             isMetadataOnly = true,
-            isModified = true
+            isModified = true,
+            sourceCodeOrigins = listOf(SourceCodeOrigin.VCS)
         )
 
         val diff = pkg.diff(other)
@@ -85,6 +87,7 @@ class PackageTest : StringSpec({
         diff.vcs shouldBe pkg.vcsProcessed.toCuration()
         diff.isMetadataOnly shouldBe pkg.isMetadataOnly
         diff.isModified shouldBe pkg.isModified
+        diff.sourceCodeOrigins shouldBe pkg.sourceCodeOrigins
     }
 
     "diff result does not contain unchanged values" {
@@ -102,7 +105,8 @@ class PackageTest : StringSpec({
             homepageUrl = "homepageUrl",
             binaryArtifact = RemoteArtifact("url", Hash.create("hash")),
             sourceArtifact = RemoteArtifact("url", Hash.create("hash")),
-            vcs = VcsInfo(VcsType.forName("type"), "url", "revision")
+            vcs = VcsInfo(VcsType.forName("type"), "url", "revision"),
+            sourceCodeOrigins = listOf(SourceCodeOrigin.VCS)
         )
 
         val diff = pkg.diff(pkg)
@@ -115,5 +119,6 @@ class PackageTest : StringSpec({
         diff.sourceArtifact should beNull()
         diff.vcs should beNull()
         diff.isMetadataOnly should beNull()
+        diff.sourceCodeOrigins should beNull()
     }
 })

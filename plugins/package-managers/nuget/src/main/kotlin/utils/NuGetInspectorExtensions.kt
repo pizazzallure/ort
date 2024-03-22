@@ -76,8 +76,6 @@ internal fun NuGetInspector.Result.toOrtProject(
         definitionFilePath = VersionControlSystem.getPathInfo(definitionFile).path,
         vcs = VcsInfo.EMPTY,
         authors = emptySet(),
-        // TODO: Check if package manager support native copyright holders
-        copyrightHolders = emptySet(),
         vcsProcessed = PackageManager.processProjectVcs(definitionFile.parentFile),
         declaredLicenses = emptySet(),
         homepageUrl = "",
@@ -115,6 +113,7 @@ internal fun Collection<NuGetInspector.PackageData>.toOrtPackages(): Set<Package
 
         fun NuGetInspector.PackageData.getHash(): Hash =
             Hash.create(
+                @Suppress("UseOrEmpty")
                 (sha512 ?: sha256 ?: sha1 ?: md5 ?: "").lowercase()
             )
 
@@ -146,8 +145,6 @@ internal fun Collection<NuGetInspector.PackageData>.toOrtPackages(): Set<Package
             id = id,
             purl = pkg.purl.takeUnless { it.isEmpty() } ?: id.toPurl(),
             authors = pkg.parties.toAuthors(),
-            // TODO: Check if package manager support native copyright holders
-            copyrightHolders = emptySet(),
             declaredLicenses = declaredLicenses,
             declaredLicensesProcessed = DeclaredLicenseProcessor.process(declaredLicenses),
             description = pkg.description.lineSequence().firstOrNull { it.isNotBlank() }.orEmpty(),

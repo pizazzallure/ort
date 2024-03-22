@@ -74,7 +74,9 @@ class Downloader(private val config: DownloaderConfiguration) {
 
         val exception = DownloadException("Download failed for '${pkg.id.toCoordinates()}'.")
 
-        config.sourceCodeOrigins.forEach { origin ->
+        val sourceCodeOrigins = pkg.sourceCodeOrigins ?: config.sourceCodeOrigins
+
+        sourceCodeOrigins.forEach { origin ->
             val provenance = when (origin) {
                 SourceCodeOrigin.VCS -> handleVcsDownload(pkg, outputDirectory, dryRun, exception)
                 SourceCodeOrigin.ARTIFACT -> handleSourceArtifactDownload(pkg, outputDirectory, dryRun, exception)
@@ -259,9 +261,9 @@ class Downloader(private val config: DownloaderConfiguration) {
             val url = VcsHost.fromUrl(pkg.vcsProcessed.url)?.toArchiveDownloadUrl(pkg.vcsProcessed)
                 ?: throw DownloadException("Unhandled VCS URL ${pkg.vcsProcessed.url}.")
 
-            val response = okHttpClient.ping(url)
+            val response = runCatching { okHttpClient.ping(url) }
 
-            if (response.code != HttpURLConnection.HTTP_OK) {
+            if (response.getOrNull()?.code != HttpURLConnection.HTTP_OK) {
                 throw DownloadException("Cannot verify existence of ${pkg.vcsProcessed}.")
             }
 
