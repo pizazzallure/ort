@@ -248,12 +248,17 @@ private fun XSSFRow.createLicenseTextCell(
     var licenseString = ""
 
     val concludedLicense = reporterPackage.licenseInfo.licenseInfo.concludedLicenseInfo.concludedLicense
-    val curatedCopyrightHolders = reporterPackage.curations.map { it.curation }.map { it.copyrightHolders }
+    val curatedCopyrightHolders = reporterPackage.curations.mapNotNull { it.curation }
+        .mapNotNull { it.copyrightHolders?.takeIf { it.isNotEmpty() }}
+
+    // if there is curated copyright holders but without concluded license,
+    // the curated copyright holders can not be determined to given to which detected license.
+    // display the curated copyright holders outside the detected license area.
     if(concludedLicense == null && curatedCopyrightHolders.isNotEmpty()) {
         licenseString += "Curated Copyright Holders: "
         licenseString += "\n\n"
         curatedCopyrightHolders.forEach {
-            it?.forEach {
+            it.forEach {
                 licenseString += it
                 licenseString += "\n"
             }
