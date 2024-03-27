@@ -31,6 +31,7 @@ import org.ossreviewtoolkit.model.licenses.*
 import org.ossreviewtoolkit.model.vulnerabilities.*
 import org.ossreviewtoolkit.plugins.reporters.evaluatedmodel.EvaluatedFindingType
 import org.ossreviewtoolkit.plugins.reporters.evaluatedmodel.EvaluatedModel
+import org.ossreviewtoolkit.plugins.reporters.evaluatedmodel.EvaluatedPackage
 import org.ossreviewtoolkit.reporter.Reporter
 import org.ossreviewtoolkit.reporter.ReporterInput
 import java.io.File
@@ -114,14 +115,12 @@ class InterfaceAuditReportReporter : Reporter {
                 config.options[OPTION_DEDUPLICATE_DEPENDENCY_TREE].toBoolean()
             )
 
-            evaluatedModel.packages
-
             val mapper = JsonMapper().registerModule(JavaTimeModule()).setDateFormat(SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ssXXX"))
             mapper.propertyNamingStrategy = PropertyNamingStrategies.LOWER_CAMEL_CASE
 
             val licenseModelJson = mapper
                 .writer()
-                .writeValueAsString(buildDependency(input))
+                .writeValueAsString(buildDependency(input, evaluatedModel))
 
             val outputFile = outputDir.resolve(reportFileName)
 
@@ -131,8 +130,8 @@ class InterfaceAuditReportReporter : Reporter {
             return outputFile
         }
 
-        private fun buildDependency(input: ReporterInput): Dependency {
-            val combinedSBom: MutableMap<Identifier, SoftwareBillOfMaterial> = HashMap()
+        private fun buildDependency(input: ReporterInput, evaluatedModel: EvaluatedModel): Dependency {
+             val combinedSBom: MutableMap<Identifier, SoftwareBillOfMaterial> = HashMap()
             var vulnerabilityBillOfMaterial: VulnerabilityResult? = null
 
             for (project in input.ortResult.getProjects()) {
@@ -145,7 +144,7 @@ class InterfaceAuditReportReporter : Reporter {
                         }
                     }
 
-                buildSBom(input, project, scopeMap).forEach { identifier, sbom ->
+                buildSBom(input, project, scopeMap, evaluatedModel).forEach { identifier, sbom ->
                     combinedSBom.merge(identifier, sbom) { left, right -> mergeSbom(left, right) }
                 }
             }
@@ -220,7 +219,7 @@ class InterfaceAuditReportReporter : Reporter {
             left: SoftwareBillOfMaterial,
             right: SoftwareBillOfMaterial
         ): SoftwareBillOfMaterial {
-            val scopes = left.scopes.toMutableSet();
+            val scopes = left.scopes.toMutableSet()
 
             scopes.addAll(right.scopes)
 
@@ -245,9 +244,12 @@ class InterfaceAuditReportReporter : Reporter {
         private fun buildSBom(
             input: ReporterInput,
             project: Project,
-            scopeMap: Map<Identifier, Set<String>>
-        ): Map<Identifier, SoftwareBillOfMaterial> =
-            input.ortResult.collectDependencies(project.id)
+            scopeMap: Map<Identifier, Set<String>>,
+            evaluatedModel: EvaluatedModel
+        ): Map<Identifier, SoftwareBillOfMaterial> {
+            val evaluatedPackageMap: Map<Identifier, EvaluatedPackage> = evaluatedModel.packages.associateBy { it.id }
+
+            return input.ortResult.collectDependencies(project.id)
                 .filter { !input.ortResult.isExcluded(it) }
                 .filter { input.ortResult.getPackage(it) != null }
                 .associateWith { id ->
@@ -255,6 +257,7 @@ class InterfaceAuditReportReporter : Reporter {
                     // We know that a package exists for the reference.
                     val curatedPkg = ortResult.getPackage(id)!!
                     val pkg = curatedPkg.metadata
+                    val evaluatedPackage = evaluatedPackageMap.get(id)
 
                     SoftwareBillOfMaterial(
                         dependencyCoordinate = id.toCoordinates(),
@@ -268,11 +271,12 @@ class InterfaceAuditReportReporter : Reporter {
                         homepageUri = curatedPkg.metadata.homepageUrl,
                         licenseDetail = buildLicenseDetail(input, curatedPkg),
                         copyrightDetail = buildCopyrightDetail(input, curatedPkg),
-                        authorDetail = buildAuthorDetail(curatedPkg),
+                        authorDetail = buildAuthorDetail(curatedPkg, evaluatedPackage),
                         transitiveDependency = buildPackageDependencies(ortResult, curatedPkg),
                         ruleViolation = buildRuleViolations(ortResult)
                     )
                 }
+        }
 
         private fun buildPackageDependencies(
             ortResult: OrtResult,
@@ -309,74 +313,113 @@ class InterfaceAuditReportReporter : Reporter {
                         },
                         severity = it.severity.name,
                         message = it.message,
-//                        howToFix = it.howToFix
                     )
                 }
                 .collect(Collectors.toList())
 
-        private fun buildAuthorDetail(curatedPkg: CuratedPackage): AuthorDetail =
-            AuthorDetail(
-                author = mergeSortedSets(curatedPkg.metadata.sortedAuthors(),
-                    curatedPkg.curatedAuthors())
-            )
+        private fun buildAuthorDetail(curatedPkg: CuratedPackage, evaluatedPackage: EvaluatedPackage?): AuthorDetail {
+            val pkg = curatedPkg.metadata
+            var authors = mutableSetOf<String>()
+            authors.addAll(pkg.authors)
 
-        private fun buildLicenseDetail(input: ReporterInput, curatedPkg: CuratedPackage): List<LicenseDetail> =
-            input.licenseInfoResolver
-                .resolveLicenseInfo(curatedPkg.metadata.id)
-                .filterExcluded()
-                .licenses.stream()
+            if(evaluatedPackage != null) {
+                // check the detected authors from evaluated package
+                val authorFindings = evaluatedPackage.findings.filter { finding ->
+                    finding.type == EvaluatedFindingType.AUTHOR
+                }
+
+                // add detected authors as well
+                authorFindings.forEach {
+                    it.author?.author?.let { it1 -> authors.add(it1) }
+                }
+            }
+
+            return AuthorDetail(
+                author = authors
+            )
+        }
+
+        private fun buildLicenseDetail(
+            input: ReporterInput,
+            curatedPkg: CuratedPackage
+        ): List<LicenseDetail>  {
+            val resolvedLicenseInfo = input.licenseInfoResolver.resolveLicenseInfo(curatedPkg.metadata.id).filterExcluded()
+            // determine the licenses, only the concluded licenses if they exist, otherwise return detected licenses.
+            val licenseInfo = resolvedLicenseInfo.filter(LicenseView.CONCLUDED_OR_DETECTED).filterExcluded()
+
+            return licenseInfo.licenses.stream()
                 .map {
                     val licenseId = it.license.simpleLicense()
+
+                    val curatedCopyrightFindings = it.getResolvedCopyrights()
+                        .flatMap { it.findings }
+                        .filter { it.findingType == ResolvedCopyrightSource.PROVIDED_BY_CURATION }
+                        .mapTo(mutableSetOf()) { it.statement }
+                    val scannedCopyrightFindings = it.getResolvedCopyrights()
+                        .flatMap { it.findings }
+                        .filter { it.findingType == ResolvedCopyrightSource.DETERMINED_BY_SCANNER }
+                        .mapTo(mutableSetOf()) { it.statement }
+
+                    val copyrights: MutableSet<String> = mutableSetOf()
+                    if (curatedCopyrightFindings.isNotEmpty()) {
+                        copyrights.addAll(curatedCopyrightFindings)
+                    } else {
+                        copyrights.addAll(scannedCopyrightFindings)
+                    }
                     LicenseDetail(
                         spdxLicenseName = licenseId,
                         licenseText = input.licenseTextProvider.getLicenseText(licenseId),
-                        copyrights = it.getCopyrights(),
+                        copyrights = copyrights,
                         locations = it.locations.map { it.toDataplatform() }.toCollection(HashSet())
                     )
                 }
                 .collect(Collectors.toList())
+        }
 
         private fun buildLicenseCopyrightStatements(input: ReporterInput, curatedPkg: CuratedPackage): Set<String> {
+            val resolvedLicenseInfo = input.licenseInfoResolver.resolveLicenseInfo(curatedPkg.metadata.id).filterExcluded()
+            // determine the licenses, only the concluded licenses if they exist, otherwise return detected licenses.
+            val licenseInfo = resolvedLicenseInfo.filter(LicenseView.CONCLUDED_OR_DETECTED).filterExcluded()
+
+            // either contains curated copyright holders or all detected copyrights
             val copyrightStatements: MutableSet<String> = HashSet()
 
-            input.licenseInfoResolver
-                .resolveLicenseInfo(curatedPkg.metadata.id)
-                .filterExcluded()
-                .licenses.stream()
-                .map { resolvedLicense ->
-                    copyrightStatements.addAll(resolvedLicense.getCopyrights())
+            licenseInfo.licenses.forEach {
+                val curatedCopyrightFindings = it.getResolvedCopyrights()
+                    .flatMap { it.findings }
+                    .filter { it.findingType == ResolvedCopyrightSource.PROVIDED_BY_CURATION }
+                    .mapTo(mutableSetOf()) { it.statement }
+                val scannedCopyrightFindings = it.getResolvedCopyrights()
+                    .flatMap { it.findings }
+                    .filter { it.findingType == ResolvedCopyrightSource.DETERMINED_BY_SCANNER }
+                    .mapTo(mutableSetOf()) { it.statement }
 
-                    if (!resolvedLicense.isDetectedExcluded) {
-                        resolvedLicense
-                            .locations.map { it.toDataplatform() }
-                            .forEach { licenseLocation ->
-                                licenseLocation.copyrightFindings.forEach { licenseCopyrightFinding ->
-                                    copyrightStatements.add(licenseCopyrightFinding.statement)
-                                }
-                            }
-                    }
+                if (curatedCopyrightFindings.isNotEmpty()) {
+                    copyrightStatements.addAll(curatedCopyrightFindings)
+                } else {
+                    copyrightStatements.addAll(scannedCopyrightFindings)
                 }
+            }
 
             return copyrightStatements
         }
 
-        private fun buildCopyrightDetail(input: ReporterInput, curatedPkg: CuratedPackage): CopyrightDetail =
-            CopyrightDetail(
+        private fun buildCopyrightDetail(
+            input: ReporterInput,
+            curatedPkg: CuratedPackage
+        ): CopyrightDetail {
+            return CopyrightDetail(
                 copyrightHolder = buildCopyrightHolders(curatedPkg),
                 copyrightStatement = buildCopyrightStatements(input, curatedPkg)
             )
+        }
 
         private fun buildCopyrightHolders(curatedPkg: CuratedPackage): Set<String> =
             mergeSortedSets(curatedPkg.metadata.copyrightHolders, curatedPkg.curatedCopyrightHolders())
 
-        private fun buildCopyrightStatements(input: ReporterInput, curatedPkg: CuratedPackage): Set<String> =
-            mergeAnySets(
-                input.licenseInfoResolver
-                    .resolveLicenseInfo(curatedPkg.metadata.id)
-                    .filterExcluded()
-                    .getCopyrights(),
-                buildLicenseCopyrightStatements(input, curatedPkg)
-            )
+        private fun buildCopyrightStatements(input: ReporterInput, curatedPkg: CuratedPackage): Set<String> {
+            return buildLicenseCopyrightStatements(input, curatedPkg)
+        }
 
         private data class Dependency(
             @JsonInclude(JsonInclude.Include.NON_DEFAULT)

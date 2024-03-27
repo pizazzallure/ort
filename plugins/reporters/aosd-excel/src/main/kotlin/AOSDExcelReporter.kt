@@ -188,10 +188,13 @@ class AOSDExcelReporter : Reporter {
 
                         var scopeNames = mutableSetOf<String>()
                         if(evaluatedPackage != null) {
+                            // check the detected authors from evaluated package
                             scopeNames.addAll(evaluatedPackage.scopes.map { it.name })
                             val authorFindings = evaluatedPackage.findings.filter { finding ->
                                 finding.type == EvaluatedFindingType.AUTHOR
                             }
+
+                            // add detected authors as well
                             authorFindings.forEach {
                                 it.author?.author?.let { it1 -> authors.add(it1) }
                             }
