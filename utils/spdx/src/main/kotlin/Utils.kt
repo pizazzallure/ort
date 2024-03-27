@@ -21,11 +21,19 @@ package org.ossreviewtoolkit.utils.spdx
 
 import com.fasterxml.jackson.dataformat.yaml.YAMLMapper
 import com.fasterxml.jackson.module.kotlin.registerKotlinModule
-import org.ossreviewtoolkit.utils.common.*
-import org.ossreviewtoolkit.utils.spdx.SpdxConstants.LICENSE_REF_PREFIX
+
 import java.io.File
 import java.net.URL
 import java.security.MessageDigest
+
+import org.ossreviewtoolkit.utils.common.Os
+import org.ossreviewtoolkit.utils.common.PATH_STRING_COMPARATOR
+import org.ossreviewtoolkit.utils.common.VCS_DIRECTORIES
+import org.ossreviewtoolkit.utils.common.calculateHash
+import org.ossreviewtoolkit.utils.common.encodeHex
+import org.ossreviewtoolkit.utils.common.isSymbolicLink
+import org.ossreviewtoolkit.utils.common.realFile
+import org.ossreviewtoolkit.utils.spdx.SpdxConstants.LICENSE_REF_PREFIX
 
 /**
  * A mapper to read license mapping from YAML resource files.

@@ -142,4 +142,3 @@ internal fun Collection<ResolvedCopyrightFinding>.toResolvedCopyrights(process: 
 
     return processedCopyrights + unprocessedCopyrights
 }
-

@@ -42,7 +42,7 @@ data class ResolvedCopyrightFinding(
     val matchingPathExcludes: List<PathExclude>,
 
     /**
-     * The source of the copyright finding
+     * The source of the copyright finding.
      */
     val findingType: ResolvedCopyrightSource
     

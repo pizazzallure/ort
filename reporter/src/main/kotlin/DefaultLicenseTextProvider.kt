@@ -19,7 +19,12 @@
 
 package org.ossreviewtoolkit.reporter
 
-import org.ossreviewtoolkit.utils.spdx.*
+import org.ossreviewtoolkit.utils.spdx.getCustomLicenseText
+import org.ossreviewtoolkit.utils.spdx.getCustomLicenseTextReader
+import org.ossreviewtoolkit.utils.spdx.getLicenseText
+import org.ossreviewtoolkit.utils.spdx.getLicenseTextReader
+import org.ossreviewtoolkit.utils.spdx.hasCustomLicenseText
+import org.ossreviewtoolkit.utils.spdx.hasLicenseText
 import java.io.File
 
 class DefaultLicenseTextProvider(private val licenseTextDirectories: List<File> = emptyList()) : LicenseTextProvider,
