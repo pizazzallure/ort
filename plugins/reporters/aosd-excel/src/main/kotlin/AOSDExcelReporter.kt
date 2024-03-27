@@ -109,7 +109,7 @@ class AOSDExcelReporter : Reporter {
                     }
                 }
                 row.createSPDXCell(aosdReporterPackage, workbook)
-                row.createLicenseTextCell(aosdReporterPackage, workbook, input)?.let {
+                row.createLicenseTextCell(aosdReporterPackage, workbook, input, identifier, outputDir)?.let {
                     tooLongLicenseTexts.put("${identifier.name}-${identifier.version}", it)
                 }
                 row.createUsageLinkageCell()
@@ -133,18 +133,7 @@ class AOSDExcelReporter : Reporter {
         }
 
         tooLongLicenseTexts.forEach { (key, value) ->
-            fun extractName(path: String): String {
-                val lindex = path.lastIndexOf(File.separatorChar)
-
-                if (lindex > 0) {
-                    return path.substring(lindex + 1)
-                }
-
-                return path
-            }
-
             val licenseOutputFile = outputDir.resolve(extractName("$key-license-text.txt"))
-
             licenseOutputFile.writeText(value)
         }
 
@@ -242,7 +231,9 @@ private fun XSSFRow.createUsageLinkageCell() {
 private fun XSSFRow.createLicenseTextCell(
     reporterPackage: AOSDExcelReporter.AOSDReporterPackage,
     workbook: XSSFWorkbook,
-    input: ReporterInput
+    input: ReporterInput,
+    identifier: Identifier,
+    outputDir: File
 ): String? {
     val cell = createCell(ExcelColumn.LICENSE_TEXT.ordinal)
     val cellStyle = workbook.createCellStyle()
@@ -327,10 +318,22 @@ private fun XSSFRow.createLicenseTextCell(
     if (licenseString.length < SpreadsheetVersion.EXCEL2007.maxTextLength) {
         cell.setCellValue(licenseString)
     } else {
+        val key = identifier.name + "-" + identifier.version
+        val licenseOutputFile = outputDir.resolve(extractName("$key-license-text.txt"))
+        cell.setCellValue(licenseOutputFile.absolutePath)
+
         return licenseString
     }
 
     return null
+}
+
+private fun extractName(path: String): String {
+    val lindex = path.lastIndexOf(File.separatorChar)
+    if (lindex > 0) {
+        return path.substring(lindex + 1)
+    }
+    return path
 }
 
 private fun XSSFRow.createSPDXCell(reporterPackage: AOSDExcelReporter.AOSDReporterPackage, workbook: XSSFWorkbook) {
