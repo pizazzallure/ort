@@ -90,20 +90,22 @@ class LicenseInfoResolver(
                 }
 
                 // associate the curated copyright holder to the concluded licenses.
-                locations += ResolvedLicenseLocation(
-                    provenance = UnknownProvenance,
-                    location = UNDEFINED_TEXT_LOCATION,
-                    appliedCuration = null,
-                    matchingPathExcludes = emptyList(),
-                    copyrights = curatedCopyrightHolders.mapTo(mutableSetOf()) { copyrightHolder ->
-                        ResolvedCopyrightFinding(
-                            statement = copyrightHolder,
-                            location = UNDEFINED_TEXT_LOCATION,
-                            matchingPathExcludes = emptyList(),
-                            findingType = ResolvedCopyrightSource.PROVIDED_BY_CURATION
-                        )
-                    }
-                )
+                if(curatedCopyrightHolders.isNotEmpty()) {
+                    locations += ResolvedLicenseLocation(
+                        provenance = UnknownProvenance,
+                        location = UNDEFINED_TEXT_LOCATION,
+                        appliedCuration = null,
+                        matchingPathExcludes = emptyList(),
+                        copyrights = curatedCopyrightHolders.mapTo(mutableSetOf()) { copyrightHolder ->
+                            ResolvedCopyrightFinding(
+                                statement = copyrightHolder,
+                                location = UNDEFINED_TEXT_LOCATION,
+                                matchingPathExcludes = emptyList(),
+                                findingType = ResolvedCopyrightSource.PROVIDED_BY_CURATION
+                            )
+                        }
+                    )
+                }
             }
         }
 
