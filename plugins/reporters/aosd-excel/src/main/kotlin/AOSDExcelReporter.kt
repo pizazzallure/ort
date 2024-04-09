@@ -263,22 +263,16 @@ private fun XSSFRow.createLicenseTextCell(
 
         val spdxLicenseExpression = it.license.simpleLicense()
 
-        val curatedCopyrightFindings = it.getResolvedCopyrights()
+        // display both detected and curated copyrights
+        val copyrightFindings = it.getResolvedCopyrights()
             .flatMap { it.findings }
-            .filter { it.findingType == ResolvedCopyrightSource.PROVIDED_BY_CURATION }
-            .mapTo(mutableSetOf()) { it.statement }
-        val scannedCopyrightFindings = it.getResolvedCopyrights()
-            .flatMap { it.findings }
-            .filter { it.findingType == ResolvedCopyrightSource.DETERMINED_BY_SCANNER }
+            .filter { it.findingType == ResolvedCopyrightSource.PROVIDED_BY_CURATION
+                || it.findingType == ResolvedCopyrightSource.DETERMINED_BY_SCANNER }
             .mapTo(mutableSetOf()) { it.statement }
 
         licenseString += "#$spdxLicenseExpression"
         licenseString += "\n\n"
-        if (curatedCopyrightFindings.isNotEmpty()) {
-            licenseString += curatedCopyrightFindings.joinToString("\n")
-        } else {
-            licenseString += scannedCopyrightFindings.joinToString("\n")
-        }
+        licenseString += copyrightFindings.joinToString("\n")
         licenseString += "\n\n"
 
         if (input.licenseTextProvider is CustomLicenseTextProvider) {
