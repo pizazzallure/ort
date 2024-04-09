@@ -109,7 +109,7 @@ class AOSDExcelReporter : Reporter {
                     }
                 }
                 row.createSPDXCell(aosdReporterPackage, workbook)
-                row.createLicenseTextCell(aosdReporterPackage, workbook, input, identifier, outputDir)?.let {
+                row.createLicenseTextCell(aosdReporterPackage, workbook, input, identifier)?.let {
                     tooLongLicenseTexts.put("${identifier.name}-${identifier.version}", it)
                 }
                 row.createUsageLinkageCell()
@@ -232,8 +232,7 @@ private fun XSSFRow.createLicenseTextCell(
     reporterPackage: AOSDExcelReporter.AOSDReporterPackage,
     workbook: XSSFWorkbook,
     input: ReporterInput,
-    identifier: Identifier,
-    outputDir: File
+    identifier: Identifier
 ): String? {
     val cell = createCell(ExcelColumn.LICENSE_TEXT.ordinal)
     val cellStyle = workbook.createCellStyle()
@@ -318,9 +317,8 @@ private fun XSSFRow.createLicenseTextCell(
     if (licenseString.length < SpreadsheetVersion.EXCEL2007.maxTextLength) {
         cell.setCellValue(licenseString)
     } else {
-        val key = identifier.name + "-" + identifier.version
-        val licenseOutputFile = outputDir.resolve(extractName("$key-license-text.txt"))
-        cell.setCellValue(licenseOutputFile.absolutePath)
+        val fileName = identifier.name + "-" + identifier.version + "-license-text.txt"
+        cell.setCellValue(fileName)
 
         return licenseString
     }
