@@ -350,26 +350,10 @@ class InterfaceAuditReportReporter : Reporter {
             return licenseInfo.licenses.stream()
                 .map {
                     val licenseId = it.license.simpleLicense()
-
-                    val curatedCopyrightFindings = it.getResolvedCopyrights()
-                        .flatMap { it.findings }
-                        .filter { it.findingType == ResolvedCopyrightSource.PROVIDED_BY_CURATION }
-                        .mapTo(mutableSetOf()) { it.statement }
-                    val scannedCopyrightFindings = it.getResolvedCopyrights()
-                        .flatMap { it.findings }
-                        .filter { it.findingType == ResolvedCopyrightSource.DETERMINED_BY_SCANNER }
-                        .mapTo(mutableSetOf()) { it.statement }
-
-                    val copyrights: MutableSet<String> = mutableSetOf()
-                    if (curatedCopyrightFindings.isNotEmpty()) {
-                        copyrights.addAll(curatedCopyrightFindings)
-                    } else {
-                        copyrights.addAll(scannedCopyrightFindings)
-                    }
                     LicenseDetail(
                         spdxLicenseName = licenseId,
                         licenseText = input.licenseTextProvider.getLicenseText(licenseId),
-                        copyrights = copyrights,
+                        copyrights = it.getCopyrights(),
                         locations = it.locations.map { it.toDataplatform() }.toCollection(HashSet())
                     )
                 }
@@ -378,26 +362,41 @@ class InterfaceAuditReportReporter : Reporter {
 
         private fun buildLicenseCopyrightStatements(input: ReporterInput, curatedPkg: CuratedPackage): Set<String> {
             val resolvedLicenseInfo = input.licenseInfoResolver.resolveLicenseInfo(curatedPkg.metadata.id).filterExcluded()
-            // determine the licenses, only the concluded licenses if they exist, otherwise return detected licenses.
-            val licenseInfo = resolvedLicenseInfo.filter(LicenseView.CONCLUDED_OR_DETECTED).filterExcluded()
+            val concludedLicense = resolvedLicenseInfo.licenseInfo.concludedLicenseInfo.concludedLicense
 
-            // either contains curated copyright holders or all detected copyrights
+            val curatedCopyrightHolders = curatedPkg.curations.mapNotNull { it.curation }
+                .mapNotNull { it.copyrightHolders?.takeIf { it.isNotEmpty() }}
+
+            // contains curated copyright holders or all detected copyrights
             val copyrightStatements: MutableSet<String> = HashSet()
 
-            licenseInfo.licenses.forEach {
-                val curatedCopyrightFindings = it.getResolvedCopyrights()
-                    .flatMap { it.findings }
-                    .filter { it.findingType == ResolvedCopyrightSource.PROVIDED_BY_CURATION }
-                    .mapTo(mutableSetOf()) { it.statement }
+            resolvedLicenseInfo.licenses.forEach {
                 val scannedCopyrightFindings = it.getResolvedCopyrights()
                     .flatMap { it.findings }
                     .filter { it.findingType == ResolvedCopyrightSource.DETERMINED_BY_SCANNER }
                     .mapTo(mutableSetOf()) { it.statement }
+                val curatedCopyrightFindingsForConcludedLicense = it.getResolvedCopyrights()
+                    .flatMap { it.findings }
+                    .filter { it.findingType == ResolvedCopyrightSource.PROVIDED_BY_CURATION }
+                    .mapTo(mutableSetOf()) { it.statement }
 
-                if (curatedCopyrightFindings.isNotEmpty()) {
-                    copyrightStatements.addAll(curatedCopyrightFindings)
-                } else {
+                // add the detected copyrights if exist
+                if(!it.isDetectedExcluded) {
                     copyrightStatements.addAll(scannedCopyrightFindings)
+                }
+
+                // all the curated copytrights should be added into copyright detail.
+                if(concludedLicense != null) {
+                    copyrightStatements.addAll(curatedCopyrightFindingsForConcludedLicense)
+                } else {
+                    // in case if there is curated copyright holders but without concluded license,
+                    // the curated copyright holders can not be given to any detected license, there is no location findings for curated copyrights,
+                    // these curated copyrights can not be found from resolved license information which should be also added into copyright detail
+                    curatedCopyrightHolders.forEach {
+                        it.forEach {
+                            copyrightStatements.add(it)
+                        }
+                    }
                 }
             }
 
@@ -409,13 +408,10 @@ class InterfaceAuditReportReporter : Reporter {
             curatedPkg: CuratedPackage
         ): CopyrightDetail {
             return CopyrightDetail(
-                copyrightHolder = buildCopyrightHolders(curatedPkg),
+                copyrightHolder = emptySet(),
                 copyrightStatement = buildCopyrightStatements(input, curatedPkg)
             )
         }
-
-        private fun buildCopyrightHolders(curatedPkg: CuratedPackage): Set<String> =
-            mergeSortedSets(curatedPkg.metadata.copyrightHolders, curatedPkg.curatedCopyrightHolders())
 
         private fun buildCopyrightStatements(input: ReporterInput, curatedPkg: CuratedPackage): Set<String> {
             return buildLicenseCopyrightStatements(input, curatedPkg)
