@@ -248,7 +248,7 @@ private fun XSSFRow.createLicenseTextCell(
     // the curated copyright holders can not be determined to given to which detected license.
     // display the curated copyright holders outside the detected license area.
     if(concludedLicense == null && curatedCopyrightHolders.isNotEmpty()) {
-        licenseString += "Curated Copyright Holders: "
+        licenseString += "#Curated Copyright Holders: "
         licenseString += "\n\n"
         curatedCopyrightHolders.forEach {
             it.forEach {
