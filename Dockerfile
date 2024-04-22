@@ -151,7 +151,7 @@ ARG PYTHON_INSPECTOR_VERSION=0.10.0
 ARG PYTHON_PIPENV_VERSION=2023.10.24
 ARG PYTHON_POETRY_VERSION=1.7.0
 ARG PIPTOOL_VERSION=23.3.1
-ARG SCANCODE_VERSION=32.0.8
+ARG SCANCODE_VERSION=32.1.0
 
 RUN pip install --no-cache-dir -U \
     pip=="$PIPTOOL_VERSION" \
@@ -252,15 +252,13 @@ COPY --from=rustbuild /opt/rust /opt/rust
 # GOLANG - Build as a separate component
 FROM base AS gobuild
 
-ARG GO_DEP_VERSION=0.5.4
-ARG GO_VERSION=1.21.6
+ARG GO_VERSION=1.22.0
 ENV GOBIN=/opt/go/bin
 ENV PATH=$PATH:/opt/go/bin
 
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 RUN ARCH=$(arch | sed s/aarch64/arm64/ | sed s/x86_64/amd64/) \
-    && curl -L https://dl.google.com/go/go$GO_VERSION.linux-$ARCH.tar.gz | tar -C /opt -xz \
-    && curl -ksS https://raw.githubusercontent.com/golang/dep/v$GO_DEP_VERSION/install.sh | bash
+    && curl -L https://dl.google.com/go/go$GO_VERSION.linux-$ARCH.tar.gz | tar -C /opt -xz
 
 FROM scratch AS golang
 COPY --from=gobuild /opt/go /opt/go
@@ -404,6 +402,25 @@ FROM scratch AS dotnet
 COPY --from=dotnetbuild /opt/dotnet /opt/dotnet
 
 #------------------------------------------------------------------------
+# BAZEL
+FROM base as bazelbuild
+
+ARG BAZEL_VERSION=7.0.1
+
+ENV BAZEL_HOME=/opt/bazel
+
+RUN mkdir -p $BAZEL_HOME/bin \
+    && if [ "$(arch)" = "aarch64" ]; then \
+    curl -L https://github.com/bazelbuild/bazel/releases/download/$BAZEL_VERSION/bazel-$BAZEL_VERSION-linux-arm64 -o $BAZEL_HOME/bin/bazel; \
+    else \
+    curl -L https://github.com/bazelbuild/bazel/releases/download/$BAZEL_VERSION/bazel-$BAZEL_VERSION-linux-x86_64 -o $BAZEL_HOME/bin/bazel; \
+    fi \
+    && chmod a+x $BAZEL_HOME/bin/bazel
+
+FROM scratch as bazel
+COPY --from=bazelbuild /opt/bazel /opt/bazel
+
+#------------------------------------------------------------------------
 # ORT
 FROM base as ortbuild
 
@@ -432,8 +449,8 @@ FROM scratch AS ortbin
 COPY --from=ortbuild /opt/ort /opt/ort
 
 #------------------------------------------------------------------------
-# Minimal Runtime container
-FROM base as minimal
+# Container with minimal selection of supported package managers.
+FROM base as minimal-tools
 
 # Remove ort build scripts
 RUN [ -d /etc/scripts ] && sudo rm -rf /etc/scripts
@@ -446,20 +463,20 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     subversion \
     && sudo rm -rf /var/lib/apt/lists/*
 
-RUN syft / --exclude '*/usr/share/doc' --exclude '*/etc' -o spdx-json --file /usr/share/doc/ort/ort-base.spdx.json
+RUN syft / --exclude '*/usr/share/doc' --exclude '*/etc' -o spdx-json --output json=/usr/share/doc/ort/ort-base.spdx.json
 
 # Python
 ENV PYENV_ROOT=/opt/python
 ENV PATH=$PATH:$PYENV_ROOT/shims:$PYENV_ROOT/bin
 COPY --from=python --chown=$USER:$USER $PYENV_ROOT $PYENV_ROOT
-RUN syft $PYENV_ROOT -o spdx-json --file /usr/share/doc/ort/ort-python.spdx.json
+RUN syft $PYENV_ROOT -o spdx-json --output json=/usr/share/doc/ort/ort-python.spdx.json
 
 # NodeJS
 ARG NODEJS_VERSION=20.9.0
 ENV NVM_DIR=/opt/nvm
 ENV PATH=$PATH:$NVM_DIR/versions/node/v$NODEJS_VERSION/bin
 COPY --from=nodejs --chown=$USER:$USER $NVM_DIR $NVM_DIR
-RUN syft $NVM_DIR  -o spdx-json --file /usr/share/doc/ort/ort-nodejs.spdx.json
+RUN syft $NVM_DIR  -o spdx-json --output json=/usr/share/doc/ort/ort-nodejs.spdx.json
 
 # Rust
 ENV RUST_HOME=/opt/rust
@@ -468,35 +485,23 @@ ENV RUSTUP_HOME=$RUST_HOME/rustup
 ENV PATH=$PATH:$CARGO_HOME/bin:$RUSTUP_HOME/bin
 COPY --from=rust --chown=$USER:$USER $RUST_HOME $RUST_HOME
 RUN chmod o+rwx $CARGO_HOME
-RUN syft $RUST_HOME -o spdx-json --file /usr/share/doc/ort/ort-rust.spdx.json
+RUN syft $RUST_HOME -o spdx-json --output json=/usr/share/doc/ort/ort-rust.spdx.json
 
 # Golang
 ENV PATH=$PATH:/opt/go/bin
 COPY --from=golang --chown=$USER:$USER /opt/go /opt/go
-RUN syft /opt/go -o spdx-json --file /usr/share/doc/ort/ort-golang.spdx.json
+RUN syft /opt/go -o spdx-json --output json=/usr/share/doc/ort/ort-golang.spdx.json
 
 # Ruby
 ENV RBENV_ROOT=/opt/rbenv/
 ENV GEM_HOME=/var/tmp/gem
 ENV PATH=$PATH:$RBENV_ROOT/bin:$RBENV_ROOT/shims:$RBENV_ROOT/plugins/ruby-install/bin
 COPY --from=ruby --chown=$USER:$USER $RBENV_ROOT $RBENV_ROOT
-RUN syft $RBENV_ROOT -o spdx-json --file /usr/share/doc/ort/ort-ruby.spdx.json
-
-# ORT
-COPY --from=ortbin --chown=$USER:$USER /opt/ort /opt/ort
-ENV PATH=$PATH:/opt/ort/bin
-
-USER $USER
-WORKDIR $HOME
-
-# Ensure that the ORT data directory exists to be able to mount the config into it with correct permissions.
-RUN mkdir -p "$HOME/.ort"
-
-ENTRYPOINT ["/opt/ort/bin/ort"]
+RUN syft $RBENV_ROOT -o spdx-json --output json=/usr/share/doc/ort/ort-ruby.spdx.json
 
 #------------------------------------------------------------------------
-# Full Runtime container
-FROM minimal as run
+# Container with all supported package managers.
+FROM minimal-tools as all-tools
 
 # Repo and Android
 ENV ANDROID_HOME=/opt/android-sdk
@@ -506,14 +511,14 @@ ENV PATH=$PATH:$ANDROID_HOME/platform-tools
 COPY --from=android --chown=$USER:$USER $ANDROID_HOME $ANDROID_HOME
 RUN sudo chmod -R o+rw $ANDROID_HOME
 
-RUN syft $ANDROID_HOME -o spdx-json --file /usr/share/doc/ort/ort-android.spdx.json
+RUN syft $ANDROID_HOME -o spdx-json --output json=/usr/share/doc/ort/ort-android.spdx.json
 
 # Swift
 ENV SWIFT_HOME=/opt/swift
 ENV PATH=$PATH:$SWIFT_HOME/bin
 COPY --from=swift --chown=$USER:$USER $SWIFT_HOME $SWIFT_HOME
 
-RUN syft $SWIFT_HOME -o spdx-json --file /usr/share/doc/ort/ort-swift.spdx.json
+RUN syft $SWIFT_HOME -o spdx-json --output json=/usr/share/doc/ort/ort-swift.spdx.json
 
 
 # Scala
@@ -521,14 +526,14 @@ ENV SBT_HOME=/opt/sbt
 ENV PATH=$PATH:$SBT_HOME/bin
 COPY --from=scala --chown=$USER:$USER $SBT_HOME $SBT_HOME
 
-RUN syft $SBT_HOME -o spdx-json --file /usr/share/doc/ort/ort-sbt.spdx.json
+RUN syft $SBT_HOME -o spdx-json --output json=/usr/share/doc/ort/ort-sbt.spdx.json
 
 # Dart
 ENV DART_SDK=/opt/dart-sdk
 ENV PATH=$PATH:$DART_SDK/bin
 COPY --from=dart --chown=$USER:$USER $DART_SDK $DART_SDK
 
-RUN syft $DART_SDK -o spdx-json --file /usr/share/doc/ort/ort-golang.dart.json
+RUN syft $DART_SDK -o spdx-json --output json=/usr/share/doc/ort/ort-golang.dart.json
 
 # Dotnet
 ENV DOTNET_HOME=/opt/dotnet
@@ -537,7 +542,7 @@ ENV PATH=$PATH:$DOTNET_HOME:$DOTNET_HOME/tools:$DOTNET_HOME/bin
 
 COPY --from=dotnet --chown=$USER:$USER $DOTNET_HOME $DOTNET_HOME
 
-RUN syft $DOTNET_HOME -o spdx-json --file /usr/share/doc/ort/ort-dotnet.spdx.json
+RUN syft $DOTNET_HOME -o spdx-json --output json=/usr/share/doc/ort/ort-dotnet.spdx.json
 
 # PHP
 ARG PHP_VERSION=8.1
@@ -555,7 +560,7 @@ RUN mkdir -p /opt/php/bin \
 
 ENV PATH=$PATH:/opt/php/bin
 
-RUN syft /opt/php -o spdx-json --file /usr/share/doc/ort/ort-php.spdx.json
+RUN syft /opt/php -o spdx-json --output json=/usr/share/doc/ort/ort-php.spdx.json
 
 # Haskell
 ENV HASKELL_HOME=/opt/haskell
@@ -563,4 +568,44 @@ ENV PATH=$PATH:$HASKELL_HOME/bin
 
 COPY --from=haskell /opt/haskell /opt/haskell
 
-RUN syft /opt/haskell -o spdx-json --file /usr/share/doc/ort/ort-haskell.spdx.json
+RUN syft /opt/haskell -o spdx-json --output json=/usr/share/doc/ort/ort-haskell.spdx.json
+
+# Bazel
+ENV BAZEL_HOME=/opt/bazel
+ENV PATH=$PATH:$BAZEL_HOME/bin
+
+COPY --from=bazel $BAZEL_HOME $BAZEL_HOME
+
+RUN syft $BAZEL_HOME -o spdx-json --output json=/usr/share/doc/ort/ort-bazel.spdx.json
+
+#------------------------------------------------------------------------
+# Runtime container with minimal selection of supported package managers pre-installed.
+FROM minimal-tools as minimal
+
+# ORT
+COPY --from=ortbin --chown=$USER:$USER /opt/ort /opt/ort
+ENV PATH=$PATH:/opt/ort/bin
+
+USER $USER
+WORKDIR $HOME
+
+# Ensure that the ORT data directory exists to be able to mount the config into it with correct permissions.
+RUN mkdir -p "$HOME/.ort"
+
+ENTRYPOINT ["/opt/ort/bin/ort"]
+
+#------------------------------------------------------------------------
+# Runtime container with all supported package managers pre-installed.
+FROM all-tools as run
+
+# ORT
+COPY --from=ortbin --chown=$USER:$USER /opt/ort /opt/ort
+ENV PATH=$PATH:/opt/ort/bin
+
+USER $USER
+WORKDIR $HOME
+
+# Ensure that the ORT data directory exists to be able to mount the config into it with correct permissions.
+RUN mkdir -p "$HOME/.ort"
+
+ENTRYPOINT ["/opt/ort/bin/ort"]
