@@ -39,7 +39,7 @@ ARG NUGET_INSPECTOR_VERSION=0.9.12
 ARG PYTHON_INSPECTOR_VERSION="0.10.0"
 
 # Set this to the ScanCode version to use.
-ARG SCANCODE_VERSION="32.0.8"
+ARG SCANCODE_VERSION="32.1.0"
 
 FROM eclipse-temurin:$JAVA_VERSION-jdk-jammy AS build
 
@@ -76,8 +76,7 @@ ENV \
     COMPOSER_VERSION=2.2.6-2ubuntu4 \
     CONAN_VERSION=1.63.0 \
     DOTNET_VERSION=6.0 \
-    GO_DEP_VERSION=0.5.4 \
-    GO_VERSION=1.21.6 \
+    GO_VERSION=1.22.0 \
     HASKELL_STACK_VERSION=2.13.1 \
     NPM_VERSION=10.1.0 \
     PNPM_VERSION=8.10.3 \
@@ -168,7 +167,6 @@ RUN /opt/ort/bin/export_proxy_certificates.sh /tmp/certificates/ && \
     pip install --no-cache-dir conan==$CONAN_VERSION poetry==$PYTHON_POETRY_VERSION pipenv==$PYTHON_PIPENV_VERSION && \
     # Install golang in order to have `go mod` as package manager.
     curl -ksS https://dl.google.com/go/go$GO_VERSION.linux-amd64.tar.gz | tar -C /opt -xz && \
-    curl -ksS https://raw.githubusercontent.com/golang/dep/v$GO_DEP_VERSION/install.sh | sh && \
     curl -ksS https://raw.githubusercontent.com/commercialhaskell/stack/v$HASKELL_STACK_VERSION/etc/scripts/get-stack.sh | sh && \
     mkdir -p $SWIFT_HOME && \
     curl -L https://download.swift.org/swift-$SWIFT_VERSION-release/ubuntu2204/swift-$SWIFT_VERSION-RELEASE/swift-$SWIFT_VERSION-RELEASE-ubuntu22.04.tar.gz \

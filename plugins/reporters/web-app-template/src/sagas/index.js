@@ -19,9 +19,10 @@
 
 import pako from 'pako';
 import { all, put, takeEvery } from 'redux-saga/effects';
+
 import processOrtResultData from './processOrtResultData';
 
-export function* loadOrtResultData() {
+export function * loadOrtResultData() {
     yield put({ type: 'APP::SHOW_LOAD_VIEW' });
     yield put({ type: 'APP::LOADING_ORT_RESULT_DATA_START' });
 
@@ -29,15 +30,14 @@ export function* loadOrtResultData() {
     const ortResultDataNode = document.querySelector('script[id="ort-report-data"]');
 
     if (ortResultDataNode) {
-        const { type: dataType } = ortResultDataNode;
+        const { textContent: ortResultDataNodeContents, type: ortResultDataNodeType } = ortResultDataNode;
         let ortResultData;
-        const ortReportDataTextContent = ortResultDataNode.textContent;
 
-        if (ortReportDataTextContent
-            && ortReportDataTextContent !== 'ORT_REPORT_DATA_PLACEHOLDER') {
-            if (dataType === 'application/gzip') {
+        // Check report is WebApp template e.g. contains 'ORT_REPORT_DATA_PLACEHOLDER'
+        if (!!ortResultDataNodeContents && ortResultDataNodeContents.length !== 27) {
+            if (ortResultDataNodeType === 'application/gzip') {
                 // Decode Base64 (convert ASCII to binary).
-                const decodedBase64Data = atob(ortReportDataTextContent);
+                const decodedBase64Data = atob(ortResultDataNodeContents);
 
                 // Convert binary string to character-number array.
                 const charData = decodedBase64Data.split('').map((x) => x.charCodeAt(0));
@@ -50,7 +50,7 @@ export function* loadOrtResultData() {
 
                 ortResultData = JSON.parse(new TextDecoder('utf-8').decode(data));
             } else {
-                ortResultData = JSON.parse(ortReportDataTextContent);
+                ortResultData = JSON.parse(ortResultDataNodeContents);
             }
         }
 
@@ -62,16 +62,16 @@ export function* loadOrtResultData() {
         }
     }
 }
-export function* watchProcessOrtResultData() {
+export function * watchProcessOrtResultData() {
     yield takeEvery('APP::LOADING_PROCESS_ORT_RESULT_DATA_START', processOrtResultData);
 }
 
-export function* watchLoadOrtResultData() {
+export function * watchLoadOrtResultData() {
     yield takeEvery('APP::LOADING_START', loadOrtResultData);
 }
 
 // single entry point to start all Sagas at once
-export default function* rootSaga() {
+export default function * rootSaga() {
     yield all([
         watchLoadOrtResultData(),
         watchProcessOrtResultData()

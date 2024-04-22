@@ -19,6 +19,7 @@
 
 package org.ossreviewtoolkit.plugins.scanners.scancode
 
+import io.kotest.engine.spec.tempdir
 import io.kotest.matchers.should
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.endWith
@@ -28,7 +29,6 @@ import org.ossreviewtoolkit.model.LicenseFinding
 import org.ossreviewtoolkit.model.TextLocation
 import org.ossreviewtoolkit.scanner.AbstractPathScannerWrapperFunTest
 import org.ossreviewtoolkit.scanner.ScannerWrapperConfig
-import org.ossreviewtoolkit.utils.ort.createOrtTempDir
 import org.ossreviewtoolkit.utils.spdx.getLicenseText
 import org.ossreviewtoolkit.utils.test.ExpensiveTag
 
@@ -36,15 +36,13 @@ class ScanCodeScannerFunTest : AbstractPathScannerWrapperFunTest(setOf(Expensive
     override val scanner = ScanCode("ScanCode", ScanCodeConfig.DEFAULT, ScannerWrapperConfig.EMPTY)
 
     override val expectedFileLicenses = listOf(
-        LicenseFinding("Apache-2.0", TextLocation("LICENSE", 1, 187), 100.0f),
-        LicenseFinding("Apache-2.0", TextLocation("LICENSE", 191, 201), 100.0f)
+        LicenseFinding("Apache-2.0", TextLocation("LICENSE", 1, 201), 100.0f)
     )
 
     override val expectedDirectoryLicenses = listOf(
-        LicenseFinding("Apache-2.0", TextLocation("COPYING", 1, 201), 99.18f),
-        LicenseFinding("Apache-2.0", TextLocation("LICENCE", 1, 201), 99.18f),
-        LicenseFinding("Apache-2.0", TextLocation("LICENSE", 1, 187), 100.0f),
-        LicenseFinding("Apache-2.0", TextLocation("LICENSE", 191, 201), 100.0f)
+        LicenseFinding("Apache-2.0", TextLocation("COPYING", 1, 201), 99.43f),
+        LicenseFinding("Apache-2.0", TextLocation("LICENCE", 1, 201), 99.43f),
+        LicenseFinding("Apache-2.0", TextLocation("LICENSE", 1, 201), 100.0f)
     )
 
     init {
@@ -66,7 +64,7 @@ class ScanCodeScannerFunTest : AbstractPathScannerWrapperFunTest(setOf(Expensive
             val id = "LicenseRef-scancode-here-proprietary"
             val text = "x\ny\n"
 
-            val outputDir = createOrtTempDir().apply { resolve(id).writeText(text) }
+            val outputDir = tempdir().apply { resolve(id).writeText(text) }
 
             getLicenseText(id, true, listOf(outputDir)) shouldBe getLicenseText(id, true)
         }
