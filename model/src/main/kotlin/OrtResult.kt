@@ -244,16 +244,31 @@ data class OrtResult(
     }
 
     /**
-     * Return a map of all de-duplicated [Issue]s associated by [Identifier].
+     * Return a map of all de-duplicated [Issue]s associated by [Identifier]. If [omitExcluded] is set to true, excluded
+     * issues are omitted from the result. If [omitResolved] is set to true, resolved issues are omitted from the
+     * result. Issues with [severity][Issue.severity] below [minSeverity] are omitted from the result.
      */
     @JsonIgnore
-    fun getIssues(): Map<Identifier, Set<Issue>> {
+    fun getIssues(
+        omitExcluded: Boolean = false,
+        omitResolved: Boolean = false,
+        minSeverity: Severity = Severity.entries.min()
+    ): Map<Identifier, Set<Issue>> {
         val analyzerIssues = analyzer?.result?.getAllIssues().orEmpty()
-        val scannerIssues = scanner?.getIssues().orEmpty()
+        val scannerIssues = scanner?.getAllIssues().orEmpty()
         val advisorIssues = advisor?.results?.getIssues().orEmpty()
 
-        val analyzerAndScannerIssues = analyzerIssues.zipWithCollections(scannerIssues)
-        return analyzerAndScannerIssues.zipWithCollections(advisorIssues)
+        val allIssues = analyzerIssues.zipWithCollections(scannerIssues).zipWithCollections(advisorIssues)
+
+        return allIssues.mapNotNull { (id, issues) ->
+            if (omitExcluded && isExcluded(id)) return@mapNotNull null
+
+            val filteredIssues = issues.filterTo(mutableSetOf()) {
+                (!omitResolved || !isResolved(it)) && it.severity >= minSeverity
+            }
+
+            filteredIssues.takeUnless { it.isEmpty() }?.let { id to it }
+        }.toMap()
     }
 
     /**
@@ -278,12 +293,7 @@ data class OrtResult(
      */
     @JsonIgnore
     fun getOpenIssues(minSeverity: Severity = Severity.WARNING) =
-        getIssues()
-            .mapNotNull { (id, issues) -> issues.takeUnless { isExcluded(id) } }
-            .flatten()
-            .filter { issue ->
-                issue.severity >= minSeverity && getResolutions().issues.none { it.matches(issue) }
-            }
+        getIssues(omitExcluded = true, omitResolved = true, minSeverity = minSeverity).values.flatten().distinct()
 
     /**
      * Return a list of [PackageConfiguration]s for the given [packageId] and [provenance].
@@ -438,26 +448,13 @@ data class OrtResult(
      * [omitResolved] and remove violations below the [minSeverity].
      */
     @JsonIgnore
-    fun getRuleViolations(omitResolved: Boolean = false, minSeverity: Severity? = null): List<RuleViolation> {
-        val allViolations = evaluator?.violations.orEmpty()
-
-        val severeViolations = when (minSeverity) {
-            null -> allViolations
-            else -> allViolations.filter { it.severity >= minSeverity }
+    fun getRuleViolations(
+        omitResolved: Boolean = false,
+        minSeverity: Severity = Severity.entries.min()
+    ): List<RuleViolation> =
+        evaluator?.violations.orEmpty().filter {
+            (!omitResolved || !isResolved(it)) && it.severity >= minSeverity
         }
-
-        return if (omitResolved) {
-            val resolutions = getResolutions().ruleViolations
-
-            severeViolations.filter { violation ->
-                resolutions.none { resolution ->
-                    resolution.matches(violation)
-                }
-            }
-        } else {
-            severeViolations
-        }
-    }
 
     /**
      * Return the list of [ScanResult]s for the given [id].
@@ -506,12 +503,8 @@ data class OrtResult(
             .filterKeys { !omitExcluded || !isExcluded(it) }
 
         return if (omitResolved) {
-            val resolutions = getResolutions().vulnerabilities
-
             allVulnerabilities.mapValues { (_, vulnerabilities) ->
-                vulnerabilities.filter { vulnerability ->
-                    resolutions.none { it.matches(vulnerability) }
-                }
+                vulnerabilities.filter { !isResolved(it) }
             }.filterValues { it.isNotEmpty() }
         } else {
             allVulnerabilities
@@ -559,7 +552,7 @@ data class OrtResult(
      *
      * Return `false` if there is no dependency on this [id].
      */
-    fun isPackageExcluded(id: Identifier): Boolean = packages[id]?.isExcluded ?: false
+    fun isPackageExcluded(id: Identifier): Boolean = packages[id]?.isExcluded == true
 
     /**
      * Return `true` if the [Project] with the given [id] is excluded.
@@ -570,7 +563,7 @@ data class OrtResult(
      *
      * Return `false` if no project with the given [id] is found.
      */
-    fun isProjectExcluded(id: Identifier): Boolean = projects[id]?.isExcluded ?: false
+    fun isProjectExcluded(id: Identifier): Boolean = projects[id]?.isExcluded == true
 
     /**
      * Return true if and only if the given [id] denotes a [Package] contained in this [OrtResult].

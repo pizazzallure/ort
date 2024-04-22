@@ -19,10 +19,12 @@
 
 package org.ossreviewtoolkit.model.config
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import com.fasterxml.jackson.annotation.JsonInclude
 import com.fasterxml.jackson.annotation.JsonInclude.Include
 import com.fasterxml.jackson.annotation.JsonProperty
 
+@JsonIgnoreProperties("parallel_transactions")
 data class PostgresConnection(
     /**
      * The database URL in JDBC format.
@@ -73,12 +75,46 @@ data class PostgresConnection(
     val sslrootcert: String? = null,
 
     /**
-     * The number of parallel transactions to use for the storage dispatcher.
+     * The maximum number of milliseconds to wait for connections from the pool. For details see the
+     * [Hikari documentation](https://github.com/brettwooldridge/HikariCP#frequently-used).
      */
-    val parallelTransactions: Int = 5
+    @JsonInclude(Include.NON_NULL)
+    val connectionTimeout: Long? = null,
 
     /**
-     * TODO: Make additional parameters configurable, see:
-     *       https://jdbc.postgresql.org/documentation/head/connect.html
+     * The maximum number of milliseconds a connection is allowed to sit idle in the pool. This requires that
+     * [minimumIdle] is set to a value lower than [maximumPoolSize]. For details see the
+     * [Hikari documentation](https://github.com/brettwooldridge/HikariCP#frequently-used).
      */
+    @JsonInclude(Include.NON_NULL)
+    val idleTimeout: Long? = null,
+
+    /**
+     * The frequency in milliseconds that the pool will attempt to keep an idle connection alive. Must be set to a value
+     * lower than [maxLifetime]. For details see the
+     * [Hikari documentation](https://github.com/brettwooldridge/HikariCP#frequently-used).
+     */
+    @JsonInclude(Include.NON_NULL)
+    val keepaliveTime: Long? = null,
+
+    /**
+     * The maximum lifetime of a connection in milliseconds. For details see the
+     * [Hikari documentation](https://github.com/brettwooldridge/HikariCP#frequently-used).
+     */
+    @JsonInclude(Include.NON_NULL)
+    val maxLifetime: Long? = null,
+
+    /**
+     * The maximum size of the connection pool. For details see the
+     * [Hikari documentation](https://github.com/brettwooldridge/HikariCP#frequently-used).
+     */
+    @JsonInclude(Include.NON_NULL)
+    val maximumPoolSize: Int? = null,
+
+    /**
+     * The minimum number of idle connections that the pool tries to maintain. For details see the
+     * [Hikari documentation](https://github.com/brettwooldridge/HikariCP#frequently-used).
+     */
+    @JsonInclude(Include.NON_NULL)
+    val minimumIdle: Int? = null
 )

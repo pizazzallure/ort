@@ -13,14 +13,12 @@ It can be further processed or manually edited before passing it to one of the o
 Currently, the following package managers (grouped by the programming language they are most commonly used with) are supported:
 
 * C / C++
+  * [Bazel](https://bazel.build/) (**experimental**) (limitations: see [open tasks](https://github.com/oss-review-toolkit/ort/issues/264))
   * [Conan](https://conan.io/)
   * Also see: [SPDX documents](#analyzer-for-spdx-documents)
 * Dart / Flutter
   * [Pub](https://pub.dev/)
 * Go
-  * [dep](https://golang.github.io/dep/)
-  * [Glide](https://github.com/Masterminds/glide)
-  * [Godep](https://github.com/tools/godep)
   * [GoMod](https://github.com/golang/go/wiki/Modules)
 * Haskell
   * [Stack](https://haskellstack.org/)

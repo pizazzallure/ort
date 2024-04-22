@@ -60,7 +60,20 @@ class RequirementsCommand : OrtCommand(
     help = "Check for the command line tools required by ORT."
 ) {
     private enum class RequirementsType { PLUGINS, COMMANDS }
-    private enum class VersionStatus { SATISFIED, UNSATISFIED, UNAVAILABLE }
+
+    private enum class VersionStatus {
+        /** The determined version satisfies ORT's requirements. */
+        SATISFIED,
+
+        /** The determined version does not satisfy ORT's requirements. */
+        UNSATISFIED,
+
+        /** The tool is available but the version could not be determined. */
+        UNKNOWN,
+
+        /** The tool is not available at all (and thus the version could not be determined). */
+        UNAVAILABLE
+    }
 
     private val list by option(
         "--list", "-l",
@@ -93,10 +106,14 @@ class RequirementsCommand : OrtCommand(
                 appendLine("Not all tools requirements were satisfied:")
 
                 if (VersionStatus.UNSATISFIED in status) {
-                    appendLine("\tSome tools were not found in their required versions.")
+                    appendLine("\t! Some tools were not found in their required versions.")
                 }
 
-                if (VersionStatus.UNAVAILABLE in status) appendLine("\tSome tools were not found at all.")
+                if (VersionStatus.UNKNOWN in status) {
+                    appendLine("\t! For some tools the version could not be determined.")
+                }
+
+                if (VersionStatus.UNAVAILABLE in status) appendLine("\t! Some tools were not found at all.")
             }
 
             echo(Theme.Default.warning(summary))
@@ -236,7 +253,7 @@ class RequirementsCommand : OrtCommand(
                 val status = if (tool.getVersionRequirement().isSatisfiedByAny) {
                     VersionStatus.SATISFIED
                 } else {
-                    VersionStatus.UNSATISFIED
+                    VersionStatus.UNKNOWN
                 }
 
                 Triple(status, WARNING_PREFIX, "Could not determine the version.")

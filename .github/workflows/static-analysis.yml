@@ -19,7 +19,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - uses: wagoid/commitlint-github-action@v5
+      - uses: wagoid/commitlint-github-action@v6
         with:
           configFile: .commitlintrc.yml
   code-base-checks:
@@ -27,29 +27,28 @@ jobs:
     steps:
     - name: Checkout Repository
       uses: actions/checkout@v4
-    - name: Check copyrights, license headers, and .gitattributes
-      uses: gradle/gradle-build-action@v3
+    - name: Setup Gradle
+      uses: gradle/actions/setup-gradle@v3
       with:
         gradle-home-cache-cleanup: true
-        arguments: checkCopyrightsInNoticeFile checkLicenseHeaders checkGitAttributes
+    - name: Check copyrights, license headers, and .gitattributes
+      run: ./gradlew checkCopyrightsInNoticeFile checkLicenseHeaders checkGitAttributes
   detekt-issues:
     runs-on: ubuntu-22.04
     steps:
     - name: Checkout Repository
       uses: actions/checkout@v4
+    - name: Setup Gradle
+      uses: gradle/actions/setup-gradle@v3
+      with:
+        gradle-home-cache-cleanup: true
     - name: Check for Detekt Issues
-      uses: gradle/gradle-build-action@v3
-      with:
-        gradle-home-cache-cleanup: true
-        arguments: detekt
+      run: ./gradlew detekt
     - name: Check for Detekt Issues with type resolution
-      uses: gradle/gradle-build-action@v3
-      with:
-        gradle-home-cache-cleanup: true
-        arguments: detektMain detektTestFixtures detektTest detektFunTest
+      run: ./gradlew detektMain detektTestFixtures detektTest detektFunTest
     - name: Upload SARIF File
       uses: github/codeql-action/upload-sarif@v3
-      if: ${{ always() }} # Upload even if the previous step failed.
+      if: always() # Upload even if the previous step failed.
       with:
         sarif_file: build/reports/detekt/merged.sarif
   markdown-links:
@@ -85,7 +84,7 @@ jobs:
       with:
         fetch-depth: 0
     - name: Qodana Scan
-      uses: JetBrains/qodana-action@v2023.3.1
+      uses: JetBrains/qodana-action@v2023.3.2
       with:
         post-pr-comment: false
         use-caches: false

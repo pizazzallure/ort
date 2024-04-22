@@ -22,12 +22,16 @@ package org.ossreviewtoolkit.plugins.packagemanagers.cargo
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
+import net.peanuuutz.tomlkt.Toml
+
+internal val toml = Toml { ignoreUnknownKeys = true }
+
 /**
  * See https://docs.rs/cargo-lock/latest/cargo_lock/struct.Lockfile.html.
  */
 @Serializable
 internal data class CargoLockfile(
-    val version: Int = 1,
+    val version: Int? = null,
 
     @SerialName("package")
     val packages: List<Package>,
