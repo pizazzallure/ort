@@ -21,10 +21,13 @@ package org.ossreviewtoolkit.model
 
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.WordSpec
-import io.kotest.matchers.collections.containExactly
+import io.kotest.matchers.collections.beEmpty
 import io.kotest.matchers.collections.containExactlyInAnyOrder
 import io.kotest.matchers.collections.haveSize
+import io.kotest.matchers.collections.shouldContain
 import io.kotest.matchers.collections.shouldContainExactly
+import io.kotest.matchers.collections.shouldHaveSingleElement
+import io.kotest.matchers.collections.shouldNotContain
 import io.kotest.matchers.should
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldMatch
@@ -44,7 +47,7 @@ import org.ossreviewtoolkit.model.config.RuleViolationResolutionReason
 import org.ossreviewtoolkit.utils.test.readOrtResult
 
 class OrtResultTest : WordSpec({
-    "collectDependencies()" should {
+    "getDependencies()" should {
         "be able to get all direct dependencies of a package" {
             val ortResult = readOrtResult("src/test/assets/sbt-multi-project-example-expected-output.yml")
             val id = Identifier("Maven:com.typesafe.akka:akka-stream_2.12:2.5.6")
@@ -59,16 +62,22 @@ class OrtResultTest : WordSpec({
         }
     }
 
-    "collectProjectsAndPackages()" should {
-        "be able to get all ids except for ones for sub-projects" {
-            val ortResult = readOrtResult("src/test/assets/gradle-all-dependencies-expected-result.yml")
+    "getProjectsAndPackages()" should {
+        val ortResult = readOrtResult("src/test/assets/gradle-all-dependencies-expected-result.yml")
+        val subProjectId = Identifier("Gradle:org.ossreviewtoolkit.gradle.example:lib:1.0.0")
+
+        "be able to get all ids including sub-projects" {
             val ids = ortResult.getProjectsAndPackages()
-            val idsWithoutSubProjects = ortResult.getProjectsAndPackages(includeSubProjects = false)
-            val actualIds = ids - idsWithoutSubProjects
 
             ids should haveSize(9)
-            idsWithoutSubProjects should haveSize(8)
-            actualIds should containExactly(Identifier("Gradle:org.ossreviewtoolkit.gradle.example:lib:1.0.0"))
+            ids shouldContain subProjectId
+        }
+
+        "be able to get all ids excluding sub-projects" {
+            val ids = ortResult.getProjectsAndPackages(includeSubProjects = false)
+
+            ids should haveSize(8)
+            ids shouldNotContain(subProjectId)
         }
     }
 
@@ -147,9 +156,7 @@ class OrtResultTest : WordSpec({
         "omit resolved issues" {
             val ortResult = OrtResult.EMPTY.copy(
                 analyzer = AnalyzerRun.EMPTY.copy(
-                    result = AnalyzerResult(
-                        projects = emptySet(),
-                        packages = emptySet(),
+                    result = AnalyzerResult.EMPTY.copy(
                         issues = mapOf(
                             Identifier("Maven:org.oss-review-toolkit:example:1.0") to listOf(
                                 Issue(message = "Issue message to resolve", source = ""),
@@ -173,18 +180,13 @@ class OrtResultTest : WordSpec({
 
             val openIssues = ortResult.getOpenIssues(Severity.WARNING)
 
-            openIssues should haveSize(1)
-            with(openIssues.first()) {
-                message shouldBe "Non-resolved issue"
-            }
+            openIssues.map { it.message } shouldHaveSingleElement "Non-resolved issue"
         }
 
         "omit issues with violation below threshold" {
             val ortResult = OrtResult.EMPTY.copy(
                 analyzer = AnalyzerRun.EMPTY.copy(
-                    result = AnalyzerResult(
-                        projects = emptySet(),
-                        packages = emptySet(),
+                    result = AnalyzerResult.EMPTY.copy(
                         issues = mapOf(
                             Identifier("Maven:org.oss-review-toolkit:example:1.0") to
                                 listOf(
@@ -206,13 +208,10 @@ class OrtResultTest : WordSpec({
 
             val openIssues = ortResult.getOpenIssues(Severity.WARNING)
 
-            openIssues should haveSize(1)
-            with(openIssues.first()) {
-                message shouldBe "Issue with severity 'warning'"
-            }
+            openIssues.map { it.message } shouldHaveSingleElement "Issue with severity 'warning'"
         }
 
-        "omit excluded issues" {
+        "omit issues of excluded projects" {
             val ortResult = OrtResult.EMPTY.copy(
                 repository = Repository.EMPTY.copy(
                     config = RepositoryConfiguration(
@@ -227,7 +226,7 @@ class OrtResultTest : WordSpec({
                     )
                 ),
                 analyzer = AnalyzerRun.EMPTY.copy(
-                    result = AnalyzerResult(
+                    result = AnalyzerResult.EMPTY.copy(
                         projects = setOf(
                             Project.EMPTY.copy(
                                 id = Identifier("Maven:org.oss-review-toolkit:excluded:1.0"),
@@ -235,7 +234,6 @@ class OrtResultTest : WordSpec({
                                 declaredLicenses = emptySet()
                             )
                         ),
-                        packages = emptySet(),
                         issues = mapOf(
                             Identifier("Maven:org.oss-review-toolkit:excluded:1.0") to
                                 listOf(Issue(message = "Excluded issue", source = "")),
@@ -248,10 +246,80 @@ class OrtResultTest : WordSpec({
 
             val openIssues = ortResult.getOpenIssues()
 
-            openIssues should haveSize(1)
-            with(openIssues.first()) {
-                message shouldBe "Included issue"
-            }
+            openIssues.map { it.message } shouldHaveSingleElement "Included issue"
+        }
+
+        "omit scan issues with excluded affected path" {
+            val projectId = Identifier("Maven:org.oss-review-toolkit:example-project:1.0")
+            val vcs = VcsInfo(
+                type = VcsType.GIT,
+                url = "https:/github.com/example.project.git",
+                revision = "0000000000000000000000000000000000000000",
+                path = ""
+            )
+
+            val ortResult = OrtResult.EMPTY.copy(
+                repository = Repository.EMPTY.copy(
+                    vcs = vcs,
+                    vcsProcessed = vcs,
+                    config = RepositoryConfiguration(
+                        excludes = Excludes(
+                            paths = listOf(
+                                PathExclude(
+                                    pattern = "test/**",
+                                    reason = PathExcludeReason.TEST_OF
+                                )
+                            )
+                        )
+                    )
+                ),
+                analyzer = AnalyzerRun.EMPTY.copy(
+                    result = AnalyzerResult.EMPTY.copy(
+                        projects = setOf(
+                            Project.EMPTY.copy(
+                                id = projectId,
+                                definitionFilePath = "pom.xml",
+                                declaredLicenses = emptySet(),
+                                vcsProcessed = vcs
+                            )
+                        )
+                    )
+                ),
+                scanner = ScannerRun.EMPTY.copy(
+                    scanners = mapOf(projectId to setOf("ScanCode")),
+                    provenances = setOf(
+                        ProvenanceResolutionResult(
+                            id = projectId,
+                            packageProvenance = RepositoryProvenance(
+                                vcsInfo = vcs,
+                                resolvedRevision = vcs.revision
+                            )
+                        )
+                    ),
+                    scanResults = setOf(
+                        ScanResult(
+                            provenance = RepositoryProvenance(
+                                vcsInfo = vcs,
+                                resolvedRevision = vcs.revision
+                            ),
+                            scanner = ScannerDetails.EMPTY.copy(name = "ScanCode"),
+                            summary = ScanSummary.EMPTY.copy(
+                                issues = listOf(
+                                    Issue(
+                                        message = "Included issue",
+                                        source = "ScanCode",
+                                        affectedPath = "test/assets/asset.json"
+                                    )
+                                )
+                            )
+                        )
+                    )
+                )
+            )
+
+            val issues = ortResult.getOpenIssues()
+
+            issues should beEmpty()
         }
     }
 
@@ -300,8 +368,9 @@ class OrtResultTest : WordSpec({
                 )
             )
 
-            ortResult.getRuleViolations(omitResolved = false, minSeverity = Severity.entries.min()).map { it.rule }
-                .shouldContainExactly("rule id")
+            val ruleViolations = ortResult.getRuleViolations(omitResolved = false, minSeverity = Severity.entries.min())
+
+            ruleViolations.map { it.rule }.shouldContainExactly("rule id")
         }
 
         "drop violations which are resolved or below minSeverity if omitResolved is true and minSeverity is WARNING" {
@@ -350,8 +419,9 @@ class OrtResultTest : WordSpec({
                 )
             )
 
-            ortResult.getRuleViolations(omitResolved = true, minSeverity = Severity.WARNING).map { it.rule }
-                .shouldContainExactly("Rule violation without resolution")
+            val ruleViolations = ortResult.getRuleViolations(omitResolved = true, minSeverity = Severity.WARNING)
+
+            ruleViolations.map { it.rule }.shouldContainExactly("Rule violation without resolution")
         }
     }
 })

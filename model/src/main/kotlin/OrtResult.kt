@@ -153,6 +153,29 @@ data class OrtResult(
         resolvedConfiguration.packageConfigurations.orEmpty().groupBy { it.id }
     }
 
+    private val issuesWithExcludedAffectedPathById: Map<Identifier, Set<Issue>> by lazy {
+        buildMap<Identifier, MutableSet<Issue>> {
+            scanner?.getAllScanResults().orEmpty().forEach { (id, scanResults) ->
+                scanResults.forEach { scanResult ->
+                    val pathExcludes = getPathExcludes(id, scanResult.provenance)
+
+                    scanResult.summary.issues.forEach { issue ->
+                        if (issue.affectedPath != null && pathExcludes.any { it.matches(issue.affectedPath) }) {
+                            getOrPut(id) { mutableSetOf() } += issue
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private fun getPathExcludes(id: Identifier, provenance: Provenance) =
+        if (isProject(id)) {
+            repository.config.excludes.paths
+        } else {
+            getPackageConfigurations(id, provenance).flatMapTo(mutableSetOf()) { it.pathExcludes }
+        }
+
     /**
      * A map of projects and their excluded state. Calculating this map once brings massive performance improvements
      * when querying projects in large analyzer results.
@@ -283,7 +306,9 @@ data class OrtResult(
             if (omitExcluded && isExcluded(id)) return@mapNotNull null
 
             val filteredIssues = issues.filterTo(mutableSetOf()) {
-                (!omitResolved || !isResolved(it)) && it.severity >= minSeverity
+                (!omitResolved || !isResolved(it))
+                    && it.severity >= minSeverity
+                    && it !in issuesWithExcludedAffectedPathById[id].orEmpty()
             }
 
             filteredIssues.takeUnless { it.isEmpty() }?.let { id to it }
@@ -560,6 +585,13 @@ data class OrtResult(
         } else {
             isPackageExcluded(id)
         }
+
+    /**
+     * Return `true` if and only if the given [issue] is excluded in context of the given [id]. This is the case when
+     * either [id] is excluded, or the [affected path][Issue.affectedPath] of [issue] is matched by a path exclude.
+     */
+    fun isExcluded(issue: Issue, id: Identifier): Boolean =
+        isExcluded(id) || issue in issuesWithExcludedAffectedPathById[id].orEmpty()
 
     /**
      * Return `true` if all dependencies on the package or project identified by the given [id] are excluded. This is
