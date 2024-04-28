@@ -30,6 +30,7 @@ import org.ossreviewtoolkit.model.Identifier
 import org.ossreviewtoolkit.model.Package
 import org.ossreviewtoolkit.model.VcsInfo
 import org.ossreviewtoolkit.model.VcsType
+import org.ossreviewtoolkit.utils.common.VCS_DIRECTORIES
 import org.ossreviewtoolkit.utils.test.ExpensiveTag
 
 private const val REPO_URL = "https://svn.code.sf.net/p/sendmessage/code"
@@ -61,7 +62,9 @@ class SubversionDownloadFunTest : StringSpec() {
             )
 
             val workingTree = svn.download(pkg, outputDir)
-            val actualFiles = workingTree.workingDir.list().sorted()
+            val actualFiles = workingTree.workingDir.walk().maxDepth(1).mapNotNullTo(mutableListOf()) {
+                it.toRelativeString(workingTree.workingDir).ifEmpty { null }
+            }.sorted()
 
             workingTree.isValid() shouldBe true
             workingTree.getRevision() shouldBe REPO_REV
@@ -73,17 +76,16 @@ class SubversionDownloadFunTest : StringSpec() {
                 vcsProcessed = VcsInfo(VcsType.SUBVERSION, REPO_URL, REPO_REV, path = REPO_PATH)
             )
             val expectedFiles = listOf(
-                File(REPO_PATH, "checkyear.js"),
-                File(REPO_PATH, "coverity.bat")
+                "$REPO_PATH/checkyear.js",
+                "$REPO_PATH/coverity.bat"
             )
 
             val workingTree = svn.download(pkg, outputDir)
-            val actualFiles = workingTree.workingDir.walkBottomUp()
-                .onEnter { it.name != ".svn" }
+            val actualFiles = workingTree.workingDir.walk()
+                .onEnter { it.name !in VCS_DIRECTORIES }
                 .filter { it.isFile }
-                .map { it.relativeTo(outputDir) }
-                .sortedBy { it.path }
-                .toList()
+                .mapTo(mutableListOf()) { it.toRelativeString(workingTree.workingDir) }
+                .sorted()
 
             workingTree.isValid() shouldBe true
             workingTree.getRevision() shouldBe REPO_REV
@@ -102,7 +104,9 @@ class SubversionDownloadFunTest : StringSpec() {
             )
 
             val workingTree = svn.download(pkg, outputDir)
-            val actualFiles = workingTree.workingDir.list().sorted()
+            val actualFiles = workingTree.workingDir.walk().maxDepth(1).mapNotNullTo(mutableListOf()) {
+                it.toRelativeString(workingTree.workingDir).ifEmpty { null }
+            }.sorted()
 
             workingTree.isValid() shouldBe true
             workingTree.getRevision() shouldBe REPO_REV_FOR_TAG
@@ -134,7 +138,10 @@ class SubversionDownloadFunTest : StringSpec() {
             )
 
             val workingTree = svn.download(pkg, outputDir)
-            val actualFiles = workingTree.workingDir.resolve(REPO_PATH_FOR_VERSION).list().sorted()
+            val pathForVersion = workingTree.workingDir.resolve(REPO_PATH_FOR_VERSION)
+            val actualFiles = pathForVersion.walk().maxDepth(1).mapNotNullTo(mutableListOf()) {
+                it.toRelativeString(pathForVersion).ifEmpty { null }
+            }.sorted()
 
             workingTree.isValid() shouldBe true
             workingTree.getRevision() shouldBe REPO_REV_FOR_VERSION

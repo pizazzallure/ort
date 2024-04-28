@@ -162,7 +162,7 @@ class Cargo(
                 val pkg = packageById.getValue(node.id)
                 PackageReference(
                     id = Identifier("Crate", "", pkg.name, pkg.version),
-                    linkage = if (pkg.isProject()) PackageLinkage.PROJECT_STATIC else PackageLinkage.STATIC,
+                    linkage = if (pkg.isProject(analysisRoot)) PackageLinkage.PROJECT_STATIC else PackageLinkage.STATIC,
                     dependencies = dependencyNodes.toPackageReferences()
                 )
             }
@@ -191,14 +191,30 @@ class Cargo(
         )
 
         val nonProjectPackages = packageById.values.mapNotNullTo(mutableSetOf()) { cargoPkg ->
-            cargoPkg.takeUnless { it.isProject() }?.toPackage(hashes)
+            cargoPkg.takeUnless { it.isProject(analysisRoot) }?.toPackage(hashes)
         }
 
         return listOf(ProjectAnalyzerResult(project, nonProjectPackages))
     }
 }
 
-private fun CargoMetadata.Package.isProject() = source == null
+/**
+ * Return the local path for this Cargo package if applicable, or null if the Cargo package is not local.
+ */
+private fun CargoMetadata.Package.getLocalPath(): File? =
+    id.substringAfter("path+file://", "").ifEmpty { null }
+        ?.removeSuffix(")")?.substringBefore("#")?.let { File(it) }
+
+/**
+ * Return whether this Cargo package is supposed to be regarded as an ORT project. The [analysisRoot] is used to check
+ * whether this Cargo package lives within the analyzer root.
+ */
+private fun CargoMetadata.Package.isProject(analysisRoot: File): Boolean {
+    val isWithinAnalyzerRoot = getLocalPath()?.startsWith(analysisRoot.absoluteFile) == true
+
+    // If a package cannot be retrieved from anywhere but lies within the analyzer root, treat it as a project.
+    return source == null && isWithinAnalyzerRoot
+}
 
 private fun CargoMetadata.Package.toPackage(hashes: Map<String, String>): Package {
     val declaredLicenses = parseDeclaredLicenses()
@@ -208,6 +224,9 @@ private fun CargoMetadata.Package.toPackage(hashes: Map<String, String>): Packag
     // https://github.com/rust-lang/cargo/issues/2039
     // https://github.com/rust-lang/cargo/pull/4920
     val declaredLicensesProcessed = DeclaredLicenseProcessor.process(declaredLicenses, operator = SpdxOperator.OR)
+
+    val vcs = repository?.let { VcsHost.parseUrl(it) }.orEmpty()
+    val vcsProcessed = getLocalPath()?.let { PackageManager.processProjectVcs(it) } ?: vcs.normalize()
 
     return Package(
         id = Identifier(
@@ -225,7 +244,8 @@ private fun CargoMetadata.Package.toPackage(hashes: Map<String, String>): Packag
         binaryArtifact = RemoteArtifact.EMPTY,
         sourceArtifact = parseSourceArtifact(hashes).orEmpty(),
         homepageUrl = homepage.orEmpty(),
-        vcs = VcsHost.parseUrl(repository.orEmpty())
+        vcs = vcs,
+        vcsProcessed = vcsProcessed
     )
 }
 
@@ -250,7 +270,7 @@ private fun CargoMetadata.Package.parseDeclaredLicenses(): Set<String> {
 // to.
 // See https://doc.rust-lang.org/cargo/reference/specifying-dependencies.html#specifying-dependencies-from-git-repositories
 // for the specification for this kind of dependency.
-private val GIT_DEPENDENCY_REGEX = Regex("git\\+(https://.*)\\?(?:rev|tag|branch)=.+#([0-9a-zA-Z]+)")
+private val GIT_DEPENDENCY_REGEX = Regex("git\\+(https://.*)\\?(?:rev|tag|branch)=.+#([0-9a-fA-F]{7,40})")
 
 private fun CargoMetadata.Package.parseSourceArtifact(hashes: Map<String, String>): RemoteArtifact? {
     val source = source ?: return null
