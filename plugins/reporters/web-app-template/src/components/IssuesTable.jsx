@@ -58,76 +58,7 @@ class IssuesTable extends React.Component {
             return null;
         }
 
-        const columns = [
-            {
-                align: 'center',
-                dataIndex: 'severityIndex',
-                filters: [
-                    {
-                        text: 'Errors',
-                        value: 0
-                    },
-                    {
-                        text: 'Warnings',
-                        value: 1
-                    },
-                    {
-                        text: 'Hint',
-                        value: 2
-                    },
-                    {
-                        text: 'Resolved',
-                        value: 3
-                    }
-                ],
-                filteredValue: filteredInfo.severityIndex || null,
-                onFilter: (value, webAppOrtIssue) => webAppOrtIssue.severityIndex === Number(value),
-                render: (text, webAppOrtIssue) => (
-                    webAppOrtIssue.isResolved
-                        ? (
-                            <Tooltip
-                                placement="right"
-                                title={Array.from(webAppOrtIssue.resolutionReasons).join(', ')}
-                            >
-                                <IssuesCloseOutlined
-                                    className="ort-ok"
-                                />
-                            </Tooltip>
-                            )
-                        : (
-                            <span>
-                                {
-                                    webAppOrtIssue.severity === 'ERROR'
-                                    && (
-                                        <ExclamationCircleOutlined
-                                            className="ort-error"
-                                        />
-                                    )
-                                }
-                                {
-                                    webAppOrtIssue.severity === 'WARNING'
-                                    && (
-                                        <WarningOutlined
-                                            className="ort-warning"
-                                        />
-                                    )
-                                }
-                                {
-                                    webAppOrtIssue.severity === 'HINT'
-                                    && (
-                                        <InfoCircleOutlined
-                                            className="ort-hint"
-                                        />
-                                    )
-                                }
-                            </span>
-                            )
-                ),
-                sorter: (a, b) => a.severityIndex - b.severityIndex,
-                sortOrder: sortedInfo.field === 'severityIndex' && sortedInfo.order,
-                width: '5em'
-            }
-        ];
+        const columns = [];
 
         if (showExcludesColumn) {
             columns.push({
@@ -157,14 +88,12 @@ class IssuesTable extends React.Component {
                 filteredValue: filteredInfo.excludes || null,
                 key: 'excludes',
                 onFilter: (value, webAppOrtIssue) => {
-                    const webAppPackage = webAppOrtIssue.package;
-
                     if (value === 'excluded') {
-                        return webAppPackage.isExcluded;
+                        return webAppOrtIssue.isExcluded;
                     }
 
                     if (value === 'included') {
-                        return !webAppPackage.isExcluded;
+                        return !webAppOrtIssue.isExcluded;
                     }
 
                     return false;
@@ -172,7 +101,7 @@ class IssuesTable extends React.Component {
                 render: (webAppOrtIssue) => {
                     const webAppPackage = webAppOrtIssue.package;
 
-                    return webAppPackage.isExcluded
+                    return webAppOrtIssue.isExcluded
                         ? (
                         <span className="ort-excludes">
                             <Tooltip
@@ -190,6 +119,75 @@ class IssuesTable extends React.Component {
                 width: '2em'
             });
         }
+
+        columns.push({
+            align: 'center',
+            dataIndex: 'severityIndex',
+            filters: [
+                {
+                    text: 'Errors',
+                    value: 0
+                },
+                {
+                    text: 'Warnings',
+                    value: 1
+                },
+                {
+                    text: 'Hint',
+                    value: 2
+                },
+                {
+                    text: 'Resolved',
+                    value: 3
+                }
+            ],
+            filteredValue: filteredInfo.severityIndex || null,
+            onFilter: (value, webAppOrtIssue) => webAppOrtIssue.severityIndex === Number(value),
+            render: (text, webAppOrtIssue) => (
+                webAppOrtIssue.isResolved
+                    ? (
+                        <Tooltip
+                            placement="right"
+                            title={Array.from(webAppOrtIssue.resolutionReasons).join(', ')}
+                        >
+                            <IssuesCloseOutlined
+                                className="ort-ok"
+                            />
+                        </Tooltip>
+                        )
+                    : (
+                        <span>
+                            {
+                                webAppOrtIssue.severity === 'ERROR'
+                                && (
+                                    <ExclamationCircleOutlined
+                                        className="ort-error"
+                                    />
+                                )
+                            }
+                            {
+                                webAppOrtIssue.severity === 'WARNING'
+                                && (
+                                    <WarningOutlined
+                                        className="ort-warning"
+                                    />
+                                )
+                            }
+                            {
+                                webAppOrtIssue.severity === 'HINT'
+                                && (
+                                    <InfoCircleOutlined
+                                        className="ort-hint"
+                                    />
+                                )
+                            }
+                        </span>
+                        )
+            ),
+            sorter: (a, b) => a.severityIndex - b.severityIndex,
+            sortOrder: sortedInfo.field === 'severityIndex' && sortedInfo.order,
+            width: '5em'
+        });
 
         columns.push(
             {
