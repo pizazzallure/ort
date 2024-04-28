@@ -63,11 +63,26 @@ import org.semver4j.RangesListFactory
 const val GIT_HISTORY_DEPTH = 50
 
 // Replace prefixes of Git submodule repository URLs.
-private val REPOSITORY_URL_PREFIX_REPLACEMENTS = mapOf(
+private val REPOSITORY_URL_PREFIX_REPLACEMENTS = listOf(
     "git://" to "https://"
 )
 
-class Git : VersionControlSystem(), CommandLineTool {
+object GitCommand : CommandLineTool {
+    private val versionRegex = Regex("[Gg]it [Vv]ersion (?<version>[\\d.a-z-]+)(\\s.+)?")
+
+    override fun command(workingDir: File?) = "git"
+
+    // Require at least Git 2.29 on the client side as it has protocol "v2" enabled by default.
+    override fun getVersionRequirement(): RangesList = RangesListFactory.create(">=2.29")
+
+    override fun transformVersion(output: String): String =
+        versionRegex.matchEntire(output.lineSequence().first())?.let { match ->
+            @Suppress("UnsafeCallOnNullableType")
+            match.groups["version"]!!.value
+        }.orEmpty()
+}
+
+class Git : VersionControlSystem(GitCommand) {
     companion object {
         init {
             // Make sure that JGit uses the exact same authentication information as ORT itself. This addresses
@@ -99,36 +114,18 @@ class Git : VersionControlSystem(), CommandLineTool {
         }
     }
 
-    private val versionRegex = Regex("[Gg]it [Vv]ersion (?<version>[\\d.a-z-]+)(\\s.+)?")
-
     override val type = VcsType.GIT.toString()
     override val priority = 100
     override val latestRevisionNames = listOf("HEAD", "@")
 
-    override fun command(workingDir: File?) = "git"
-
-    override fun getVersion() = getVersion(null)
-
-    // Require at least Git 2.29 on the client side as it has protocol "v2" enabled by default.
-    override fun getVersionRequirement(): RangesList = RangesListFactory.create(">=2.29")
+    override fun getVersion() = GitCommand.getVersion(null)
 
     override fun getDefaultBranchName(url: String): String {
         val refs = Git.lsRemoteRepository().setRemote(url).callAsMap()
         return (refs["HEAD"] as? SymbolicRef)?.target?.name?.removePrefix("refs/heads/") ?: "master"
     }
 
-    override fun transformVersion(output: String): String =
-        versionRegex.matchEntire(output.lineSequence().first())?.let { match ->
-            @Suppress("UnsafeCallOnNullableType")
-            match.groups["version"]!!.value
-        }.orEmpty()
-
-    override fun getWorkingTree(vcsDirectory: File): WorkingTree =
-        GitWorkingTree(
-            workingDir = vcsDirectory,
-            vcsType = VcsType.forName(type),
-            repositoryUrlPrefixReplacements = REPOSITORY_URL_PREFIX_REPLACEMENTS
-        )
+    override fun getWorkingTree(vcsDirectory: File): WorkingTree = GitWorkingTree(vcsDirectory, VcsType.forName(type))
 
     override fun isApplicableUrlInternal(vcsUrl: String): Boolean =
         runCatching {
@@ -243,7 +240,7 @@ class Git : VersionControlSystem(), CommandLineTool {
         }.mapCatching { fetchResult ->
             // TODO: Migrate this to JGit once sparse checkout (https://bugs.eclipse.org/bugs/show_bug.cgi?id=383772) is
             //       implemented. Also see the "reset" call below.
-            run("checkout", revision, workingDir = workingTree.workingDir)
+            GitCommand.run("checkout", revision, workingDir = workingTree.workingDir)
 
             // In case of a non-fixed revision (branch or tag) reset the working tree to ensure that the previously
             // fetched changes are applied.
@@ -267,7 +264,7 @@ class Git : VersionControlSystem(), CommandLineTool {
                     "Requested revision '$revision' not found in refs advertised by the server."
                 }
 
-                run("reset", "--hard", resolvedRevision, workingDir = workingTree.workingDir)
+                GitCommand.run("reset", "--hard", resolvedRevision, workingDir = workingTree.workingDir)
             }
 
             revision
@@ -276,22 +273,24 @@ class Git : VersionControlSystem(), CommandLineTool {
     private fun updateSubmodules(workingTree: WorkingTree) {
         if (!workingTree.getRootPath().resolve(".gitmodules").isFile) return
 
-        val configOption = REPOSITORY_URL_PREFIX_REPLACEMENTS.flatMap { (prefix, replacement) ->
-            listOf("-c", "url.$replacement.insteadOf=$prefix")
-        }.toTypedArray()
+        val insteadOf = REPOSITORY_URL_PREFIX_REPLACEMENTS.map { (prefix, replacement) ->
+            "url.$replacement.insteadOf $prefix"
+        }
 
         runCatching {
             // TODO: Migrate this to JGit once https://bugs.eclipse.org/bugs/show_bug.cgi?id=580731 is implemented.
-            workingTree.runGit(
-                *configOption, "submodule", "update", "--init", "--recursive", "--depth", "$GIT_HISTORY_DEPTH"
-            )
+            workingTree.runGit("submodule", "update", "--init", "--recursive", "--depth", "$GIT_HISTORY_DEPTH")
+
+            insteadOf.forEach {
+                workingTree.runGit("submodule", "foreach", "--recursive", "git config $it")
+            }
         }.recover {
             // As Git's dumb HTTP transport does not support shallow capabilities, also try to not limit the depth.
-            workingTree.runGit(*configOption, "submodule", "update", "--recursive")
+            workingTree.runGit("submodule", "update", "--recursive")
         }
     }
 
-    private fun WorkingTree.runGit(vararg args: String) = run(*args, workingDir = workingDir)
+    private fun WorkingTree.runGit(vararg args: String) = GitCommand.run(*args, workingDir = workingDir)
 }
 
 /**
