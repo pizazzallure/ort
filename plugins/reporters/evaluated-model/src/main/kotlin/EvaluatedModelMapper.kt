@@ -150,7 +150,7 @@ internal class EvaluatedModelMapper(private val input: ReporterInput) {
             vulnerabilitiesResolutions = vulnerabilitiesResolutions,
             vulnerabilities = vulnerabilities,
             statistics = with(input) { getStatistics(ortResult, licenseInfoResolver, ortConfig) },
-            repository = input.ortResult.repository.deduplicateResolutions(),
+            repository = input.ortResult.repository.deduplicateResolutionsAndExcludes(),
             severeIssueThreshold = input.ortConfig.severeIssueThreshold,
             severeRuleViolationThreshold = input.ortConfig.severeRuleViolationThreshold,
             repositoryConfiguration = input.ortResult.repository.config.toYaml(),
@@ -601,6 +601,7 @@ internal class EvaluatedModelMapper(private val input: ReporterInput) {
                 message = issue.message,
                 severity = issue.severity,
                 resolutions = resolutions,
+                isExcluded = input.ortResult.isExcluded(issue, pkg.id),
                 pkg = pkg,
                 scanResult = scanResult,
                 path = path,
@@ -761,23 +762,26 @@ internal class EvaluatedModelMapper(private val input: ReporterInput) {
         values.map { addIfRequired(it) }.distinct()
 
     /**
-     * Return a copy of the [RepositoryConfiguration] with [Resolutions] that refer to the same instances as the
-     * [ResolvedConfiguration] for equal [Resolutions]. This is required for the [EvaluatedModel] to contained indexed
-     * references instead of duplicate [Resolutions].
+     * Return a copy of the [RepositoryConfiguration] with [Resolutions] and [Excludes] that refer to the same instances
+     * as the [ResolvedConfiguration] for equal entries. This is required for the [EvaluatedModel] to contain indexed
+     * entries instead of duplicate ones.
      */
-    private fun Repository.deduplicateResolutions(): Repository {
+    private fun Repository.deduplicateResolutionsAndExcludes(): Repository {
         val resolutions = with(config.resolutions) {
             copy(
-                issues = issues.map { resolution -> issueResolutions.find { resolution == it } ?: resolution },
-                ruleViolations = ruleViolations.map { resolution ->
-                    ruleViolationResolutions.find { resolution == it } ?: resolution
-                },
-                vulnerabilities = vulnerabilities.map { resolution ->
-                    vulnerabilitiesResolutions.find { resolution == it } ?: resolution
-                }
+                issues = issues.map { issueResolutions.addIfRequired(it) },
+                ruleViolations = ruleViolations.map { ruleViolationResolutions.addIfRequired(it) },
+                vulnerabilities = vulnerabilities.map { vulnerabilitiesResolutions.addIfRequired(it) }
             )
         }
 
-        return copy(config = config.copy(resolutions = resolutions))
+        val excludes = with(config.excludes) {
+            copy(
+                paths = paths.map { pathExcludes.addIfRequired(it) },
+                scopes = scopes.map { scopeExcludes.addIfRequired(it) }
+            )
+        }
+
+        return copy(config = config.copy(excludes = excludes, resolutions = resolutions))
     }
 }
