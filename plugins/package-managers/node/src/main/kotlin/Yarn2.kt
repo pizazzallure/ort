@@ -334,10 +334,14 @@ class Yarn2(
         packagesDetails: Map<String, AdditionalData>
     ): Map<Identifier, Project> {
         val allDependencies = mutableMapOf<YarnDependencyType, MutableMap<Identifier, List<Identifier>>>()
+
+        // Enhancement: read dependencyToType only one time from definition file for better performance instead of reading everytime for each package parsing
+        val dependencyToType = listDependenciesByType(definitionFile)
+
         // Create packages for all modules found in the workspace and add them to the graph builder. They are reused
         // when they are referenced by scope dependencies.
         iterator.forEach { node ->
-            val dependencyMapping = parsePackage(node, definitionFile, packagesHeaders, packagesDetails)
+            val dependencyMapping = parsePackage(node, definitionFile, packagesHeaders, packagesDetails, dependencyToType)
             dependencyMapping.forEach {
                 val mapping = allDependencies.getOrPut(it.key) { mutableMapOf() }
                 mapping += it.value
@@ -410,7 +414,8 @@ class Yarn2(
         json: ObjectNode,
         definitionFile: File,
         packagesHeaders: Map<String, PackageHeader>,
-        packagesDetails: Map<String, AdditionalData>
+        packagesDetails: Map<String, AdditionalData>,
+        dependencyToType: Map<String, YarnDependencyType>
     ): Map<YarnDependencyType, Pair<Identifier, List<Identifier>>> {
         val value = json["value"].textValue()
         val header = packagesHeaders[value]
@@ -509,8 +514,6 @@ class Yarn2(
         val rawDependencies = childrenNode.withArray<JsonNode>("Dependencies")
         val dependencies = processDependencies(rawDependencies)
 
-        val dependencyToType = listDependenciesByType(definitionFile)
-
         // Sort all dependencies per scope. Notice that the logic is somehow lenient: If a dependency is not found
         // in this scope, it falls back in the 'dependencies' scope. This is due to the fact that the detection of
         // dependencies per scope is limited, because it relies on package.json parsing and only the project ones
@@ -518,8 +521,17 @@ class Yarn2(
 
         return YarnDependencyType.entries.associateWith { dependencyType ->
             id to dependencies.filter {
-                dependencyToType[it.name] == dependencyType
-                    || (it.name !in dependencyToType && dependencyType == YarnDependencyType.DEPENDENCIES)
+                var fullName = it.name
+
+                // the "dependencyToType" is a key-value map for all dependencies defined in package.json file.
+                // the key format in "dependencyToType" is combined with namespace and name, e.g.  key :  @angular/animations
+                // so, to find the matched dependency, the dependency name is not enough to match, the namespace should be also considered.
+                if(it.namespace.isNotEmpty()) {
+                    fullName = it.namespace + "/" + it.name
+                }
+
+                dependencyToType[fullName] == dependencyType
+                    || (fullName !in dependencyToType && dependencyType == YarnDependencyType.DEPENDENCIES)
             }
         }
     }
@@ -606,30 +618,42 @@ class Yarn2(
 
             val locatorRawName = locatorMatcher.groupValues[1]
             val locatorType = locatorMatcher.groupValues[2]
-            val locatorVersion = locatorMatcher.groupValues[3]
 
+            var locatorVersion = locatorMatcher.groupValues[3]
             val (locatorNamespace, locatorName) = splitNpmNamespaceAndName(locatorRawName)
-            val version = cleanYarn2VersionString(locatorVersion)
 
-            val identifierType = if ("workspace" in locatorType) "Yarn2" else "NPM"
-            when {
-                // Prevent @virtual dependencies because they are internal to Yarn.
-                // See https://yarnpkg.com/features/protocols
-                "virtual" in locatorType -> null
+            var version = cleanYarn2VersionString(locatorVersion)
 
-                else -> {
-                    runCatching {
-                        Identifier(identifierType, locatorNamespace, locatorName, version)
-                    }.onFailure {
-                        it.showStackTrace()
-                        issues += createAndLogIssue(
-                            managerName,
-                            "Cannot build identifier for dependency '$locator.'",
-                            Severity.ERROR
-                        )
-                    }.getOrNull()
+            // for "virtual" package, the version format could be following:
+            //  e.g. "86d66680764c6ad1191a3abe5b400064390db4f17fee921c6396364552098d2dffaa63f4d8b0b3acb60fa132642222168fa0f83717491679b161cb955d9496bc#npm%3A14.1.2"
+            // further parsing the actual version which is the string after "%3A", e.g.  "4.1.2"
+            if(locatorType.equals("virtual")) {
+                val parts = version.split("%3A")
+                if(parts.isNotEmpty()) {
+                    version = parts.last()
                 }
             }
+
+            val identifierType = if ("workspace" in locatorType) "Yarn2" else "NPM"
+
+            // The "virtual" dependency package can be defined as dependencies in package.json file,
+            // do not prevent virtual dependencies to create package Identifier.
+            // and add logging here for "virtual" dependency package
+            if("virtual".equals(locatorType)) {
+                logger.log(Severity.HINT.toLog4jLevel()) { "virtual dependency package is founded:  '$locator.'" }
+            }
+
+            runCatching {
+                Identifier(identifierType, locatorNamespace, locatorName, version)
+            }.onFailure {
+                it.showStackTrace()
+                issues += createAndLogIssue(
+                    managerName,
+                    "Cannot build identifier for dependency '$locator.'",
+                    Severity.ERROR
+                )
+            }.getOrNull()
+
         }.toList()
 
     /**
