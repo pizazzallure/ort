@@ -36,7 +36,7 @@ project:
       - id: "Pub::typed_data:1.3.2"
         dependencies:
         - id: "Pub::collection:1.18.0"
-    - id: "Pub::meta:1.14.0"
+    - id: "Pub::meta:1.15.0"
     - id: "Pub::path:1.9.0"
     - id: "Pub::pedantic:1.11.1"
   - name: "dev_dependencies"
@@ -46,7 +46,7 @@ project:
       - id: "Pub::async:2.11.0"
         dependencies:
         - id: "Pub::collection:1.18.0"
-        - id: "Pub::meta:1.14.0"
+        - id: "Pub::meta:1.15.0"
       - id: "Pub::collection:1.18.0"
       - id: "Pub::http_parser:4.0.2"
         dependencies:
@@ -75,14 +75,14 @@ project:
         - id: "Pub::async:2.11.0"
           dependencies:
           - id: "Pub::collection:1.18.0"
-          - id: "Pub::meta:1.14.0"
-    - id: "Pub::test:1.25.4"
+          - id: "Pub::meta:1.15.0"
+    - id: "Pub::test:1.25.5"
       dependencies:
       - id: "Pub::analyzer:6.4.1"
         dependencies:
         - id: "Pub::_fe_analyzer_shared:67.0.0"
           dependencies:
-          - id: "Pub::meta:1.14.0"
+          - id: "Pub::meta:1.15.0"
         - id: "Pub::collection:1.18.0"
         - id: "Pub::convert:3.1.1"
           dependencies:
@@ -99,11 +99,11 @@ project:
           - id: "Pub::async:2.11.0"
             dependencies:
             - id: "Pub::collection:1.18.0"
-            - id: "Pub::meta:1.14.0"
+            - id: "Pub::meta:1.15.0"
           - id: "Pub::collection:1.18.0"
           - id: "Pub::file:7.0.0"
             dependencies:
-            - id: "Pub::meta:1.14.0"
+            - id: "Pub::meta:1.15.0"
             - id: "Pub::path:1.9.0"
           - id: "Pub::path:1.9.0"
           - id: "Pub::string_scanner:1.2.0"
@@ -113,7 +113,7 @@ project:
               - id: "Pub::collection:1.18.0"
               - id: "Pub::path:1.9.0"
               - id: "Pub::term_glyph:1.2.1"
-        - id: "Pub::meta:1.14.0"
+        - id: "Pub::meta:1.15.0"
         - id: "Pub::package_config:2.1.0"
           dependencies:
           - id: "Pub::path:1.9.0"
@@ -121,7 +121,7 @@ project:
         - id: "Pub::pub_semver:2.1.4"
           dependencies:
           - id: "Pub::collection:1.18.0"
-          - id: "Pub::meta:1.14.0"
+          - id: "Pub::meta:1.15.0"
         - id: "Pub::source_span:1.10.0"
           dependencies:
           - id: "Pub::collection:1.18.0"
@@ -132,7 +132,7 @@ project:
           - id: "Pub::async:2.11.0"
             dependencies:
             - id: "Pub::collection:1.18.0"
-            - id: "Pub::meta:1.14.0"
+            - id: "Pub::meta:1.15.0"
           - id: "Pub::path:1.9.0"
         - id: "Pub::yaml:3.1.2"
           dependencies:
@@ -152,7 +152,7 @@ project:
       - id: "Pub::async:2.11.0"
         dependencies:
         - id: "Pub::collection:1.18.0"
-        - id: "Pub::meta:1.14.0"
+        - id: "Pub::meta:1.15.0"
       - id: "Pub::boolean_selector:2.1.1"
         dependencies:
         - id: "Pub::source_span:1.10.0"
@@ -168,7 +168,7 @@ project:
             - id: "Pub::path:1.9.0"
             - id: "Pub::term_glyph:1.2.1"
       - id: "Pub::collection:1.18.0"
-      - id: "Pub::coverage:1.7.2"
+      - id: "Pub::coverage:1.8.0"
         dependencies:
         - id: "Pub::args:2.5.0"
         - id: "Pub::logging:1.2.0"
@@ -186,16 +186,16 @@ project:
         - id: "Pub::stack_trace:1.11.1"
           dependencies:
           - id: "Pub::path:1.9.0"
-        - id: "Pub::vm_service:14.2.1"
+        - id: "Pub::vm_service:14.2.2"
       - id: "Pub::http_multi_server:3.2.1"
         dependencies:
         - id: "Pub::async:2.11.0"
           dependencies:
           - id: "Pub::collection:1.18.0"
-          - id: "Pub::meta:1.14.0"
+          - id: "Pub::meta:1.15.0"
       - id: "Pub::io:1.0.4"
         dependencies:
-        - id: "Pub::meta:1.14.0"
+        - id: "Pub::meta:1.15.0"
         - id: "Pub::path:1.9.0"
         - id: "Pub::string_scanner:1.2.0"
           dependencies:
@@ -210,8 +210,8 @@ project:
         - id: "Pub::async:2.11.0"
           dependencies:
           - id: "Pub::collection:1.18.0"
-          - id: "Pub::meta:1.14.0"
-        - id: "Pub::meta:1.14.0"
+          - id: "Pub::meta:1.15.0"
+        - id: "Pub::meta:1.15.0"
         - id: "Pub::stack_trace:1.11.1"
           dependencies:
           - id: "Pub::path:1.9.0"
@@ -221,7 +221,7 @@ project:
           - id: "Pub::async:2.11.0"
             dependencies:
             - id: "Pub::collection:1.18.0"
-            - id: "Pub::meta:1.14.0"
+            - id: "Pub::meta:1.15.0"
           - id: "Pub::boolean_selector:2.1.1"
             dependencies:
             - id: "Pub::source_span:1.10.0"
@@ -237,7 +237,7 @@ project:
                 - id: "Pub::path:1.9.0"
                 - id: "Pub::term_glyph:1.2.1"
           - id: "Pub::collection:1.18.0"
-          - id: "Pub::meta:1.14.0"
+          - id: "Pub::meta:1.15.0"
           - id: "Pub::source_span:1.10.0"
             dependencies:
             - id: "Pub::collection:1.18.0"
@@ -251,7 +251,7 @@ project:
             - id: "Pub::async:2.11.0"
               dependencies:
               - id: "Pub::collection:1.18.0"
-              - id: "Pub::meta:1.14.0"
+              - id: "Pub::meta:1.15.0"
           - id: "Pub::string_scanner:1.2.0"
             dependencies:
             - id: "Pub::source_span:1.10.0"
@@ -270,7 +270,7 @@ project:
         - id: "Pub::async:2.11.0"
           dependencies:
           - id: "Pub::collection:1.18.0"
-          - id: "Pub::meta:1.14.0"
+          - id: "Pub::meta:1.15.0"
         - id: "Pub::stack_trace:1.11.1"
           dependencies:
           - id: "Pub::path:1.9.0"
@@ -279,7 +279,7 @@ project:
         - id: "Pub::async:2.11.0"
           dependencies:
           - id: "Pub::collection:1.18.0"
-          - id: "Pub::meta:1.14.0"
+          - id: "Pub::meta:1.15.0"
         - id: "Pub::collection:1.18.0"
         - id: "Pub::http_parser:4.0.2"
           dependencies:
@@ -308,7 +308,7 @@ project:
           - id: "Pub::async:2.11.0"
             dependencies:
             - id: "Pub::collection:1.18.0"
-            - id: "Pub::meta:1.14.0"
+            - id: "Pub::meta:1.15.0"
       - id: "Pub::shelf_packages_handler:3.0.2"
         dependencies:
         - id: "Pub::path:1.9.0"
@@ -317,7 +317,7 @@ project:
           - id: "Pub::async:2.11.0"
             dependencies:
             - id: "Pub::collection:1.18.0"
-            - id: "Pub::meta:1.14.0"
+            - id: "Pub::meta:1.15.0"
           - id: "Pub::collection:1.18.0"
           - id: "Pub::http_parser:4.0.2"
             dependencies:
@@ -346,7 +346,7 @@ project:
             - id: "Pub::async:2.11.0"
               dependencies:
               - id: "Pub::collection:1.18.0"
-              - id: "Pub::meta:1.14.0"
+              - id: "Pub::meta:1.15.0"
         - id: "Pub::shelf_static:1.1.2"
           dependencies:
           - id: "Pub::convert:3.1.1"
@@ -379,7 +379,7 @@ project:
             - id: "Pub::async:2.11.0"
               dependencies:
               - id: "Pub::collection:1.18.0"
-              - id: "Pub::meta:1.14.0"
+              - id: "Pub::meta:1.15.0"
             - id: "Pub::collection:1.18.0"
             - id: "Pub::http_parser:4.0.2"
               dependencies:
@@ -408,7 +408,7 @@ project:
               - id: "Pub::async:2.11.0"
                 dependencies:
                 - id: "Pub::collection:1.18.0"
-                - id: "Pub::meta:1.14.0"
+                - id: "Pub::meta:1.15.0"
       - id: "Pub::shelf_static:1.1.2"
         dependencies:
         - id: "Pub::convert:3.1.1"
@@ -441,7 +441,7 @@ project:
           - id: "Pub::async:2.11.0"
             dependencies:
             - id: "Pub::collection:1.18.0"
-            - id: "Pub::meta:1.14.0"
+            - id: "Pub::meta:1.15.0"
           - id: "Pub::collection:1.18.0"
           - id: "Pub::http_parser:4.0.2"
             dependencies:
@@ -470,15 +470,15 @@ project:
             - id: "Pub::async:2.11.0"
               dependencies:
               - id: "Pub::collection:1.18.0"
-              - id: "Pub::meta:1.14.0"
-      - id: "Pub::shelf_web_socket:1.0.4"
+              - id: "Pub::meta:1.15.0"
+      - id: "Pub::shelf_web_socket:2.0.0"
         dependencies:
         - id: "Pub::shelf:1.4.1"
           dependencies:
           - id: "Pub::async:2.11.0"
             dependencies:
             - id: "Pub::collection:1.18.0"
-            - id: "Pub::meta:1.14.0"
+            - id: "Pub::meta:1.15.0"
           - id: "Pub::collection:1.18.0"
           - id: "Pub::http_parser:4.0.2"
             dependencies:
@@ -507,19 +507,19 @@ project:
             - id: "Pub::async:2.11.0"
               dependencies:
               - id: "Pub::collection:1.18.0"
-              - id: "Pub::meta:1.14.0"
+              - id: "Pub::meta:1.15.0"
         - id: "Pub::stream_channel:2.1.2"
           dependencies:
           - id: "Pub::async:2.11.0"
             dependencies:
             - id: "Pub::collection:1.18.0"
-            - id: "Pub::meta:1.14.0"
-        - id: "Pub::web_socket_channel:2.4.5"
+            - id: "Pub::meta:1.15.0"
+        - id: "Pub::web_socket_channel:3.0.0"
           dependencies:
           - id: "Pub::async:2.11.0"
             dependencies:
             - id: "Pub::collection:1.18.0"
-            - id: "Pub::meta:1.14.0"
+            - id: "Pub::meta:1.15.0"
           - id: "Pub::crypto:3.0.3"
             dependencies:
             - id: "Pub::typed_data:1.3.2"
@@ -530,8 +530,11 @@ project:
             - id: "Pub::async:2.11.0"
               dependencies:
               - id: "Pub::collection:1.18.0"
-              - id: "Pub::meta:1.14.0"
+              - id: "Pub::meta:1.15.0"
           - id: "Pub::web:0.5.1"
+          - id: "Pub::web_socket:0.1.4"
+            dependencies:
+            - id: "Pub::web:0.5.1"
       - id: "Pub::source_span:1.10.0"
         dependencies:
         - id: "Pub::collection:1.18.0"
@@ -545,13 +548,13 @@ project:
         - id: "Pub::async:2.11.0"
           dependencies:
           - id: "Pub::collection:1.18.0"
-          - id: "Pub::meta:1.14.0"
+          - id: "Pub::meta:1.15.0"
       - id: "Pub::test_api:0.7.1"
         dependencies:
         - id: "Pub::async:2.11.0"
           dependencies:
           - id: "Pub::collection:1.18.0"
-          - id: "Pub::meta:1.14.0"
+          - id: "Pub::meta:1.15.0"
         - id: "Pub::boolean_selector:2.1.1"
           dependencies:
           - id: "Pub::source_span:1.10.0"
@@ -567,7 +570,7 @@ project:
               - id: "Pub::path:1.9.0"
               - id: "Pub::term_glyph:1.2.1"
         - id: "Pub::collection:1.18.0"
-        - id: "Pub::meta:1.14.0"
+        - id: "Pub::meta:1.15.0"
         - id: "Pub::source_span:1.10.0"
           dependencies:
           - id: "Pub::collection:1.18.0"
@@ -581,7 +584,7 @@ project:
           - id: "Pub::async:2.11.0"
             dependencies:
             - id: "Pub::collection:1.18.0"
-            - id: "Pub::meta:1.14.0"
+            - id: "Pub::meta:1.15.0"
         - id: "Pub::string_scanner:1.2.0"
           dependencies:
           - id: "Pub::source_span:1.10.0"
@@ -596,7 +599,7 @@ project:
           dependencies:
           - id: "Pub::_fe_analyzer_shared:67.0.0"
             dependencies:
-            - id: "Pub::meta:1.14.0"
+            - id: "Pub::meta:1.15.0"
           - id: "Pub::collection:1.18.0"
           - id: "Pub::convert:3.1.1"
             dependencies:
@@ -613,11 +616,11 @@ project:
             - id: "Pub::async:2.11.0"
               dependencies:
               - id: "Pub::collection:1.18.0"
-              - id: "Pub::meta:1.14.0"
+              - id: "Pub::meta:1.15.0"
             - id: "Pub::collection:1.18.0"
             - id: "Pub::file:7.0.0"
               dependencies:
-              - id: "Pub::meta:1.14.0"
+              - id: "Pub::meta:1.15.0"
               - id: "Pub::path:1.9.0"
             - id: "Pub::path:1.9.0"
             - id: "Pub::string_scanner:1.2.0"
@@ -627,7 +630,7 @@ project:
                 - id: "Pub::collection:1.18.0"
                 - id: "Pub::path:1.9.0"
                 - id: "Pub::term_glyph:1.2.1"
-          - id: "Pub::meta:1.14.0"
+          - id: "Pub::meta:1.15.0"
           - id: "Pub::package_config:2.1.0"
             dependencies:
             - id: "Pub::path:1.9.0"
@@ -635,7 +638,7 @@ project:
           - id: "Pub::pub_semver:2.1.4"
             dependencies:
             - id: "Pub::collection:1.18.0"
-            - id: "Pub::meta:1.14.0"
+            - id: "Pub::meta:1.15.0"
           - id: "Pub::source_span:1.10.0"
             dependencies:
             - id: "Pub::collection:1.18.0"
@@ -646,7 +649,7 @@ project:
             - id: "Pub::async:2.11.0"
               dependencies:
               - id: "Pub::collection:1.18.0"
-              - id: "Pub::meta:1.14.0"
+              - id: "Pub::meta:1.15.0"
             - id: "Pub::path:1.9.0"
           - id: "Pub::yaml:3.1.2"
             dependencies:
@@ -667,7 +670,7 @@ project:
         - id: "Pub::async:2.11.0"
           dependencies:
           - id: "Pub::collection:1.18.0"
-          - id: "Pub::meta:1.14.0"
+          - id: "Pub::meta:1.15.0"
         - id: "Pub::boolean_selector:2.1.1"
           dependencies:
           - id: "Pub::source_span:1.10.0"
@@ -683,7 +686,7 @@ project:
               - id: "Pub::path:1.9.0"
               - id: "Pub::term_glyph:1.2.1"
         - id: "Pub::collection:1.18.0"
-        - id: "Pub::coverage:1.7.2"
+        - id: "Pub::coverage:1.8.0"
           dependencies:
           - id: "Pub::args:2.5.0"
           - id: "Pub::logging:1.2.0"
@@ -701,24 +704,24 @@ project:
           - id: "Pub::stack_trace:1.11.1"
             dependencies:
             - id: "Pub::path:1.9.0"
-          - id: "Pub::vm_service:14.2.1"
+          - id: "Pub::vm_service:14.2.2"
         - id: "Pub::frontend_server_client:4.0.0"
           dependencies:
           - id: "Pub::async:2.11.0"
             dependencies:
             - id: "Pub::collection:1.18.0"
-            - id: "Pub::meta:1.14.0"
+            - id: "Pub::meta:1.15.0"
           - id: "Pub::path:1.9.0"
         - id: "Pub::glob:2.1.2"
           dependencies:
           - id: "Pub::async:2.11.0"
             dependencies:
             - id: "Pub::collection:1.18.0"
-            - id: "Pub::meta:1.14.0"
+            - id: "Pub::meta:1.15.0"
           - id: "Pub::collection:1.18.0"
           - id: "Pub::file:7.0.0"
             dependencies:
-            - id: "Pub::meta:1.14.0"
+            - id: "Pub::meta:1.15.0"
             - id: "Pub::path:1.9.0"
           - id: "Pub::path:1.9.0"
           - id: "Pub::string_scanner:1.2.0"
@@ -730,7 +733,7 @@ project:
               - id: "Pub::term_glyph:1.2.1"
         - id: "Pub::io:1.0.4"
           dependencies:
-          - id: "Pub::meta:1.14.0"
+          - id: "Pub::meta:1.15.0"
           - id: "Pub::path:1.9.0"
           - id: "Pub::string_scanner:1.2.0"
             dependencies:
@@ -739,7 +742,7 @@ project:
               - id: "Pub::collection:1.18.0"
               - id: "Pub::path:1.9.0"
               - id: "Pub::term_glyph:1.2.1"
-        - id: "Pub::meta:1.14.0"
+        - id: "Pub::meta:1.15.0"
         - id: "Pub::package_config:2.1.0"
           dependencies:
           - id: "Pub::path:1.9.0"
@@ -749,7 +752,7 @@ project:
           - id: "Pub::async:2.11.0"
             dependencies:
             - id: "Pub::collection:1.18.0"
-            - id: "Pub::meta:1.14.0"
+            - id: "Pub::meta:1.15.0"
           - id: "Pub::stack_trace:1.11.1"
             dependencies:
             - id: "Pub::path:1.9.0"
@@ -786,13 +789,13 @@ project:
           - id: "Pub::async:2.11.0"
             dependencies:
             - id: "Pub::collection:1.18.0"
-            - id: "Pub::meta:1.14.0"
+            - id: "Pub::meta:1.15.0"
         - id: "Pub::test_api:0.7.1"
           dependencies:
           - id: "Pub::async:2.11.0"
             dependencies:
             - id: "Pub::collection:1.18.0"
-            - id: "Pub::meta:1.14.0"
+            - id: "Pub::meta:1.15.0"
           - id: "Pub::boolean_selector:2.1.1"
             dependencies:
             - id: "Pub::source_span:1.10.0"
@@ -808,7 +811,7 @@ project:
                 - id: "Pub::path:1.9.0"
                 - id: "Pub::term_glyph:1.2.1"
           - id: "Pub::collection:1.18.0"
-          - id: "Pub::meta:1.14.0"
+          - id: "Pub::meta:1.15.0"
           - id: "Pub::source_span:1.10.0"
             dependencies:
             - id: "Pub::collection:1.18.0"
@@ -822,7 +825,7 @@ project:
             - id: "Pub::async:2.11.0"
               dependencies:
               - id: "Pub::collection:1.18.0"
-              - id: "Pub::meta:1.14.0"
+              - id: "Pub::meta:1.15.0"
           - id: "Pub::string_scanner:1.2.0"
             dependencies:
             - id: "Pub::source_span:1.10.0"
@@ -831,7 +834,7 @@ project:
               - id: "Pub::path:1.9.0"
               - id: "Pub::term_glyph:1.2.1"
           - id: "Pub::term_glyph:1.2.1"
-        - id: "Pub::vm_service:14.2.1"
+        - id: "Pub::vm_service:14.2.2"
         - id: "Pub::yaml:3.1.2"
           dependencies:
           - id: "Pub::collection:1.18.0"
@@ -850,12 +853,12 @@ project:
       - id: "Pub::typed_data:1.3.2"
         dependencies:
         - id: "Pub::collection:1.18.0"
-      - id: "Pub::web_socket_channel:2.4.5"
+      - id: "Pub::web_socket_channel:3.0.0"
         dependencies:
         - id: "Pub::async:2.11.0"
           dependencies:
           - id: "Pub::collection:1.18.0"
-          - id: "Pub::meta:1.14.0"
+          - id: "Pub::meta:1.15.0"
         - id: "Pub::crypto:3.0.3"
           dependencies:
           - id: "Pub::typed_data:1.3.2"
@@ -866,8 +869,11 @@ project:
           - id: "Pub::async:2.11.0"
             dependencies:
             - id: "Pub::collection:1.18.0"
-            - id: "Pub::meta:1.14.0"
+            - id: "Pub::meta:1.15.0"
         - id: "Pub::web:0.5.1"
+        - id: "Pub::web_socket:0.1.4"
+          dependencies:
+          - id: "Pub::web:0.5.1"
       - id: "Pub::webkit_inspection_protocol:1.2.1"
         dependencies:
         - id: "Pub::logging:1.2.0"
@@ -1073,8 +1079,8 @@ packages:
     url: "https://github.com/dart-lang/convert.git"
     revision: ""
     path: ""
-- id: "Pub::coverage:1.7.2"
-  purl: "pkg:pub/coverage@1.7.2"
+- id: "Pub::coverage:1.8.0"
+  purl: "pkg:pub/coverage@1.8.0"
   declared_licenses: []
   declared_licenses_processed: {}
   description: "Coverage data manipulation and formatting"
@@ -1085,9 +1091,9 @@ packages:
       value: ""
       algorithm: ""
   source_artifact:
-    url: "https://pub.dev/packages/coverage/versions/1.7.2.tar.gz"
+    url: "https://pub.dev/packages/coverage/versions/1.8.0.tar.gz"
     hash:
-      value: "8acabb8306b57a409bf4c83522065672ee13179297a6bb0cb9ead73948df7c76"
+      value: "3945034e86ea203af7a056d98e98e42a5518fff200d6e8e6647e1886b07e936e"
       algorithm: "SHA-256"
   vcs:
     type: "Git"
@@ -1366,8 +1372,8 @@ packages:
     url: "https://github.com/dart-lang/matcher.git"
     revision: ""
     path: ""
-- id: "Pub::meta:1.14.0"
-  purl: "pkg:pub/meta@1.14.0"
+- id: "Pub::meta:1.15.0"
+  purl: "pkg:pub/meta@1.15.0"
   declared_licenses: []
   declared_licenses_processed: {}
   description: "Annotations used to express developer intentions that can't otherwise\
@@ -1379,9 +1385,9 @@ packages:
       value: ""
       algorithm: ""
   source_artifact:
-    url: "https://pub.dev/packages/meta/versions/1.14.0.tar.gz"
+    url: "https://pub.dev/packages/meta/versions/1.15.0.tar.gz"
     hash:
-      value: "25dfcaf170a0190f47ca6355bdd4552cb8924b430512ff0cafb8db9bd41fe33b"
+      value: "bdb68674043280c3428e9ec998512fb681678676b3c54e773629ffe74419f8c7"
       algorithm: "SHA-256"
   vcs:
     type: "Git"
@@ -1661,8 +1667,8 @@ packages:
     url: "https://github.com/dart-lang/shelf.git"
     revision: ""
     path: "pkgs/shelf_static"
-- id: "Pub::shelf_web_socket:1.0.4"
-  purl: "pkg:pub/shelf_web_socket@1.0.4"
+- id: "Pub::shelf_web_socket:2.0.0"
+  purl: "pkg:pub/shelf_web_socket@2.0.0"
   declared_licenses: []
   declared_licenses_processed: {}
   description: "A shelf handler that wires up a listener for every connection."
@@ -1673,9 +1679,9 @@ packages:
       value: ""
       algorithm: ""
   source_artifact:
-    url: "https://pub.dev/packages/shelf_web_socket/versions/1.0.4.tar.gz"
+    url: "https://pub.dev/packages/shelf_web_socket/versions/2.0.0.tar.gz"
     hash:
-      value: "9ca081be41c60190ebcb4766b2486a7d50261db7bd0f5d9615f2d653637a84c1"
+      value: "073c147238594ecd0d193f3456a5fe91c4b0abbcc68bf5cd95b36c4e194ac611"
       algorithm: "SHA-256"
   vcs:
     type: "Git"
@@ -1870,8 +1876,8 @@ packages:
     url: "https://github.com/dart-lang/term_glyph.git"
     revision: ""
     path: ""
-- id: "Pub::test:1.25.4"
-  purl: "pkg:pub/test@1.25.4"
+- id: "Pub::test:1.25.5"
+  purl: "pkg:pub/test@1.25.5"
   declared_licenses: []
   declared_licenses_processed: {}
   description: "A full featured library for writing and running Dart tests across\
@@ -1883,9 +1889,9 @@ packages:
       value: ""
       algorithm: ""
   source_artifact:
-    url: "https://pub.dev/packages/test/versions/1.25.4.tar.gz"
+    url: "https://pub.dev/packages/test/versions/1.25.5.tar.gz"
     hash:
-      value: "d72b538180efcf8413cd2e4e6fcc7ae99c7712e0909eb9223f9da6e6d0ef715f"
+      value: "d11b55850c68c1f6c0cf00eabded4e66c4043feaf6c0d7ce4a36785137df6331"
       algorithm: "SHA-256"
   vcs:
     type: "Git"
@@ -1975,8 +1981,8 @@ packages:
     url: "https://github.com/dart-lang/typed_data.git"
     revision: ""
     path: ""
-- id: "Pub::vm_service:14.2.1"
-  purl: "pkg:pub/vm_service@14.2.1"
+- id: "Pub::vm_service:14.2.2"
+  purl: "pkg:pub/vm_service@14.2.2"
   declared_licenses: []
   declared_licenses_processed: {}
   description: "A library to communicate with a service implementing the Dart VM service\
@@ -1988,9 +1994,9 @@ packages:
       value: ""
       algorithm: ""
   source_artifact:
-    url: "https://pub.dev/packages/vm_service/versions/14.2.1.tar.gz"
+    url: "https://pub.dev/packages/vm_service/versions/14.2.2.tar.gz"
     hash:
-      value: "3923c89304b715fb1eb6423f017651664a03bf5f4b29983627c4da791f74a4ec"
+      value: "7475cb4dd713d57b6f7464c0e13f06da0d535d8b2067e188962a59bac2cf280b"
       algorithm: "SHA-256"
   vcs:
     type: "Git"
@@ -2055,8 +2061,35 @@ packages:
     url: "https://github.com/dart-lang/web.git"
     revision: ""
     path: ""
-- id: "Pub::web_socket_channel:2.4.5"
-  purl: "pkg:pub/web_socket_channel@2.4.5"
+- id: "Pub::web_socket:0.1.4"
+  purl: "pkg:pub/web_socket@0.1.4"
+  declared_licenses: []
+  declared_licenses_processed: {}
+  description: "Any easy-to-use library for communicating with WebSockets that has\
+    \ multiple implementations."
+  homepage_url: ""
+  binary_artifact:
+    url: ""
+    hash:
+      value: ""
+      algorithm: ""
+  source_artifact:
+    url: "https://pub.dev/packages/web_socket/versions/0.1.4.tar.gz"
+    hash:
+      value: "217f49b5213796cb508d6a942a5dc604ce1cb6a0a6b3d8cb3f0c314f0ecea712"
+      algorithm: "SHA-256"
+  vcs:
+    type: "Git"
+    url: "https://github.com/dart-lang/http.git"
+    revision: ""
+    path: "pkgs/web_socket"
+  vcs_processed:
+    type: "Git"
+    url: "https://github.com/dart-lang/http.git"
+    revision: ""
+    path: "pkgs/web_socket"
+- id: "Pub::web_socket_channel:3.0.0"
+  purl: "pkg:pub/web_socket_channel@3.0.0"
   declared_licenses: []
   declared_licenses_processed: {}
   description: "StreamChannel wrappers for WebSockets. Provides a cross-platform WebSocketChannel\
@@ -2069,9 +2102,9 @@ packages:
       value: ""
       algorithm: ""
   source_artifact:
-    url: "https://pub.dev/packages/web_socket_channel/versions/2.4.5.tar.gz"
+    url: "https://pub.dev/packages/web_socket_channel/versions/3.0.0.tar.gz"
     hash:
-      value: "58c6666b342a38816b2e7e50ed0f1e261959630becd4c879c4f26bfa14aa5a42"
+      value: "a2d56211ee4d35d9b344d9d4ce60f362e4f5d1aafb988302906bd732bc731276"
       algorithm: "SHA-256"
   vcs:
     type: "Git"

@@ -28,6 +28,8 @@ import java.util.SortedSet
 import org.ossreviewtoolkit.model.ArtifactProvenance
 import org.ossreviewtoolkit.model.AuthorFinding
 import org.ossreviewtoolkit.model.CopyrightFinding
+import org.ossreviewtoolkit.model.DependencyGraphEdge
+import org.ossreviewtoolkit.model.DependencyReference
 import org.ossreviewtoolkit.model.FileList
 import org.ossreviewtoolkit.model.Identifier
 import org.ossreviewtoolkit.model.LicenseFinding
@@ -47,6 +49,14 @@ class CopyrightFindingSortedSetConverter : StdConverter<Set<CopyrightFinding>, S
 
 class AuthorFindingSortedSetConverter : StdConverter<Set<AuthorFinding>, SortedSet<AuthorFinding>>() {
     override fun convert(value: Set<AuthorFinding>) = value.toSortedSet(AuthorFinding.COMPARATOR)
+
+class DependencyGraphEdgeSortedSetConverter : StdConverter<Set<DependencyGraphEdge>, Set<DependencyGraphEdge>>() {
+    override fun convert(value: Set<DependencyGraphEdge>) = value.toSortedSet(compareBy({ it.from }, { it.to }))
+}
+
+class DependencyReferenceSortedSetConverter : StdConverter<Set<DependencyReference>, SortedSet<DependencyReference>>() {
+    override fun convert(value: Set<DependencyReference>) =
+        value.toSortedSet(compareBy({ it.pkg.toString() }, { it.fragment }))
 }
 
 /** Do not convert to SortedSet in order to not require a comparator consistent with equals */

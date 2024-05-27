@@ -48,6 +48,8 @@ class WebAppOrtResult {
 
     #dependencyTrees = [];
 
+    #effectiveLicenses = [];
+
     #treeNodesByPackageIndexMap;
 
     #treeNodesByKeyMap;
@@ -75,8 +77,6 @@ class WebAppOrtResult {
     #metadata = {};
 
     #packages = [];
-
-    #packageIndexesByPackageNameMap = new Map();
 
     #pathExcludes = [];
 
@@ -236,7 +236,8 @@ class WebAppOrtResult {
                     },
                     licenses: {
                         declared,
-                        detected
+                        detected,
+                        effective
                     }
                 } = this.#statistics;
 
@@ -246,6 +247,10 @@ class WebAppOrtResult {
 
                 if (detected) {
                     this.#detectedLicensesProcessed = [...detected.keys()];
+                }
+
+                if (effective) {
+                    this.#effectiveLicenses = [...effective.keys()];
                 }
 
                 if (totalTreeDepth) {
@@ -399,14 +404,6 @@ class WebAppOrtResult {
         return this.#dependencyTrees;
     }
 
-    get treeNodesByPackageIndexMap() {
-        return this.#treeNodesByPackageIndexMap;
-    }
-
-    get treeNodesByKeyMap() {
-        return this.#treeNodesByKeyMap;
-    }
-
     get detectedLicenses() {
         return this.#detectedLicenses;
     }
@@ -417,6 +414,10 @@ class WebAppOrtResult {
 
     get effectiveLicensePackages() {
         return this.#effectiveLicensePackages;
+    }
+
+    get effectiveLicenses() {
+        return this.#effectiveLicenses;
     }
 
     get issues() {
@@ -489,6 +490,14 @@ class WebAppOrtResult {
 
     get statistics() {
         return this.#statistics;
+    }
+
+    get treeNodesByPackageIndexMap() {
+        return this.#treeNodesByPackageIndexMap;
+    }
+
+    get treeNodesByKeyMap() {
+        return this.#treeNodesByKeyMap;
     }
 
     get vulnerabilities() {

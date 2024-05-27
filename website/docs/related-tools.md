@@ -9,6 +9,11 @@ sidebar_label: Related Tools
 
 A [repository](https://github.com/oss-review-toolkit/ort-config) with exemplary ORT configuration files.
 
+## ORT Server
+
+The [ORT Server](https://github.com/eclipse-apoapsis/ort-server) is a scalable server implementation of ORT.
+It is designed to run inside a Kubernetes cluster and can be used via a REST API or a web frontend which is currently under development.
+
 ## ORT Workbench
 
 The [ORT Workbench](https://github.com/oss-review-toolkit/ort-workbench) is an ORT result file viewer developed by the ORT core team.
@@ -27,3 +32,8 @@ A [GitLab Pipeline](https://github.com/oss-review-toolkit/ort-gitlab-ci) to run 
 ## ORTHW
 
 A [bash script](https://github.com/oss-review-toolkit/orthw) that helps to simplify and speed up common tasks performed when processing ORT results.
+
+## OpossumUI
+
+[OpossumUI](https://github.com/opossum-tool/OpossumUI) is a desktop application that provides a compliance audit workflow.
+ORT can generate input files for OpossumUI using the "Opossum" reporter.

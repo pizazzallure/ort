@@ -666,7 +666,7 @@ private fun createResolver(
     archiver: FileArchiver = FileArchiver.createDefault()
 ) = LicenseInfoResolver(
     provider = SimpleLicenseInfoProvider(data),
-    copyrightGarbage = CopyrightGarbage(copyrightGarbage.toSortedSet()),
+    copyrightGarbage = CopyrightGarbage(copyrightGarbage),
     addAuthorsToCopyrights = addAuthorsToCopyrights,
     archiver = archiver
 )

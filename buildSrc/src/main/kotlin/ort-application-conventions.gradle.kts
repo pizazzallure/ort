@@ -33,6 +33,7 @@ private val Project.libs: LibrariesForLibs
 plugins {
     // Apply core plugins.
     application
+    signing
 
     // Apply precompiled plugins.
     id("ort-kotlin-conventions")
@@ -44,8 +45,8 @@ plugins {
 
 application {
     applicationDefaultJvmArgs = listOf(
-        "--add-opens", "java.base/sun.nio.ch=ALL-UNNAMED",
-        "--add-opens", "java.base/java.io=ALL-UNNAMED"
+        "--add-opens", "java.base/java.io=ALL-UNNAMED",
+        "--add-opens", "java.base/sun.nio.ch=ALL-UNNAMED"
     )
 }
 
@@ -185,8 +186,21 @@ tasks.named<CreateStartScripts>("startScripts") {
     }
 }
 
-tasks.named<Tar>("distTar") {
+val distTar = tasks.named<Tar>("distTar") {
     compression = Compression.GZIP
+}
+
+val distZip = tasks.named<Zip>("distZip")
+
+signing {
+    val signingInMemoryKey: String? by project
+    val signingInMemoryKeyPassword: String? by project
+
+    if (signingInMemoryKey != null && signingInMemoryKeyPassword != null) {
+        useInMemoryPgpKeys(signingInMemoryKey, signingInMemoryKeyPassword)
+        sign(distTar.get())
+        sign(distZip.get())
+    }
 }
 
 tasks.named<JavaExec>("run") {
