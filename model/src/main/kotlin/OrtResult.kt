@@ -295,25 +295,64 @@ data class OrtResult(
         omitExcluded: Boolean = false,
         omitResolved: Boolean = false,
         minSeverity: Severity = Severity.entries.min()
-    ): Map<Identifier, Set<Issue>> {
-        val analyzerIssues = analyzer?.result?.getAllIssues().orEmpty()
-        val scannerIssues = scanner?.getAllIssues().orEmpty()
-        val advisorIssues = advisor?.results?.getIssues().orEmpty()
+    ): Map<Identifier, Set<Issue>> =
+        getAnalyzerIssues()
+            .zipWithCollections(getScannerIssues())
+            .zipWithCollections(getAdvisorIssues())
+            .filterIssues(omitExcluded, omitResolved, minSeverity)
 
-        val allIssues = analyzerIssues.zipWithCollections(scannerIssues).zipWithCollections(advisorIssues)
+    /**
+     * Return a map of all de-duplicated analyzer [Issue]s associated by [Identifier]. If [omitExcluded] is set to true,
+     * excluded issues are omitted from the result. If [omitResolved] is set to true, resolved issues are omitted from
+     * the result. Issues with [severity][Issue.severity] below [minSeverity] are omitted from the result.
+     */
+    fun getAnalyzerIssues(
+        omitExcluded: Boolean = false,
+        omitResolved: Boolean = false,
+        minSeverity: Severity = Severity.entries.min()
+    ): Map<Identifier, Set<Issue>> =
+        analyzer?.result?.getAllIssues().orEmpty().filterIssues(omitExcluded, omitResolved, minSeverity)
 
-        return allIssues.mapNotNull { (id, issues) ->
+    /**
+     * Return a map of all de-duplicated scanner [Issue]s associated by [Identifier]. If [omitExcluded] is set to true,
+     * excluded issues are omitted from the result. If [omitResolved] is set to true, resolved issues are omitted from
+     * the result. Issues with [severity][Issue.severity] below [minSeverity] are omitted from the result.
+     */
+    fun getScannerIssues(
+        omitExcluded: Boolean = false,
+        omitResolved: Boolean = false,
+        minSeverity: Severity = Severity.entries.min()
+    ): Map<Identifier, Set<Issue>> =
+        scanner?.getAllIssues().orEmpty().filterIssues(omitExcluded, omitResolved, minSeverity)
+
+    /**
+     * Return a map of all de-duplicated advisor [Issue]s associated by [Identifier]. If [omitExcluded] is set to true,
+     * excluded issues are omitted from the result. If [omitResolved] is set to true, resolved issues are omitted from
+     * the result. Issues with [severity][Issue.severity] below [minSeverity] are omitted from the result.
+     */
+    fun getAdvisorIssues(
+        omitExcluded: Boolean = false,
+        omitResolved: Boolean = false,
+        minSeverity: Severity = Severity.entries.min()
+    ): Map<Identifier, Set<Issue>> =
+        advisor?.results?.getIssues().orEmpty().filterIssues(omitExcluded, omitResolved, minSeverity)
+
+    private fun Map<Identifier, Set<Issue>>.filterIssues(
+        omitExcluded: Boolean = false,
+        omitResolved: Boolean = false,
+        minSeverity: Severity = Severity.entries.min()
+    ): Map<Identifier, Set<Issue>> =
+        mapNotNull { (id, issues) ->
             if (omitExcluded && isExcluded(id)) return@mapNotNull null
 
             val filteredIssues = issues.filterTo(mutableSetOf()) {
                 (!omitResolved || !isResolved(it))
                     && it.severity >= minSeverity
-                    && it !in issuesWithExcludedAffectedPathById[id].orEmpty()
+                    && (!omitExcluded || it !in issuesWithExcludedAffectedPathById[id].orEmpty())
             }
 
             filteredIssues.takeUnless { it.isEmpty() }?.let { id to it }
         }.toMap()
-    }
 
     /**
      * Return the label values corresponding to the given [key] split at the delimiter ',', or an empty set if the label
@@ -425,18 +464,14 @@ data class OrtResult(
 
     /**
      * Return the set of all project or package identifiers in the result, optionally [including those of subprojects]
-     * [includeSubProjects].
+     * [includeSubProjects] and optionally limited to only non-excluded ones if [omitExcluded] is true.
      */
     @JsonIgnore
-    fun getProjectsAndPackages(includeSubProjects: Boolean = true): Set<Identifier> {
-        val projectsAndPackages = mutableSetOf<Identifier>()
-        val projects = getProjects(includeSubProjects = includeSubProjects)
-
-        projects.mapTo(projectsAndPackages) { it.id }
-        getPackages().mapTo(projectsAndPackages) { it.metadata.id }
-
-        return projectsAndPackages
-    }
+    fun getProjectsAndPackages(includeSubProjects: Boolean = true, omitExcluded: Boolean = false): Set<Identifier> =
+        buildSet {
+            getProjects(includeSubProjects = includeSubProjects, omitExcluded = omitExcluded).mapTo(this) { it.id }
+            getPackages(omitExcluded = omitExcluded).mapTo(this) { it.metadata.id }
+        }
 
     /**
      * Return all [SpdxLicenseChoice]s applicable for the scope of the whole [repository].

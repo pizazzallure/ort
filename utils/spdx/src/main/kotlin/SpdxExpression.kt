@@ -163,7 +163,7 @@ sealed class SpdxExpression {
     open fun offersChoice(): Boolean = false
 
     /**
-     * Apply a license [choice], optionally limited to the given [subExpression], and return a [SpdxExpression] where
+     * Apply a license [choice], optionally limited to the given [subExpression], and return an [SpdxExpression] where
      * the choice is resolved.
      */
     open fun applyChoice(choice: SpdxExpression, subExpression: SpdxExpression = this): SpdxExpression {
@@ -300,9 +300,9 @@ class SpdxCompoundExpression(
         }
 
     override fun applyChoice(choice: SpdxExpression, subExpression: SpdxExpression): SpdxExpression {
-        if (!subExpression.validChoices().containsAll(choice.validChoices())) {
+        if (!subExpression.isSubExpression(choice)) {
             throw InvalidLicenseChoiceException(
-                "$choice is not a valid choice for $subExpression. Valid choices are: ${validChoices()}."
+                "$choice is not a valid choice for $subExpression. Valid choices are: ${subExpression.validChoices()}."
             )
         }
 
@@ -355,7 +355,7 @@ class SpdxCompoundExpression(
 
     override fun toString() =
         // If the operator of the left or right expression is different from the operator of this expression, put the
-        // respective expression in parentheses. Semantically this would only be required if the priority of this
+        // respective expression in parentheses. Semantically, this would only be required if the priority of this
         // operator is higher than the priority of the operator of the left or right expression, but always adding
         // parentheses makes it easier to understand the expression.
         buildString {
@@ -392,7 +392,7 @@ sealed class SpdxSingleLicenseExpression : SpdxExpression() {
     abstract fun simpleLicense(): String
 
     /**
-     * Return the license exception identifier if this is a [SpdxLicenseWithExceptionExpression] or null otherwise.
+     * Return the license exception identifier if this is an [SpdxLicenseWithExceptionExpression] or null otherwise.
      */
     abstract fun exception(): String?
 
@@ -411,7 +411,7 @@ class SpdxLicenseWithExceptionExpression(
     val exception: String
 ) : SpdxSingleLicenseExpression() {
     companion object {
-        private val EXCEPTION_STRING_PATTERN = Regex("\\bexception\\b", RegexOption.IGNORE_CASE)
+        private val EXCEPTION_STRING_PATTERN = Regex("\\b(exception|additional-terms)\\b", RegexOption.IGNORE_CASE)
 
         /**
          * Parse a string into an [SpdxLicenseWithExceptionExpression]. Throws an [SpdxException] if the string cannot
@@ -494,7 +494,7 @@ class SpdxLicenseWithExceptionExpression(
 
 /**
  * An SPDX simple expression as defined by version 2.2 of the [SPDX specification, annex D.3][1]. A simple expression
- * can be either a [SpdxLicenseIdExpression] or a [SpdxLicenseReferenceExpression].
+ * can be either an [SpdxLicenseIdExpression] or an [SpdxLicenseReferenceExpression].
  *
  * [1]: https://spdx.github.io/spdx-spec/v2.2.2/SPDX-license-expressions/#d3-simple-license-expressions
  */

@@ -21,9 +21,12 @@ package org.ossreviewtoolkit.model
 
 import com.fasterxml.jackson.annotation.JsonIgnore
 import com.fasterxml.jackson.annotation.JsonInclude
+import com.fasterxml.jackson.databind.annotation.JsonSerialize
 
 import java.util.SortedSet
 
+import org.ossreviewtoolkit.model.utils.DependencyGraphEdgeSortedSetConverter
+import org.ossreviewtoolkit.model.utils.DependencyReferenceSortedSetConverter
 import org.ossreviewtoolkit.model.utils.PackageLinkageValueFilter
 
 /**
@@ -99,10 +102,11 @@ data class DependencyGraph(
     val nodes: List<DependencyGraphNode>? = null,
 
     /**
-     * A list with the edges of this dependency graph. By traversing the edges, the dependencies of packages can be
+     * A set with the edges of this dependency graph. By traversing the edges, the dependencies of packages can be
      * determined.
      */
-    val edges: List<DependencyGraphEdge>? = null
+    @JsonSerialize(converter = DependencyGraphEdgeSortedSetConverter::class)
+    val edges: Set<DependencyGraphEdge>? = null
 ) {
     companion object {
         /**
@@ -314,7 +318,8 @@ class DependencyReference(
     /**
      * A set with the references to the dependencies of this dependency. That way a tree-like structure is established.
      */
-    val dependencies: SortedSet<DependencyReference> = sortedSetOf(),
+    @JsonSerialize(contentConverter = DependencyReferenceSortedSetConverter::class)
+    val dependencies: Set<DependencyReference> = emptySet(),
 
     /**
      * The type of linkage used for the referred package from its dependent package. As most of our supported
@@ -397,10 +402,10 @@ private fun DependencyReference.toGraphNode() = DependencyGraphNode(pkg, fragmen
 /**
  * Construct a mapping of dependencies based on the given [roots].
  */
-private fun constructNodeDependenciesFromScopeRoots(roots: SortedSet<DependencyReference>): NodeDependencies {
+private fun constructNodeDependenciesFromScopeRoots(roots: Set<DependencyReference>): NodeDependencies {
     val mapping = mutableMapOf<DependencyGraphNode, List<DependencyGraphNode>>()
 
-    fun construct(refs: SortedSet<DependencyReference>) {
+    fun construct(refs: Set<DependencyReference>) {
         refs.forEach { ref ->
             val node = ref.toGraphNode()
             if (node !in mapping) {
@@ -419,7 +424,7 @@ private fun constructNodeDependenciesFromScopeRoots(roots: SortedSet<DependencyR
  */
 private fun constructNodeDependenciesFromGraph(
     nodes: List<DependencyGraphNode>,
-    edges: List<DependencyGraphEdge>
+    edges: Set<DependencyGraphEdge>
 ): NodeDependencies {
     val mapping = mutableMapOf<DependencyGraphNode, MutableList<DependencyGraphNode>>()
 
