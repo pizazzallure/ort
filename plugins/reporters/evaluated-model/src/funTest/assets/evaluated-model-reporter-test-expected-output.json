@@ -91,7 +91,7 @@
     "comment" : "Resolved for illustration."
   }, {
     "_id" : 1,
-    "message" : "A test issue\\.",
+    "message" : "Example advisor error, resolved.",
     "reason" : "CANT_FIX_ISSUE",
     "comment" : "A comment explaining why the issue can be ignored."
   } ],
@@ -265,10 +265,58 @@
     "timestamp" : "1970-01-01T00:00:00Z",
     "type" : "ADVISOR",
     "source" : "VulnerableCode",
-    "message" : "A test issue.",
+    "message" : "Example advisor error, resolved.",
     "severity" : "ERROR",
     "resolutions" : [ 1 ],
     "pkg" : 2,
+    "how_to_fix" : "Some how to fix text."
+  }, {
+    "_id" : 17,
+    "timestamp" : "1970-01-01T00:00:00Z",
+    "type" : "ADVISOR",
+    "source" : "VulnerableCode",
+    "message" : "Example advisor error.",
+    "severity" : "ERROR",
+    "pkg" : 2,
+    "how_to_fix" : "Some how to fix text."
+  }, {
+    "_id" : 18,
+    "timestamp" : "1970-01-01T00:00:00Z",
+    "type" : "ADVISOR",
+    "source" : "VulnerableCode",
+    "message" : "Example advisor warning.",
+    "severity" : "WARNING",
+    "pkg" : 2,
+    "how_to_fix" : "Some how to fix text."
+  }, {
+    "_id" : 19,
+    "timestamp" : "1970-01-01T00:00:00Z",
+    "type" : "ADVISOR",
+    "source" : "VulnerableCode",
+    "message" : "Example advisor hint.",
+    "severity" : "HINT",
+    "pkg" : 2,
+    "how_to_fix" : "Some how to fix text."
+  }, {
+    "_id" : 20,
+    "timestamp" : "2024-04-25T07:44:20.725613974Z",
+    "type" : "ANALYZER",
+    "source" : "Gradle",
+    "message" : "Example analyzer warning in included package.",
+    "severity" : "WARNING",
+    "pkg" : 2,
+    "path" : 0,
+    "how_to_fix" : "Some how to fix text."
+  }, {
+    "_id" : 21,
+    "timestamp" : "2024-04-25T07:44:20.725613974Z",
+    "type" : "ANALYZER",
+    "source" : "Gradle",
+    "message" : "Example analyzer warning in excluded package.",
+    "severity" : "WARNING",
+    "is_excluded" : true,
+    "pkg" : 3,
+    "path" : 1,
     "how_to_fix" : "Some how to fix text."
   } ],
   "scan_results" : [ {
@@ -619,7 +667,7 @@
       "revision" : "",
       "path" : ""
     },
-    "paths" : [ 5, 6 ],
+    "paths" : [ 7, 8 ],
     "levels" : [ 0, 1 ],
     "scopes" : [ 0, 1 ],
     "scan_results" : [ 5 ],
@@ -664,7 +712,7 @@
       "revision" : "",
       "path" : ""
     },
-    "paths" : [ 0 ],
+    "paths" : [ 2 ],
     "levels" : [ 0 ],
     "scopes" : [ 1 ],
     "scan_results" : [ 2 ],
@@ -717,7 +765,7 @@
         "concluded_license" : "GPL-2.0-only OR MIT"
       }
     } ],
-    "paths" : [ 1 ],
+    "paths" : [ 3 ],
     "levels" : [ 1 ],
     "scopes" : [ 1 ],
     "is_excluded" : true,
@@ -771,7 +819,7 @@
         "concluded_license" : "MPL-2.0 OR EPL-1.0"
       }
     } ],
-    "paths" : [ 2 ],
+    "paths" : [ 4 ],
     "levels" : [ 1 ],
     "scopes" : [ 1 ],
     "scan_results" : [ 3 ],
@@ -817,7 +865,7 @@
       "revision" : "",
       "path" : ""
     },
-    "paths" : [ 3, 4 ],
+    "paths" : [ 5, 6 ],
     "levels" : [ 1, 2 ],
     "scopes" : [ 0, 1 ],
     "scan_results" : [ 4 ],
@@ -904,7 +952,7 @@
       "revision" : "",
       "path" : ""
     },
-    "paths" : [ 7 ],
+    "paths" : [ 9 ],
     "levels" : [ 1 ],
     "scopes" : [ 1 ],
     "scan_results" : [ 6 ],
@@ -942,67 +990,79 @@
       "revision" : "",
       "path" : ""
     },
-    "paths" : [ 8, 9 ],
+    "paths" : [ 10, 11 ],
     "levels" : [ 0 ],
     "scopes" : [ 0, 1 ],
     "is_excluded" : false
   } ],
   "paths" : [ {
     "_id" : 0,
+    "pkg" : 2,
+    "project" : 1,
+    "scope" : 0,
+    "path" : [ ]
+  }, {
+    "_id" : 1,
     "pkg" : 3,
     "project" : 1,
     "scope" : 1,
     "path" : [ ]
   }, {
-    "_id" : 1,
+    "_id" : 2,
+    "pkg" : 3,
+    "project" : 1,
+    "scope" : 1,
+    "path" : [ ]
+  }, {
+    "_id" : 3,
     "pkg" : 4,
     "project" : 1,
     "scope" : 1,
     "path" : [ 3 ]
   }, {
-    "_id" : 2,
+    "_id" : 4,
     "pkg" : 5,
     "project" : 1,
     "scope" : 1,
     "path" : [ 3 ]
   }, {
-    "_id" : 3,
+    "_id" : 5,
     "pkg" : 6,
     "project" : 1,
     "scope" : 0,
     "path" : [ 2 ]
   }, {
-    "_id" : 4,
+    "_id" : 6,
     "pkg" : 6,
     "project" : 1,
     "scope" : 1,
     "path" : [ 9, 2 ]
   }, {
-    "_id" : 5,
+    "_id" : 7,
     "pkg" : 2,
     "project" : 1,
     "scope" : 0,
     "path" : [ ]
   }, {
-    "_id" : 6,
+    "_id" : 8,
     "pkg" : 2,
     "project" : 1,
     "scope" : 1,
     "path" : [ 9 ]
   }, {
-    "_id" : 7,
+    "_id" : 9,
     "pkg" : 8,
     "project" : 1,
     "scope" : 1,
     "path" : [ 3 ]
   }, {
-    "_id" : 8,
+    "_id" : 10,
     "pkg" : 9,
     "project" : 1,
     "scope" : 0,
     "path" : [ ]
   }, {
-    "_id" : 9,
+    "_id" : 11,
     "pkg" : 9,
     "project" : 1,
     "scope" : 1,
@@ -1022,6 +1082,7 @@
         "key" : 3,
         "linkage" : "DYNAMIC",
         "pkg" : 2,
+        "issues" : [ 20 ],
         "children" : [ {
           "key" : 4,
           "linkage" : "DYNAMIC",
@@ -1050,6 +1111,7 @@
         "key" : 9,
         "linkage" : "DYNAMIC",
         "pkg" : 3,
+        "issues" : [ 21 ],
         "children" : [ {
           "key" : 10,
           "linkage" : "DYNAMIC",
@@ -1141,10 +1203,10 @@
       "vulnerability_resolutions" : 0
     },
     "open_issues" : {
-      "errors" : 4,
-      "warnings" : 2,
-      "hints" : 2,
-      "severe" : 6
+      "errors" : 5,
+      "warnings" : 4,
+      "hints" : 3,
+      "severe" : 9
     },
     "open_rule_violations" : {
       "errors" : 1,
@@ -1181,6 +1243,14 @@
         "LicenseRef-test-Apache-2.0-multi-line" : 1,
         "LicenseRef-test-Apache-2.0-single-line" : 1,
         "MIT" : 2
+      },
+      "effective" : {
+        "Apache-2.0" : 2,
+        "BSD-3-Clause" : 1,
+        "GPL-2.0-only WITH Classpath-exception-2.0" : 1,
+        "LicenseRef-test-Apache-2.0-multi-line" : 1,
+        "LicenseRef-test-Apache-2.0-single-line" : 1,
+        "MIT" : 1
       }
     },
     "execution_duration_in_seconds" : 3125
@@ -1232,7 +1302,7 @@
   },
   "severe_issue_threshold" : "WARNING",
   "severe_rule_violation_threshold" : "WARNING",
-  "repository_configuration" : "---\nexcludes:\n  paths:\n  - pattern: \"sub/module/project/build.gradle\"\n    reason: \"EXAMPLE_OF\"\n    comment: \"The project is an example.\"\n  - pattern: \"**/*.java\"\n    reason: \"EXAMPLE_OF\"\n    comment: \"These are example files.\"\n  - pattern: \"analyzer/src/funTest/assets/projects/synthetic/gradle/lib/excluded-file.dat\"\n    reason: \"DATA_FILE_OF\"\n  scopes:\n  - pattern: \"testCompile\"\n    reason: \"TEST_DEPENDENCY_OF\"\n    comment: \"The scope only contains test dependencies.\"\nresolutions:\n  issues:\n  - message: \"A test issue\\\\.\"\n    reason: \"CANT_FIX_ISSUE\"\n    comment: \"A comment explaining why the issue can be ignored.\"\n  - message: \"Example error, resolved.\"\n    reason: \"CANT_FIX_ISSUE\"\n    comment: \"Resolved for illustration.\"\n  rule_violations:\n  - message: \"Apache-2.0 hint\"\n    reason: \"CANT_FIX_EXCEPTION\"\n    comment: \"Apache-2 is not an issue.\"\nlicense_choices:\n  repository_license_choices:\n  - given: \"GPL-2.0-only OR MIT\"\n    choice: \"MIT\"\n  package_license_choices:\n  - package_id: \"Maven:com.h2database:h2:1.4.200\"\n    license_choices:\n    - given: \"MPL-2.0 OR EPL-1.0\"\n      choice: \"MPL-2.0\"\n",
+  "repository_configuration" : "---\nexcludes:\n  paths:\n  - pattern: \"sub/module/project/build.gradle\"\n    reason: \"EXAMPLE_OF\"\n    comment: \"The project is an example.\"\n  - pattern: \"**/*.java\"\n    reason: \"EXAMPLE_OF\"\n    comment: \"These are example files.\"\n  - pattern: \"analyzer/src/funTest/assets/projects/synthetic/gradle/lib/excluded-file.dat\"\n    reason: \"DATA_FILE_OF\"\n  scopes:\n  - pattern: \"testCompile\"\n    reason: \"TEST_DEPENDENCY_OF\"\n    comment: \"The scope only contains test dependencies.\"\nresolutions:\n  issues:\n  - message: \"Example advisor error, resolved.\"\n    reason: \"CANT_FIX_ISSUE\"\n    comment: \"A comment explaining why the issue can be ignored.\"\n  - message: \"Example error, resolved.\"\n    reason: \"CANT_FIX_ISSUE\"\n    comment: \"Resolved for illustration.\"\n  rule_violations:\n  - message: \"Apache-2.0 hint\"\n    reason: \"CANT_FIX_EXCEPTION\"\n    comment: \"Apache-2 is not an issue.\"\nlicense_choices:\n  repository_license_choices:\n  - given: \"GPL-2.0-only OR MIT\"\n    choice: \"MIT\"\n  package_license_choices:\n  - package_id: \"Maven:com.h2database:h2:1.4.200\"\n    license_choices:\n    - given: \"MPL-2.0 OR EPL-1.0\"\n      choice: \"MPL-2.0\"\n",
   "labels" : {
     "job_parameters.JOB_PARAM_1" : "label job param 1",
     "job_parameters.JOB_PARAM_2" : "label job param 2",

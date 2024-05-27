@@ -119,6 +119,7 @@ object Ecosystem {
     const val PUB = "Pub"
     const val PYPI = "PyPI"
     const val RUBY_GEMS = "RubyGems"
+    const val SWIFT_URL = "SwiftURL"
 }
 
 @Serializable(EventSerializer::class)
@@ -193,7 +194,8 @@ data class Severity(
 ) {
     enum class Type {
         CVSS_V2,
-        CVSS_V3
+        CVSS_V3,
+        CVSS_V4
     }
 }
 

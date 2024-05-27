@@ -26,6 +26,8 @@ import io.kotest.matchers.should
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldStartWith
 
+import kotlinx.coroutines.flow.flowOf
+
 import org.ossreviewtoolkit.clients.fossid.model.result.LicenseCategory
 import org.ossreviewtoolkit.clients.fossid.model.result.MatchType
 import org.ossreviewtoolkit.clients.fossid.model.result.Snippet
@@ -58,7 +60,14 @@ class FossIdLicenseMappingTest : WordSpec({
             val issues = mutableListOf<Issue>()
 
             val mapping = mapOf("Apache 2.0" to "Apache-2.0")
-            val findings = mapSnippetFindings(rawResults, issues, mapping, emptyList(), mutableSetOf())
+            val findings = mapSnippetFindings(
+                rawResults,
+                500,
+                issues,
+                mapping,
+                emptyList(),
+                mutableSetOf()
+            )
 
             issues should beEmpty()
             findings should haveSize(1)
@@ -73,7 +82,14 @@ class FossIdLicenseMappingTest : WordSpec({
             val rawResults = createSnippet("GFDL-1.2")
             val issues = mutableListOf<Issue>()
 
-            val findings = mapSnippetFindings(rawResults, issues, emptyMap(), emptyList(), mutableSetOf())
+            val findings = mapSnippetFindings(
+                rawResults,
+                500,
+                issues,
+                emptyMap(),
+                emptyList(),
+                mutableSetOf()
+            )
 
             issues should beEmpty()
             findings should haveSize(1)
@@ -88,7 +104,14 @@ class FossIdLicenseMappingTest : WordSpec({
             val rawResults = createSnippet("Apache-2.0")
             val issues = mutableListOf<Issue>()
 
-            val findings = mapSnippetFindings(rawResults, issues, emptyMap(), emptyList(), mutableSetOf())
+            val findings = mapSnippetFindings(
+                rawResults,
+                500,
+                issues,
+                emptyMap(),
+                emptyList(),
+                mutableSetOf()
+            )
 
             issues should beEmpty()
             findings should haveSize(1)
@@ -103,7 +126,14 @@ class FossIdLicenseMappingTest : WordSpec({
             val rawResults = createSnippet("invalid license")
             val issues = mutableListOf<Issue>()
 
-            val findings = mapSnippetFindings(rawResults, issues, emptyMap(), emptyList(), mutableSetOf())
+            val findings = mapSnippetFindings(
+                rawResults,
+                500,
+                issues,
+                emptyMap(),
+                emptyList(),
+                mutableSetOf()
+            )
 
             issues should haveSize(1)
             issues.first() shouldNotBeNull {
@@ -150,5 +180,5 @@ private fun createSnippet(license: String): RawResults {
         null,
         null
     )
-    return RawResults(emptyList(), emptyList(), emptyList(), emptyList(), mapOf(FILE_PATH to setOf(snippet)))
+    return RawResults(emptyList(), emptyList(), emptyList(), emptyList(), flowOf(FILE_PATH to setOf(snippet)))
 }
