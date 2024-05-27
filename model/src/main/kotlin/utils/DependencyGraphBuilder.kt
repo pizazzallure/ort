@@ -179,7 +179,7 @@ class DependencyGraphBuilder<D>(
         )
     }
 
-    private fun Collection<DependencyGraphEdge>.removeCycles(): List<DependencyGraphEdge> {
+    private fun Set<DependencyGraphEdge>.removeCycles(): Set<DependencyGraphEdge> {
         val edges = toMutableSet()
         val edgesToKeep = breakCycles(edges)
         val edgesToRemove = edges - edgesToKeep
@@ -188,7 +188,7 @@ class DependencyGraphBuilder<D>(
             logger.warn { "Removing edge '${it.from} -> ${it.to}' to break a cycle." }
         }
 
-        return filter { it in edgesToKeep }
+        return filterTo(mutableSetOf()) { it in edgesToKeep }
     }
 
     private fun checkReferences() {
@@ -370,7 +370,7 @@ class DependencyGraphBuilder<D>(
         transitive: Boolean,
         processed: Set<D>
     ): DependencyReference? {
-        val transitiveDependencies = dependencyHandler.dependenciesFor(dependency).mapNotNull {
+        val transitiveDependencies = dependencyHandler.dependenciesFor(dependency).mapNotNullTo(mutableSetOf()) {
             addDependencyToGraph(scopeName, it, transitive = true, processed)
         }
 
@@ -387,7 +387,7 @@ class DependencyGraphBuilder<D>(
         val ref = DependencyReference(
             pkg = index.root,
             fragment = index.fragment,
-            dependencies = transitiveDependencies.toSortedSet(),
+            dependencies = transitiveDependencies,
             linkage = dependencyHandler.linkageFor(dependency),
             issues = issues
         )
@@ -436,9 +436,9 @@ class DependencyGraphBuilder<D>(
  */
 private fun Collection<DependencyReference>.toGraph(
     indexMapping: IntArray
-): Pair<List<DependencyGraphNode>, List<DependencyGraphEdge>> {
+): Pair<List<DependencyGraphNode>, Set<DependencyGraphEdge>> {
     val nodes = mutableSetOf<DependencyGraphNode>()
-    val edges = mutableListOf<DependencyGraphEdge>()
+    val edges = mutableSetOf<DependencyGraphEdge>()
     val nodeIndices = mutableMapOf<NodeKey, Int>()
 
     fun getOrAddNodeIndex(ref: DependencyReference): Int =

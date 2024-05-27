@@ -19,8 +19,6 @@
 
 package org.ossreviewtoolkit.plugins.reporters.statichtml
 
-import java.util.SortedMap
-
 import org.ossreviewtoolkit.model.Identifier
 import org.ossreviewtoolkit.model.OrtResult
 import org.ossreviewtoolkit.model.Project
@@ -33,12 +31,9 @@ import org.ossreviewtoolkit.model.config.PathExclude
 import org.ossreviewtoolkit.model.config.RepositoryConfiguration
 import org.ossreviewtoolkit.model.config.ScopeExclude
 import org.ossreviewtoolkit.model.licenses.ResolvedLicense
-import org.ossreviewtoolkit.utils.common.zipWithCollections
 import org.ossreviewtoolkit.utils.spdx.SpdxExpression
 
-internal fun Collection<ReportTableModel.ResolvableIssue>.containsUnresolved() = any { !it.isResolved }
-
-internal data class ReportTableModel(
+internal data class TablesReport(
     /**
      * The [VcsInfo] for the scanned project.
      */
@@ -52,44 +47,91 @@ internal data class ReportTableModel(
     /**
      * A list containing all evaluator rule violations. `null` if no evaluator result is available.
      */
-    val ruleViolations: List<ResolvableViolation>?,
+    val ruleViolations: List<TablesReportViolation>?,
 
     /**
-     * A [IssueTable] containing all dependencies that caused issues.
+     * An [IssueTable] containing all analyzer issues.
      */
-    val issueSummary: IssueTable,
+    val analyzerIssues: IssueTable,
+
+    /**
+     * An [IssueTable] containing all scanner issues.
+     */
+    val scannerIssues: IssueTable,
+
+    /**
+     * An [IssueTable] containing all advisor issues.
+     */
+    val advisorIssues: IssueTable,
 
     /**
      * The [ProjectTable]s containing the dependencies for each [Project].
      */
-    val projectDependencies: SortedMap<Project, ProjectTable>,
+    val projects: List<ProjectTable>,
 
     /**
      * The labels from [OrtResult.labels].
      */
     val labels: Map<String, String>
+)
+
+internal data class IssueTable(
+    val type: Type,
+    val rows: List<Row>
 ) {
-    data class ProjectTable(
-        /**
-         * The dependencies of this project.
-         */
-        val rows: List<DependencyRow>,
+    val errorCount = rows.count { it.issue.severity == Severity.ERROR }
+    val warningCount = rows.count { it.issue.severity == Severity.WARNING }
+    val hintCount = rows.count { it.issue.severity == Severity.HINT }
 
-        /**
-         * The path to the directory containing the definition file of the project, relative to the analyzer root,
-         * see [OrtResult.getDefinitionFilePathRelativeToAnalyzerRoot].
-         */
-        val fullDefinitionFilePath: String,
-
-        /**
-         * Information about if and why the project is excluded by [PathExclude]s.
-         */
-        val pathExcludes: List<PathExclude>
-    ) {
-        fun isExcluded() = pathExcludes.isNotEmpty()
+    enum class Type {
+        ANALYZER,
+        SCANNER,
+        ADVISOR
     }
 
-    data class DependencyRow(
+    data class Row(
+        /**
+         * The issue of this row represents of the given [type][type].
+         */
+        val issue: TablesReportIssue,
+
+        /**
+         * The identifier of the package the issue corresponds to.
+         */
+        val id: Identifier
+    )
+}
+
+internal data class ProjectTable(
+    /**
+     * The identifier of the project.
+     */
+    val id: Identifier,
+
+    /**
+     * The (processed) VCS info of the project.
+     */
+    val vcs: VcsInfo,
+
+    /**
+     * The dependencies of this project.
+     */
+    val rows: List<Row>,
+
+    /**
+     * The path to the directory containing the definition file of the project, relative to the analyzer root,
+     * see [OrtResult.getDefinitionFilePathRelativeToAnalyzerRoot].
+     */
+    val fullDefinitionFilePath: String,
+
+    /**
+     * Information about if and why the project is excluded by [PathExclude]s.
+     */
+    val pathExcludes: List<PathExclude>
+) {
+    fun isExcluded() = pathExcludes.isNotEmpty()
+
+    data class Row(
         /**
          * The identifier of the package.
          */
@@ -108,7 +150,7 @@ internal data class ReportTableModel(
         /**
          * The scopes the package is used in.
          */
-        val scopes: SortedMap<String, List<ScopeExclude>>,
+        val scopes: List<Scope>,
 
         /**
          * The concluded license of the package.
@@ -134,69 +176,49 @@ internal data class ReportTableModel(
         /**
          * All analyzer issues related to this package.
          */
-        val analyzerIssues: List<ResolvableIssue>,
+        val openIssues: List<TablesReportIssue>,
 
         /**
-         * All scan issues related to this package.
+         * All issues which are either resolved or excluded or both.
          */
-        val scanIssues: List<ResolvableIssue>
-    )
-
-    data class IssueTable(
-        val rows: List<IssueRow>
+        val excludedOrResolvedIssues: List<TablesReportIssue>
     ) {
-        val errorCount: Int
-        val warningCount: Int
-        val hintCount: Int
-
-        init {
-            val unresolvedIssues = rows.flatMap {
-                it.analyzerIssues.flatMap { (_, issues) -> issues } +
-                    it.scanIssues.flatMap { (_, issues) -> issues }
-            }.filterNot { it.isResolved }.groupBy { it.severity }
-
-            errorCount = unresolvedIssues[Severity.ERROR].orEmpty().size
-            warningCount = unresolvedIssues[Severity.WARNING].orEmpty().size
-            hintCount = unresolvedIssues[Severity.HINT].orEmpty().size
-        }
+        /**
+         * Return true if and only if this [Row] is excluded by any [ScopeExclude]s
+         */
+        fun isExcluded(): Boolean = scopes.isNotEmpty() && scopes.all { it.isExcluded() }
     }
 
-    data class IssueRow(
+    data class Scope(
         /**
-         * The identifier of the package.
+         * The name of the scope.
          */
-        val id: Identifier,
+        val name: String,
 
         /**
-         * All analyzer issues related to this package, grouped by the [Identifier] of the [Project] they appear in.
+         * The excludes matching this scope.
          */
-        val analyzerIssues: SortedMap<Identifier, List<ResolvableIssue>>,
-
-        /**
-         * All scan issues related to this package, grouped by the [Identifier] of the [Project] they appear in.
-         */
-        val scanIssues: SortedMap<Identifier, List<ResolvableIssue>>
+        val excludes: List<ScopeExclude>
     ) {
-        fun merge(other: IssueRow): IssueRow =
-            IssueRow(
-                id = id,
-                analyzerIssues = analyzerIssues.zipWithCollections(other.analyzerIssues).toSortedMap(),
-                scanIssues = scanIssues.zipWithCollections(other.scanIssues).toSortedMap()
-            )
+        /**
+         * Return true if an only if this scope is matched by any [ScopeExclude]'s.
+         */
+        fun isExcluded(): Boolean = excludes.isNotEmpty()
     }
-
-    data class ResolvableIssue(
-        val source: String,
-        val description: String,
-        val resolutionDescription: String,
-        val isResolved: Boolean,
-        val severity: Severity,
-        val howToFix: String
-    )
-
-    data class ResolvableViolation(
-        val violation: RuleViolation,
-        val resolutionDescription: String,
-        val isResolved: Boolean
-    )
 }
+
+internal data class TablesReportIssue(
+    val source: String,
+    val description: String,
+    val resolutionDescription: String,
+    val isExcluded: Boolean,
+    val isResolved: Boolean,
+    val severity: Severity,
+    val howToFix: String
+)
+
+internal data class TablesReportViolation(
+    val violation: RuleViolation,
+    val resolutionDescription: String,
+    val isResolved: Boolean
+)
