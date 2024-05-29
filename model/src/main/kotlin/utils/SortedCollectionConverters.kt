@@ -49,6 +49,7 @@ class CopyrightFindingSortedSetConverter : StdConverter<Set<CopyrightFinding>, S
 
 class AuthorFindingSortedSetConverter : StdConverter<Set<AuthorFinding>, SortedSet<AuthorFinding>>() {
     override fun convert(value: Set<AuthorFinding>) = value.toSortedSet(AuthorFinding.COMPARATOR)
+}
 
 class DependencyGraphEdgeSortedSetConverter : StdConverter<Set<DependencyGraphEdge>, Set<DependencyGraphEdge>>() {
     override fun convert(value: Set<DependencyGraphEdge>) = value.toSortedSet(compareBy({ it.from }, { it.to }))
