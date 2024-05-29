@@ -153,17 +153,6 @@ ARG PYTHON_POETRY_VERSION
 ARG PIPTOOL_VERSION
 ARG SCANCODE_VERSION
 
-RUN pip install --no-cache-dir -U \
-    pip=="$PIPTOOL_VERSION" \
-    wheel \
-    && pip install --no-cache-dir -U \
-    Mercurial \
-    conan=="$CONAN_VERSION" \
-    pip \
-    pipenv=="$PYTHON_PIPENV_VERSION" \
-    poetry=="$PYTHON_POETRY_VERSION" \
-    python-inspector=="$PYTHON_INSPECTOR_VERSION"
-
 RUN ARCH=$(arch | sed s/aarch64/arm64/) \
     &&  if [ "$ARCH" == "arm64" ]; then \
     pip install -U scancode-toolkit-mini==$SCANCODE_VERSION; \
@@ -172,6 +161,16 @@ RUN ARCH=$(arch | sed s/aarch64/arm64/) \
     pip install -U --constraint requirements.txt scancode-toolkit==$SCANCODE_VERSION; \
     rm requirements.txt; \
     fi
+
+RUN pip install --no-cache-dir -U \
+    pip=="$PIPTOOL_VERSION" \
+    wheel \
+    && pip install --no-cache-dir -U \
+    Mercurial \
+    conan=="$CONAN_VERSION" \
+    pipenv=="$PYTHON_PIPENV_VERSION" \
+    poetry=="$PYTHON_POETRY_VERSION" \
+    python-inspector=="$PYTHON_INSPECTOR_VERSION"
 
 FROM scratch AS python
 COPY --from=pythonbuild /opt/python /opt/python
