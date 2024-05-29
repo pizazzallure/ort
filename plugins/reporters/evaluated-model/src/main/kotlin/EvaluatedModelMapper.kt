@@ -50,6 +50,7 @@ import org.ossreviewtoolkit.model.toYaml
 import org.ossreviewtoolkit.model.utils.FindingCurationMatcher
 import org.ossreviewtoolkit.model.utils.FindingsMatcher
 import org.ossreviewtoolkit.model.utils.RootLicenseMatcher
+import org.ossreviewtoolkit.model.utils.filterByVcsPath
 import org.ossreviewtoolkit.model.vulnerabilities.Vulnerability
 import org.ossreviewtoolkit.reporter.ReporterInput
 import org.ossreviewtoolkit.reporter.StatisticsCalculator.getStatistics
@@ -281,9 +282,7 @@ internal class EvaluatedModelMapper(private val input: ReporterInput) {
 
         issues += addAnalyzerIssues(project.id, evaluatedPackage)
 
-        input.ortResult.getScanResultsForId(project.id).mapTo(scanResults) { result ->
-            convertScanResult(result, findings, evaluatedPackage)
-        }
+        scanResults += convertScanResultsForPackage(evaluatedPackage, findings)
 
         findings.filter { it.type == EvaluatedFindingType.LICENSE }.mapNotNullTo(detectedLicenses) { it.license }
 
@@ -347,9 +346,7 @@ internal class EvaluatedModelMapper(private val input: ReporterInput) {
 
         issues += addAnalyzerIssues(pkg.id, evaluatedPackage)
 
-        input.ortResult.getScanResultsForId(pkg.id).mapTo(scanResults) { result ->
-            convertScanResult(result, findings, evaluatedPackage)
-        }
+        scanResults += convertScanResultsForPackage(evaluatedPackage, findings)
 
         findings.filter { it.type == EvaluatedFindingType.LICENSE }.mapNotNullTo(detectedLicenses) { it.license }
 
@@ -415,6 +412,20 @@ internal class EvaluatedModelMapper(private val input: ReporterInput) {
         )
     }
 
+    private fun convertScanResultsForPackage(
+        pkg: EvaluatedPackage,
+        findings: MutableList<EvaluatedFinding>
+    ): List<EvaluatedScanResult> =
+        input.ortResult.getScanResultsForId(pkg.id).map { scanResult ->
+            // If a VCS path curation has been applied after the scanning stage, it is possible to apply that curation
+            // without re-scanning in case the new VCS path is a subdirectory of the scanned VCS path. So, filter by VCS
+            // path to enable the user to see the effect on the detected license with a shorter turn around time /
+            // without re-scanning.
+            scanResult.filterByVcsPath(input.ortResult.getPackage(pkg.id)?.metadata?.vcsProcessed?.path.orEmpty())
+        }.map { scanResult ->
+            convertScanResult(scanResult, findings, pkg)
+        }
+
     private fun convertScanResult(
         result: ScanResult,
         findings: MutableList<EvaluatedFinding>,
@@ -431,21 +442,19 @@ internal class EvaluatedModelMapper(private val input: ReporterInput) {
                 calculatePackageVerificationCode(fileList.files.map { it.sha1 }.asSequence())
             }.orEmpty(),
             issues = issues
-        )
-
-        val actualScanResult = scanResults.addIfRequired(evaluatedScanResult)
+        ).run { scanResults.addIfRequired(this) }
 
         issues += addIssues(
             result.summary.issues,
             EvaluatedIssueType.SCANNER,
             pkg,
-            actualScanResult,
+            evaluatedScanResult,
             null
         )
 
-        addLicensesAndCopyrightsAndAuthors(pkg.id, result, actualScanResult, findings)
+        addLicensesAndCopyrightsAndAuthors(pkg.id, result, evaluatedScanResult, findings)
 
-        return actualScanResult
+        return evaluatedScanResult
     }
 
     private fun addDependencyTree(project: Project, pkg: EvaluatedPackage, deduplicateDependencyTree: Boolean) {
