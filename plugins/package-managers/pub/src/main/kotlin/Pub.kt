@@ -76,32 +76,26 @@ import org.ossreviewtoolkit.utils.ort.showStackTrace
 import org.semver4j.RangesList
 import org.semver4j.RangesListFactory
 
-private const val GRADLE_VERSION = "7.3"
+private const val DEFAULT_FLUTTER_VERSION = "3.19.3-stable"
+private const val DEFAULT_GRADLE_VERSION = "7.3"
 private const val PUBSPEC_YAML = "pubspec.yaml"
 private const val PUB_LOCK_FILE = "pubspec.lock"
 
 private val flutterCommand = if (Os.isWindows) "flutter.bat" else "flutter"
 private val dartCommand = if (Os.isWindows) "dart.bat" else "dart"
 
-private val flutterVersion = Os.env["FLUTTER_VERSION"] ?: "3.19.3-stable"
-private val flutterInstallDir = ortToolsDirectory.resolve("flutter-$flutterVersion")
-
-val flutterHome by lazy {
-    Os.getPathFromEnvironment(flutterCommand)?.realFile()?.parentFile?.parentFile
-        ?: Os.env["FLUTTER_HOME"]?.let { File(it) } ?: flutterInstallDir.resolve("flutter")
-}
-
-private val flutterAbsolutePath = flutterHome.resolve("bin")
-
 /**
  * The [Pub](https://pub.dev/) package manager for Dart / Flutter.
  *
- * This implementation is using the Pub version that is distributed with Flutter. If Flutter is not installed on the
- * system it is automatically downloaded and installed in the `~/.ort/tools` directory. The version of Flutter that is
- * automatically installed can be configured by setting the `FLUTTER_VERSION` environment variable.
+ * This implementation is using the Pub version distributed with Flutter. If Flutter is not installed on the system, it
+ * is automatically downloaded and installed in the `~/.ort/tools` directory. The version of Flutter that is
+ * automatically installed can be configured either by the `flutterVersion` package manager option (see below) or by
+ * setting the `FLUTTER_VERSION` environment variable.
  *
  * This package manager supports the following [options][PackageManagerConfiguration.options]:
- * - *gradleVersion*: The version of Gradle to use when analyzing Gradle projects. Defaults to [GRADLE_VERSION].
+ * - *flutterVersion*: The version to use when bootstrapping Flutter. If Flutter is already on the path, this option is
+ *   ignored.
+ * - *gradleVersion*: The version of Gradle to use when analyzing Gradle projects. Defaults to [DEFAULT_GRADLE_VERSION].
  * - *pubDependenciesOnly*: Only scan Pub dependencies and skip native ones for Android (Gradle) and iOS (CocoaPods).
  */
 @Suppress("TooManyFunctions")
@@ -112,6 +106,8 @@ class Pub(
     repoConfig: RepositoryConfiguration
 ) : PackageManager(name, analysisRoot, analyzerConfig, repoConfig), CommandLineTool {
     companion object {
+        const val OPTION_FLUTTER_VERSION = "flutterVersion"
+        const val OPTION_GRADLE_VERSION = "gradleVersion"
         const val OPTION_PUB_DEPENDENCIES_ONLY = "pubDependenciesOnly"
     }
 
@@ -125,6 +121,16 @@ class Pub(
         ) = Pub(type, analysisRoot, analyzerConfig, repoConfig)
     }
 
+    private val flutterVersion = options[OPTION_FLUTTER_VERSION] ?: Os.env["FLUTTER_VERSION"] ?: DEFAULT_FLUTTER_VERSION
+    private val flutterInstallDir = ortToolsDirectory.resolve("flutter-$flutterVersion")
+
+    private val flutterHome by lazy {
+        Os.getPathFromEnvironment(flutterCommand)?.realFile()?.parentFile?.parentFile
+            ?: Os.env["FLUTTER_HOME"]?.let { File(it) } ?: flutterInstallDir.resolve("flutter")
+    }
+
+    private val flutterAbsolutePath = flutterHome.resolve("bin")
+
     private val gradleFactory = PackageManagerFactory.ALL["Gradle"]
 
     private data class ParsePackagesResult(
@@ -132,7 +138,7 @@ class Pub(
         val issues: List<Issue>
     )
 
-    private val reader = PubCacheReader()
+    private val reader = PubCacheReader(flutterHome)
     private val gradleDefinitionFilesForPubDefinitionFiles = mutableMapOf<File, Set<File>>()
 
     private val pubDependenciesOnly = options[OPTION_PUB_DEPENDENCIES_ONLY].toBoolean()
@@ -439,7 +445,7 @@ class Pub(
         if (gradleFactory == null || !definitionFile.isFile) return emptyList()
 
         return analyzerResultCacheAndroid.getOrPut(packageName) {
-            val pubGradleVersion = options[gradleFactory.type] ?: GRADLE_VERSION
+            val pubGradleVersion = options[OPTION_GRADLE_VERSION] ?: DEFAULT_GRADLE_VERSION
 
             logger.info {
                 "Analyzing Android dependencies for package '$packageName' using Gradle version $pubGradleVersion."
