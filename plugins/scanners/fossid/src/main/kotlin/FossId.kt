@@ -467,7 +467,7 @@ class FossId internal constructor(
         val scanCodeAndId = if (existingScan == null) {
             logger.info { "No scan found for $url and revision $revision. Creating scan..." }
 
-            val scanCode = namingProvider.createScanCode(projectName)
+            val scanCode = namingProvider.createScanCode(projectName = projectName, branch = revision)
             val newUrl = urlProvider.getUrl(url)
             val scanId = createScan(projectCode, scanCode, newUrl, revision)
 
@@ -508,13 +508,7 @@ class FossId internal constructor(
         val vcs = requireNotNull(VersionControlSystem.forUrl(url))
 
         val defaultBranch = vcs.getDefaultBranchName(url)
-        logger.info {
-            if (defaultBranch != null) "Default branch is '$defaultBranch'." else "There is no default remote branch."
-        }
-
-        // If a scan for the default branch is created, put the default branch name in the scan code (the
-        // FossIdNamingProvider must also have a scan pattern that makes use of it).
-        val branchLabel = projectRevision.takeIf { defaultBranch == projectRevision }.orEmpty()
+        logger.info { "Default branch is '$defaultBranch'." }
 
         if (projectRevision == null) {
             logger.warn { "No project revision has been given." }
@@ -547,13 +541,13 @@ class FossId internal constructor(
             logger.info {
                 "No scan found for $mappedUrlWithoutCredentials and revision $revision. Creating origin scan..."
             }
-            namingProvider.createScanCode(projectName, DeltaTag.ORIGIN, branchLabel)
+            namingProvider.createScanCode(projectName, DeltaTag.ORIGIN, revision)
         } else {
             logger.info { "Scan '${existingScan.code}' found for $mappedUrlWithoutCredentials and revision $revision." }
             logger.info {
                 "Existing scan has for reference(s): ${existingScan.comment.orEmpty()}. Creating delta scan..."
             }
-            namingProvider.createScanCode(projectName, DeltaTag.DELTA, branchLabel)
+            namingProvider.createScanCode(projectName, DeltaTag.DELTA, revision)
         }
 
         val scanId = createScan(projectCode, scanCode, mappedUrl, revision, projectRevision.orEmpty())
