@@ -145,7 +145,8 @@ class LicenseInfoResolverTest : WordSpec({
                     ResolvedCopyrightFinding(
                         statement = "Copyright Apache-2.0",
                         location = TextLocation("LICENSE", 1),
-                        matchingPathExcludes = emptyList()
+                        matchingPathExcludes = emptyList(),
+                        findingType = ResolvedCopyrightSource.DETERMINED_BY_SCANNER
                     )
                 )
             )
@@ -163,7 +164,8 @@ class LicenseInfoResolverTest : WordSpec({
                     ResolvedCopyrightFinding(
                         statement = "Copyright MIT",
                         location = TextLocation("LICENSE", 31),
-                        matchingPathExcludes = emptyList()
+                        matchingPathExcludes = emptyList(),
+                        findingType = ResolvedCopyrightSource.DETERMINED_BY_SCANNER
                     )
                 )
             )
@@ -477,7 +479,8 @@ class LicenseInfoResolverTest : WordSpec({
                     ResolvedCopyrightFinding(
                         statement = "(c) 2010 Holder 1",
                         location = TextLocation("LICENSE", 1),
-                        matchingPathExcludes = emptyList()
+                        matchingPathExcludes = emptyList(),
+                        findingType = ResolvedCopyrightSource.DETERMINED_BY_SCANNER
                     )
                 )
             )
@@ -647,7 +650,8 @@ class LicenseInfoResolverTest : WordSpec({
                     ResolvedCopyrightFinding(
                         statement = "Copyright 2020 Holder",
                         location = TextLocation("LICENSE", 1),
-                        matchingPathExcludes = emptyList()
+                        matchingPathExcludes = emptyList(),
+                        findingType = ResolvedCopyrightSource.DETERMINED_BY_SCANNER
                     )
                 )
             )

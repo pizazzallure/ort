@@ -117,6 +117,12 @@ fun getLicenseText(
     licenseTextDirectories: List<File> = emptyList()
 ): String? = getLicenseTextReader(id, handleExceptions, addScanCodeLicenseTextsDir(licenseTextDirectories))?.invoke()
 
+fun hasLicenseText(
+    id: String,
+    handleExceptions: Boolean = false,
+    licenseTextDirectories: List<File> = emptyList()
+): Boolean = getLicenseTextReader(id, handleExceptions, addScanCodeLicenseTextsDir(licenseTextDirectories)) != null
+
 fun getLicenseTextReader(
     id: String,
     handleExceptions: Boolean = false,
@@ -135,6 +141,29 @@ fun getLicenseTextReader(
         SpdxLicense.forId(id.removeSuffix("+"))?.let { { it.text } }
             ?: SpdxLicenseException.forId(id)?.takeIf { handleExceptions }?.let { { it.text } }
     }
+}
+
+/**
+ * Retrieve the full text for the license with the provided SPDX [id] and if [licenseTextDirectories] is provided, the
+ * contained directories are searched in order for the license text.
+ */
+fun getCustomLicenseText(
+    id: String,
+    licenseTextDirectories: List<File> = emptyList()
+): String? = getCustomLicenseTextReader(id, licenseTextDirectories)?.invoke()
+
+fun hasCustomLicenseText(
+    id: String,
+    licenseTextDirectories: List<File> = emptyList()
+): Boolean = getCustomLicenseTextReader(id, licenseTextDirectories) != null
+
+fun getCustomLicenseTextReader(
+    id: String,
+    licenseTextDirectories: List<File> = emptyList()
+): (() -> String)? {
+    return licenseTextDirectories.asSequence().mapNotNull {
+        getLicenseTextFile(id, it)?.let { file -> { file.readText() } }
+    }.firstOrNull()
 }
 
 private fun getLicenseTextResource(id: String): URL? = object {}.javaClass.getResource("/licenserefs/$id")

@@ -59,8 +59,8 @@ data class ResolvedLicenseInfo(
      * All copyright findings that could not be matched to a license finding, mapped to the [Provenance] where they were
      * detected.
      */
-    val unmatchedCopyrights: Map<Provenance, Set<ResolvedCopyrightFinding>>
-) : Iterable<ResolvedLicense> by licenses {
+    val unmatchedCopyrights: Map<Provenance, Set<ResolvedCopyrightFinding>>,
+    ) : Iterable<ResolvedLicense> by licenses {
     operator fun get(license: SpdxSingleLicenseExpression): ResolvedLicense? = find { it.license == license }
 
     /**
@@ -136,6 +136,23 @@ data class ResolvedLicenseInfo(
      * [matching path excludes][ResolvedCopyrightFinding.matchingPathExcludes].
      */
     fun filterExcluded(): ResolvedLicenseInfo = copy(licenses = licenses.filterExcluded())
+}
+
+/**
+ * Source of resolved copyright finding
+ */
+enum class ResolvedCopyrightSource {
+    DETERMINED_BY_SCANNER,
+    SYNTHESIZED_FROM_AUTHOR,
+    PROVIDED_BY_CURATION;
+}
+
+/**
+ * Source of resolved author finding
+ */
+enum class ResolvedAuthorSource {
+    DETERMINED_BY_SCANNER,
+    PROVIDED_BY_CURATION;
 }
 
 /**

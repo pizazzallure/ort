@@ -19,15 +19,52 @@
 
 package org.ossreviewtoolkit.reporter
 
+import org.ossreviewtoolkit.utils.spdx.getCustomLicenseText
+import org.ossreviewtoolkit.utils.spdx.getCustomLicenseTextReader
+import org.ossreviewtoolkit.utils.spdx.getLicenseText
+import org.ossreviewtoolkit.utils.spdx.getLicenseTextReader
+import org.ossreviewtoolkit.utils.spdx.hasCustomLicenseText
+import org.ossreviewtoolkit.utils.spdx.hasLicenseText
 import java.io.File
 
-import org.ossreviewtoolkit.utils.spdx.getLicenseTextReader
+class DefaultLicenseTextProvider(private val licenseTextDirectories: List<File> = emptyList()) : LicenseTextProvider,
+    CustomLicenseTextProvider {
+    override fun getLicenseText(licenseId: String): String? =
+        getLicenseText(
+            id = licenseId,
+            handleExceptions = true,
+            licenseTextDirectories = licenseTextDirectories
+        )
 
-class DefaultLicenseTextProvider(private val licenseTextDirectories: List<File> = emptyList()) : LicenseTextProvider {
     override fun getLicenseTextReader(licenseId: String): (() -> String)? =
         getLicenseTextReader(
             id = licenseId,
             handleExceptions = true,
+            licenseTextDirectories = licenseTextDirectories
+        )
+
+    override fun hasLicenseText(licenseId: String): Boolean =
+        hasLicenseText(
+            id = licenseId,
+            handleExceptions = true,
+            licenseTextDirectories = licenseTextDirectories
+        )
+
+    override fun getCustomLicenseText(licenseId: String): String? =
+        getCustomLicenseText(
+            id = licenseId,
+            licenseTextDirectories = licenseTextDirectories
+        )
+
+    override fun getCustomLicenseTextReader(licenseId: String): (() -> String)? =
+        getCustomLicenseTextReader(
+            id = licenseId,
+            licenseTextDirectories = licenseTextDirectories
+        )
+
+    override fun hasCustomLicenseText(licenseId: String): Boolean =
+        hasCustomLicenseText(
+            id = licenseId,
             licenseTextDirectories = licenseTextDirectories
         )
 }

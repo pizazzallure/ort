@@ -100,7 +100,8 @@ class LicenseInfoResolver(
                             ResolvedCopyrightFinding(
                                 statement = copyrightHolder,
                                 location = UNDEFINED_TEXT_LOCATION,
-                                matchingPathExcludes = emptyList()
+                                matchingPathExcludes = emptyList(),
+                                findingType = ResolvedCopyrightSource.PROVIDED_BY_CURATION
                             )
                         }
                     )
@@ -133,7 +134,8 @@ class LicenseInfoResolver(
                             ResolvedCopyrightFinding(
                                 statement = statement,
                                 location = UNDEFINED_TEXT_LOCATION,
-                                matchingPathExcludes = emptyList()
+                                matchingPathExcludes = emptyList(),
+                                findingType = ResolvedCopyrightSource.PROVIDED_BY_CURATION
                             )
                         }
                     )
@@ -266,7 +268,10 @@ class LicenseInfoResolver(
                 it.matches(finding.location.prependedPath(relativeFindingsPath))
             }
 
-            ResolvedCopyrightFinding(finding.statement, finding.location, matchingPathExcludes)
+            ResolvedCopyrightFinding(
+                finding.statement, finding.location, matchingPathExcludes,
+                ResolvedCopyrightSource.DETERMINED_BY_SCANNER
+            )
         }
 
     private fun createLicenseFileInfo(id: Identifier): ResolvedLicenseFileInfo {
