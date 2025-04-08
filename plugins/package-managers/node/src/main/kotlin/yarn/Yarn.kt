@@ -19,54 +19,25 @@
 
 package org.ossreviewtoolkit.plugins.packagemanagers.node.yarn
 
-import java.io.File
-import java.lang.invoke.MethodHandles
-import java.util.concurrent.ConcurrentHashMap
-
-import kotlin.time.Duration.Companion.days
-
-import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.JsonElement
-import kotlinx.serialization.json.JsonObject
-import kotlinx.serialization.json.JsonPrimitive
-import kotlinx.serialization.json.decodeToSequence
-import kotlinx.serialization.json.jsonPrimitive
-
+import kotlinx.serialization.json.*
 import org.apache.logging.log4j.kotlin.logger
 import org.apache.logging.log4j.kotlin.loggerOf
-
 import org.ossreviewtoolkit.analyzer.PackageManagerFactory
-import org.ossreviewtoolkit.model.Identifier
-import org.ossreviewtoolkit.model.Issue
-import org.ossreviewtoolkit.model.Project
-import org.ossreviewtoolkit.model.ProjectAnalyzerResult
+import org.ossreviewtoolkit.model.*
 import org.ossreviewtoolkit.model.config.AnalyzerConfiguration
 import org.ossreviewtoolkit.model.config.Excludes
-import org.ossreviewtoolkit.model.createAndLogIssue
-import org.ossreviewtoolkit.model.readTree
 import org.ossreviewtoolkit.model.utils.DependencyGraphBuilder
 import org.ossreviewtoolkit.plugins.api.OrtPlugin
 import org.ossreviewtoolkit.plugins.api.PluginDescriptor
-import org.ossreviewtoolkit.plugins.packagemanagers.node.NodePackageManager
-import org.ossreviewtoolkit.plugins.packagemanagers.node.NodePackageManagerType
-import org.ossreviewtoolkit.plugins.packagemanagers.node.PackageJson
-import org.ossreviewtoolkit.plugins.packagemanagers.node.parsePackageJson
-import org.ossreviewtoolkit.plugins.packagemanagers.node.splitNamespaceAndName
-import org.ossreviewtoolkit.utils.common.CommandLineTool
-import org.ossreviewtoolkit.utils.common.DirectoryStash
-import org.ossreviewtoolkit.utils.common.DiskCache
-import org.ossreviewtoolkit.utils.common.Os
-import org.ossreviewtoolkit.utils.common.alsoIfNull
-import org.ossreviewtoolkit.utils.common.collectMessages
-import org.ossreviewtoolkit.utils.common.fieldNamesOrEmpty
-import org.ossreviewtoolkit.utils.common.isSymbolicLink
-import org.ossreviewtoolkit.utils.common.mebibytes
-import org.ossreviewtoolkit.utils.common.realFile
-import org.ossreviewtoolkit.utils.common.textValueOrEmpty
+import org.ossreviewtoolkit.plugins.packagemanagers.node.*
+import org.ossreviewtoolkit.utils.common.*
 import org.ossreviewtoolkit.utils.ort.ortDataDirectory
-
 import org.semver4j.RangesList
 import org.semver4j.RangesListFactory
+import java.io.File
+import java.lang.invoke.MethodHandles
+import java.util.concurrent.ConcurrentHashMap
+import kotlin.time.Duration.Companion.days
 
 private val yarnInfoCache = DiskCache(
     directory = ortDataDirectory.resolve("cache/analyzer/yarn/info"),
@@ -101,14 +72,16 @@ open class Yarn(override val descriptor: PluginDescriptor = YarnFactory.descript
     NodePackageManager(NodePackageManagerType.YARN) {
     override val globsForDefinitionFiles = listOf(NodePackageManagerType.DEFINITION_FILE)
 
-    private lateinit var stash: DirectoryStash
+    private lateinit var stash: NpmDirectoryStash
 
     /** Cache for submodules identified by its moduleDir absolutePath */
     private val submodulesCache = ConcurrentHashMap<String, Set<File>>()
 
     private val rawModuleInfoCache = mutableMapOf<Pair<File, Set<String>>, RawModuleInfo>()
 
-    override val graphBuilder by lazy { DependencyGraphBuilder(YarnDependencyHandler(this)) }
+    private val handler = YarnDependencyHandler(this)
+
+    override val graphBuilder by lazy { DependencyGraphBuilder(handler) }
 
     /**
      * Load the submodule directories of the project defined in [moduleDir].
@@ -136,7 +109,7 @@ open class Yarn(override val descriptor: PluginDescriptor = YarnFactory.descript
         YarnCommand.checkVersion()
 
         val directories = definitionFiles.mapTo(mutableSetOf()) { it.resolveSibling("node_modules") }
-        stash = DirectoryStash(directories)
+        stash = NpmDirectoryStash(directories)
     }
 
     override fun afterResolution(analysisRoot: File, definitionFiles: List<File>) {
@@ -151,7 +124,15 @@ open class Yarn(override val descriptor: PluginDescriptor = YarnFactory.descript
         labels: Map<String, String>
     ): List<ProjectAnalyzerResult> =
         try {
-            resolveDependenciesInternal(analysisRoot, definitionFile, excludes, analyzerConfig.allowDynamicVersions)
+            handler.excludes = excludes
+            handler.analysisRoot = analysisRoot
+
+            resolveDependenciesInternal(
+                analysisRoot,
+                definitionFile,
+                excludes,
+                analyzerConfig.allowDynamicVersions
+            )
         } finally {
             rawModuleInfoCache.clear()
         }
@@ -354,10 +335,11 @@ open class Yarn(override val descriptor: PluginDescriptor = YarnFactory.descript
         YarnCommand.run(workingDir, "install", "--ignore-scripts", "--ignore-engines", "--immutable").requireSuccess()
     }
 
-    internal fun getRemotePackageDetails(packageName: String): PackageJson? {
+    internal fun getRemotePackageDetails(packageName: String, analysisRoot: File?): PackageJson? {
         yarnInfoCache.read(packageName)?.also { return parsePackageJson(it) }
 
-        val process = YarnCommand.run("info", "--json", packageName).requireSuccess()
+        // run npm info command always under the code repo root folder, the npmrc file under root folder can be used. 
+        val process = YarnCommand.run(analysisRoot, "info", "--json", packageName).requireSuccess()
 
         return parseYarnInfo(process.stdout, process.stderr)?.also {
             yarnInfoCache.write(packageName, Json.encodeToString(it))

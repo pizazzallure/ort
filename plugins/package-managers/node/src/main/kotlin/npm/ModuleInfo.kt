@@ -22,10 +22,34 @@ package org.ossreviewtoolkit.plugins.packagemanagers.node.npm
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
+import org.ossreviewtoolkit.utils.common.Os
+import java.io.File
+import java.nio.file.Files
+import java.nio.file.LinkOption
+import java.nio.file.attribute.BasicFileAttributes
 
 private val JSON = Json { ignoreUnknownKeys = true }
 
 internal fun parseNpmList(json: String): ModuleInfo = JSON.decodeFromString(json)
+
+/**
+ * Only for NPM package manager to get the dependencies from workspace package.
+ */
+internal fun parseWorkspacePackageNpmList(json: String, packageName: String): ModuleInfo {
+    val moduleInfo: ModuleInfo = JSON.decodeFromString(json)
+    val workspacePackageModuleInfo = moduleInfo.dependencies.get(packageName)!!
+    return workspacePackageModuleInfo
+}
+
+fun File.isSymbolicLink(): Boolean =
+    runCatching {
+        // Note that we cannot use exists() to check beforehand whether a symbolic link exists to avoid a
+        // NoSuchFileException to be thrown as it returns "false" e.g. for dangling Windows junctions.
+        Files.readAttributes(toPath(), BasicFileAttributes::class.java, LinkOption.NOFOLLOW_LINKS).let {
+            it.isSymbolicLink || (Os.isWindows && it.isOther)
+        }
+    }.getOrDefault(false)
+
 
 /**
  * Module information for installed NPM packages.
@@ -61,3 +85,4 @@ internal data class ModuleInfo(
     /** The URI from where the package was resolved. Starts with "file:" for local packages. */
     val resolved: String? = null
 )
+

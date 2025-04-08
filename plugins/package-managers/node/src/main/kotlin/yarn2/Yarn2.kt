@@ -22,53 +22,31 @@ package org.ossreviewtoolkit.plugins.packagemanagers.node.yarn2
 import com.charleskorn.kaml.Yaml
 import com.charleskorn.kaml.YamlScalar
 import com.charleskorn.kaml.yamlMap
-
-import java.io.File
-
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
-
 import org.apache.logging.log4j.kotlin.logger
-
 import org.ossreviewtoolkit.analyzer.PackageManagerFactory
 import org.ossreviewtoolkit.analyzer.parseAuthorString
 import org.ossreviewtoolkit.downloader.VcsHost
 import org.ossreviewtoolkit.downloader.VersionControlSystem
-import org.ossreviewtoolkit.model.Hash
-import org.ossreviewtoolkit.model.Identifier
-import org.ossreviewtoolkit.model.Issue
-import org.ossreviewtoolkit.model.Package
-import org.ossreviewtoolkit.model.PackageLinkage
-import org.ossreviewtoolkit.model.Project
-import org.ossreviewtoolkit.model.ProjectAnalyzerResult
-import org.ossreviewtoolkit.model.RemoteArtifact
-import org.ossreviewtoolkit.model.Severity
-import org.ossreviewtoolkit.model.VcsInfo
+import org.ossreviewtoolkit.model.*
 import org.ossreviewtoolkit.model.config.AnalyzerConfiguration
 import org.ossreviewtoolkit.model.config.Excludes
-import org.ossreviewtoolkit.model.createAndLogIssue
 import org.ossreviewtoolkit.model.utils.DependencyGraphBuilder
 import org.ossreviewtoolkit.model.utils.DependencyHandler
 import org.ossreviewtoolkit.plugins.api.OrtPlugin
 import org.ossreviewtoolkit.plugins.api.OrtPluginOption
 import org.ossreviewtoolkit.plugins.api.PluginDescriptor
-import org.ossreviewtoolkit.plugins.packagemanagers.node.NodePackageManager
-import org.ossreviewtoolkit.plugins.packagemanagers.node.NodePackageManagerType
-import org.ossreviewtoolkit.plugins.packagemanagers.node.PackageJson
-import org.ossreviewtoolkit.plugins.packagemanagers.node.fixDownloadUrl
-import org.ossreviewtoolkit.plugins.packagemanagers.node.mapLicenses
-import org.ossreviewtoolkit.plugins.packagemanagers.node.parsePackageJson
-import org.ossreviewtoolkit.plugins.packagemanagers.node.parsePackageJsons
-import org.ossreviewtoolkit.plugins.packagemanagers.node.parseVcsInfo
-import org.ossreviewtoolkit.plugins.packagemanagers.node.splitNamespaceAndName
+import org.ossreviewtoolkit.plugins.packagemanagers.node.*
 import org.ossreviewtoolkit.utils.common.CommandLineTool
 import org.ossreviewtoolkit.utils.common.Os
 import org.ossreviewtoolkit.utils.ort.runBlocking
 import org.ossreviewtoolkit.utils.ort.showStackTrace
-
 import org.semver4j.RangesList
 import org.semver4j.RangesListFactory
+import java.io.File
+import kotlin.io.path.invariantSeparatorsPathString
 
 /**
  * The name of Yarn 2+ resource file.
@@ -113,9 +91,9 @@ internal class Yarn2Command(private val enableCorepack: Boolean?) : CommandLineT
     }
 
     override fun getVersion(workingDir: File?): String =
-        // `getVersion` with a `null` parameter is called once by the Analyzer to get the version of the global tool.
-        // For Yarn2+, the version is specific to each definition file being scanned therefore a global version doesn't
-        // apply.
+    // `getVersion` with a `null` parameter is called once by the Analyzer to get the version of the global tool.
+    // For Yarn2+, the version is specific to each definition file being scanned therefore a global version doesn't
+    // apply.
         // TODO: An alternative would be to collate the versions of all tools in `yarn2CommandsByPath`.
         if (workingDir == null) "" else super.getVersion(workingDir)
 
@@ -191,7 +169,8 @@ class Yarn2(override val descriptor: PluginDescriptor = Yarn2Factory.descriptor,
             moduleIds = packageHeaders.values.filterNot { it.isProject }.mapTo(mutableSetOf()) { it.moduleId }
         )
 
-        val allProjects = parseAllPackages(packageInfos, definitionFile, packageHeaders, packageDetails, excludes)
+        val allProjects =
+            parseAllPackages(packageInfos, definitionFile, packageHeaders, packageDetails, excludes, analysisRoot)
         val scopeNames = YarnDependencyType.entries.mapTo(mutableSetOf()) { it.type }
 
         return allProjects.values.map { project ->
@@ -271,7 +250,7 @@ class Yarn2(override val descriptor: PluginDescriptor = Yarn2Factory.descriptor,
                     logger.info { "Chunk #$index packages details have been fetched." }
 
                     packageJsons.map { packageJson ->
-                        processAdditionalPackageInfo(packageJson)
+                        processAdditionalPackageInfo(packageJson, false)
                     }
                 }
             }.awaitAll().flatten().associateBy { "${it.name}@${it.version}" }
@@ -290,13 +269,15 @@ class Yarn2(override val descriptor: PluginDescriptor = Yarn2Factory.descriptor,
         definitionFile: File,
         packagesHeaders: Map<String, PackageHeader>,
         packagesDetails: Map<String, AdditionalData>,
-        excludes: Excludes
+        excludes: Excludes,
+        analysisRoot: File
     ): Map<Identifier, Project> {
         val allDependencies = mutableMapOf<YarnDependencyType, MutableMap<Identifier, List<Identifier>>>()
         // Create packages for all modules found in the workspace and add them to the graph builder. They are reused
         // when they are referenced by scope dependencies.
         packageInfos.forEach { info ->
-            val dependencyMapping = parsePackage(info, definitionFile, packagesHeaders, packagesDetails)
+            val dependencyMapping =
+                parsePackage(info, definitionFile, packagesHeaders, packagesDetails, excludes, analysisRoot)
             dependencyMapping.forEach {
                 val mapping = allDependencies.getOrPut(it.key) { mutableMapOf() }
                 mapping += it.value
@@ -367,7 +348,9 @@ class Yarn2(override val descriptor: PluginDescriptor = Yarn2Factory.descriptor,
         packageInfo: PackageInfo,
         definitionFile: File,
         packagesHeaders: Map<String, PackageHeader>,
-        packagesDetails: Map<String, AdditionalData>
+        packagesDetails: Map<String, AdditionalData>,
+        excludes: Excludes,
+        analysisRoot: File
     ): Map<YarnDependencyType, Pair<Identifier, List<Identifier>>> {
         val value = packageInfo.value
         val header = packagesHeaders[value]
@@ -382,25 +365,46 @@ class Yarn2(override val descriptor: PluginDescriptor = Yarn2Factory.descriptor,
         var homepageUrl = manifest.homepage.orEmpty()
 
         val id = if (header.isProject) {
+            logger.debug("Workspace Header: $header")
+
             val version = packageInfo.children.version
             val projectFile = definitionFile.resolveSibling(header.version).resolve(definitionFile.name)
+            logger.debug("Workspace definition file: $projectFile, Root definition file: $definitionFile")
+
             val packageJson = parsePackageJson(projectFile)
-            val additionalData = processAdditionalPackageInfo(packageJson)
+            logger.debug("Workspace package json: $packageJson")
+
+            val additionalData = processAdditionalPackageInfo(
+                packageJson,
+                projectFile.canonicalFile.equals(definitionFile.canonicalFile)
+            )
             val authors = packageJson.authors
                 .flatMap { parseAuthorString(it.name) }
                 .mapNotNullTo(mutableSetOf()) { it.name }
 
             val id = Identifier("Yarn2", namespace, name, version)
-            allProjects += id to Project(
-                id = id.copy(type = projectType),
-                definitionFilePath = VersionControlSystem.getPathInfo(projectFile).path,
-                declaredLicenses = declaredLicenses,
-                vcs = additionalData.vcsFromPackage,
-                vcsProcessed = processProjectVcs(definitionFile.parentFile, additionalData.vcsFromPackage, homepageUrl),
-                description = additionalData.description,
-                homepageUrl = homepageUrl,
-                authors = authors
+
+            val isExcluded = excludes.isPathExcluded(
+                analysisRoot.toPath().relativize(projectFile.parentFile.toPath()).invariantSeparatorsPathString
             )
+
+            logger.debug("Workspace package is path excluded: $projectFile")
+            if (!isExcluded) {
+                allProjects += id to Project(
+                    id = id.copy(type = projectType),
+                    definitionFilePath = VersionControlSystem.getPathInfo(projectFile).path,
+                    declaredLicenses = declaredLicenses,
+                    vcs = additionalData.vcsFromPackage,
+                    vcsProcessed = processProjectVcs(
+                        definitionFile.parentFile,
+                        additionalData.vcsFromPackage,
+                        homepageUrl
+                    ),
+                    description = additionalData.description,
+                    homepageUrl = homepageUrl,
+                    authors = authors
+                )
+            }
             id
         } else {
             val version = header.version.cleanVersionString()
@@ -426,7 +430,7 @@ class Yarn2(override val descriptor: PluginDescriptor = Yarn2Factory.descriptor,
                 vcsFromPackage = vcsFromPackage.merge(details.vcsFromDownloadUrl)
             }
 
-            val id = Identifier("NPM", namespace, name, details.version)
+            val id = Identifier("NPM", namespace, name, details.version ?: "")
             val pkg = Package(
                 id = id,
                 authors = authors,
@@ -456,7 +460,15 @@ class Yarn2(override val descriptor: PluginDescriptor = Yarn2Factory.descriptor,
 
         val dependencies = processDependencies(packageInfo.children.dependencies)
 
-        val dependencyToType = listDependenciesByType(definitionFile)
+        // if the current package info is a project, e.g. workspace package
+        // it should list the dependencies from the current project file, not always the root project file.
+        var dependencyToType = emptyMap<String, YarnDependencyType>()
+        if (header.isProject) {
+            val projectFile = definitionFile.resolveSibling(header.version).resolve(definitionFile.name)
+            dependencyToType = listDependenciesByType(projectFile)
+        } else {
+            dependencyToType = listDependenciesByType(definitionFile)
+        }
 
         // Sort all dependencies per scope. Notice that the logic is somehow lenient: If a dependency is not found
         // in this scope, it falls back in the 'dependencies' scope. This is due to the fact that the detection of
@@ -465,8 +477,17 @@ class Yarn2(override val descriptor: PluginDescriptor = Yarn2Factory.descriptor,
 
         return YarnDependencyType.entries.associateWith { dependencyType ->
             id to dependencies.filter {
-                dependencyToType[it.name] == dependencyType
-                    || (it.name !in dependencyToType && dependencyType == YarnDependencyType.DEPENDENCIES)
+                var fullName = it.name
+
+                // the "dependencyToType" is a key-value map for all dependencies defined in package.json file.
+                // the key format in "dependencyToType" is combined with namespace and name, e.g.  key :  @angular/animations
+                // so, to find the matched dependency, the dependency name is not enough to match, the namespace should be also considered.
+                if (it.namespace.isNotEmpty()) {
+                    fullName = it.namespace + "/" + it.name
+                }
+
+                dependencyToType[fullName] == dependencyType
+                    || (fullName !in dependencyToType && dependencyType == YarnDependencyType.DEPENDENCIES)
             }
         }
     }
@@ -489,8 +510,25 @@ class Yarn2(override val descriptor: PluginDescriptor = Yarn2Factory.descriptor,
 
             val dependencyPkg = allPackages[dependencyId]
             if (dependencyPkg == null) {
-                logger.warn { "Could not find package for sub dependency '$dependencyId' of package '$id'." }
-                null
+                // in case, the dependency is the workspace package, workspace package represent a project
+                // check if the dependency is a workspace package, add workspace package as dependency
+                val filterProjects = allProjects.values.filter { project: Project ->
+                    project.id.name.equals(dependencyId.name)
+                        && project.id.namespace.equals(dependencyId.namespace)
+                        && project.id.type.equals(dependencyId.type)
+                }
+                if (filterProjects.isNotEmpty()) {
+                    val dependencyAsProject = filterProjects[0]
+                    val projectPkg = dependencyAsProject.toPackage()
+                    val subDependencies = projectPkg.collectDependencies(
+                        allDependencies,
+                        ancestorPackageIds + dependencyId
+                    )
+                    YarnModuleInfo(dependencyId, null, subDependencies)
+                } else {
+                    logger.warn { "Could not find package for sub dependency '$dependencyId' of package '$id', or the package is a workspace package which is path excluded." }
+                    null
+                }
             } else {
                 val subDependencies = dependencyPkg.collectDependencies(
                     allDependencies,
@@ -505,15 +543,21 @@ class Yarn2(override val descriptor: PluginDescriptor = Yarn2Factory.descriptor,
      * Process the [packageJson] coming from `yarn npm info` for a given package and return a populated
      * [AdditionalData].
      */
-    private fun processAdditionalPackageInfo(packageJson: PackageJson): AdditionalData {
-        val name = checkNotNull(packageJson.name)
-        val version = checkNotNull(packageJson.version)
+    private fun processAdditionalPackageInfo(packageJson: PackageJson, isRootProject: Boolean): AdditionalData {
+        // for root project package.json file, the name and version is not mandatory in some yarn2 code repository
+        val name = if (isRootProject) packageJson.name else checkNotNull(packageJson.name)
+        val version = if (isRootProject) packageJson.version else checkNotNull(packageJson.version)
+        if (name == null || version == null) {
+            logger.warn("The name or version is missing package.json file, package json: $packageJson")
+        }
+
         val description = packageJson.description.orEmpty()
         val vcsFromPackage = parseVcsInfo(packageJson)
         val homepage = packageJson.homepage.orEmpty()
         val authors = packageJson.authors
-            .flatMap { parseAuthorString(it.name) }
+            .flatMap { parseAuthorString(it.name?.takeIf { it.isNotBlank() } ?: it.email) }
             .mapNotNullTo(mutableSetOf()) { it.name }
+
         val downloadUrl = packageJson.dist?.tarball.orEmpty().fixDownloadUrl()
 
         val hash = Hash.create(packageJson.dist?.shasum.orEmpty())
@@ -551,26 +595,38 @@ class Yarn2(override val descriptor: PluginDescriptor = Yarn2Factory.descriptor,
             val locatorVersion = locatorMatcher.groupValues[3]
 
             val (locatorNamespace, locatorName) = splitNamespaceAndName(locatorRawName)
-            val version = locatorVersion.cleanVersionString()
+            var version = locatorVersion.cleanVersionString()
 
             val identifierType = if ("workspace" in locatorType) "Yarn2" else "NPM"
-            when {
-                // Prevent @virtual dependencies because they are internal to Yarn.
-                // See https://yarnpkg.com/features/protocols
-                "virtual" in locatorType -> null
 
-                else -> {
-                    runCatching {
-                        Identifier(identifierType, locatorNamespace, locatorName, version)
-                    }.onFailure {
-                        it.showStackTrace()
-                        issues += createAndLogIssue(
-                            "Cannot build identifier for dependency '$locator.'",
-                            Severity.ERROR
-                        )
-                    }.getOrNull()
+            // The "virtual" dependency package can be defined as dependencies in package.json file,
+            // do not prevent virtual dependencies to create package Identifier.
+
+            //  "virtual" package, the version format could be following:
+            //  e.g. "86d66680764c6ad1191a3abe5b400064390db4f17fee921c6396364552098d2dffaa63f4d8b0b3acb60fa132642222168fa0f83717491679b161cb955d9496bc#npm%3A14.1.2"
+            // further parsing the actual version which is the string after "%3A", e.g.  "4.1.2"
+            if (locatorType.equals("virtual")) {
+                val parts = version.split("%3A")
+                if (parts.isNotEmpty()) {
+                    version = parts.last()
                 }
             }
+
+
+            if ("virtual".equals(locatorType)) {
+                logger.log(Severity.HINT.toLog4jLevel()) { "virtual dependency package is founded:  '$locator.'" }
+            }
+
+            runCatching {
+                Identifier(identifierType, locatorNamespace, locatorName, version)
+            }.onFailure {
+                it.showStackTrace()
+                issues += createAndLogIssue(
+                    "Cannot build identifier for dependency '$locator.'",
+                    Severity.ERROR
+                )
+            }.getOrNull()
+
         }.toList()
 }
 
@@ -619,8 +675,10 @@ private val PackageHeader.moduleId: String get() = "$rawName@${version.cleanVers
  * Class containing additional data returned by `yarn npm info`.
  */
 private data class AdditionalData(
-    val name: String,
-    val version: String,
+    // for root project package.json file, the name is not mandatory
+    val name: String?,
+    // for root project package.json file, the version is not mandatory
+    val version: String?,
     val description: String,
     val vcsFromPackage: VcsInfo,
     val vcsFromDownloadUrl: VcsInfo,

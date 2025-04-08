@@ -19,25 +19,25 @@
 
 package org.ossreviewtoolkit.plugins.packagemanagers.node.pnpm
 
-import java.io.File
-
 import org.ossreviewtoolkit.model.Identifier
 import org.ossreviewtoolkit.model.Issue
 import org.ossreviewtoolkit.model.Package
 import org.ossreviewtoolkit.model.PackageLinkage
+import org.ossreviewtoolkit.model.config.Excludes
 import org.ossreviewtoolkit.model.utils.DependencyHandler
-import org.ossreviewtoolkit.plugins.packagemanagers.node.GetPackageDetailsFun
-import org.ossreviewtoolkit.plugins.packagemanagers.node.NodePackageManagerType
-import org.ossreviewtoolkit.plugins.packagemanagers.node.PackageJson
-import org.ossreviewtoolkit.plugins.packagemanagers.node.parsePackage
-import org.ossreviewtoolkit.plugins.packagemanagers.node.parsePackageJson
+import org.ossreviewtoolkit.plugins.packagemanagers.node.*
 import org.ossreviewtoolkit.plugins.packagemanagers.node.pnpm.ModuleInfo.Dependency
 import org.ossreviewtoolkit.utils.common.realFile
+import java.io.File
+import kotlin.io.path.invariantSeparatorsPathString
 
 internal class PnpmDependencyHandler(
     private val projectType: String,
     private val getPackageDetails: GetPackageDetailsFun
 ) : DependencyHandler<Dependency> {
+    lateinit var analysisRoot: File
+    lateinit var excludes: Excludes
+
     private val workspaceModuleDirs = mutableSetOf<File>()
     private val packageJsonCache = mutableMapOf<File, PackageJson>()
 
@@ -63,8 +63,21 @@ internal class PnpmDependencyHandler(
         return Identifier(type, namespace, name, version)
     }
 
-    override fun dependenciesFor(dependency: Dependency): List<Dependency> =
-        (dependency.dependencies + dependency.optionalDependencies).values.filter { it.isInstalled }
+    override fun dependenciesFor(dependency: Dependency): List<Dependency> {
+        val dependencies = (dependency.dependencies + dependency.optionalDependencies).values.filterNot { entry ->
+            // find path excluded workspace package
+            if (entry.isProject()) {
+                excludes.isPathExcluded(
+                    analysisRoot.toPath()
+                        .relativize(entry.workingDir.toPath().normalize()).invariantSeparatorsPathString
+                )
+            } else {
+                false
+            }
+        }
+
+        return dependencies.filter { it.isInstalled }
+    }
 
     override fun linkageFor(dependency: Dependency): PackageLinkage =
         PackageLinkage.DYNAMIC.takeUnless { dependency.isProject() } ?: PackageLinkage.PROJECT_DYNAMIC

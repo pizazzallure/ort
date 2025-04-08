@@ -19,16 +19,16 @@
 
 package org.ossreviewtoolkit.plugins.packagemanagers.node.npm
 
-import java.io.File
-import java.util.LinkedList
-
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.withContext
-
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.jsonObject
+import org.apache.commons.lang3.StringUtils
 import org.apache.logging.log4j.kotlin.logger
-
 import org.ossreviewtoolkit.analyzer.PackageManagerFactory
 import org.ossreviewtoolkit.model.Issue
 import org.ossreviewtoolkit.model.Project
@@ -40,20 +40,15 @@ import org.ossreviewtoolkit.model.utils.DependencyGraphBuilder
 import org.ossreviewtoolkit.plugins.api.OrtPlugin
 import org.ossreviewtoolkit.plugins.api.OrtPluginOption
 import org.ossreviewtoolkit.plugins.api.PluginDescriptor
-import org.ossreviewtoolkit.plugins.packagemanagers.node.NodePackageManager
-import org.ossreviewtoolkit.plugins.packagemanagers.node.NodePackageManagerType
-import org.ossreviewtoolkit.plugins.packagemanagers.node.PackageJson
-import org.ossreviewtoolkit.plugins.packagemanagers.node.parsePackageJson
-import org.ossreviewtoolkit.utils.common.CommandLineTool
-import org.ossreviewtoolkit.utils.common.DirectoryStash
-import org.ossreviewtoolkit.utils.common.Os
-import org.ossreviewtoolkit.utils.common.ProcessCapture
-import org.ossreviewtoolkit.utils.common.collectMessages
-import org.ossreviewtoolkit.utils.common.withoutPrefix
+import org.ossreviewtoolkit.plugins.packagemanagers.node.*
+import org.ossreviewtoolkit.plugins.packagemanagers.node.yarn.WorkspacePackage
+import org.ossreviewtoolkit.utils.common.*
 import org.ossreviewtoolkit.utils.ort.runBlocking
-
 import org.semver4j.RangesList
 import org.semver4j.RangesListFactory
+import java.io.File
+import java.util.*
+import kotlin.io.path.invariantSeparatorsPathString
 
 internal object NpmCommand : CommandLineTool {
     override fun command(workingDir: File?) = if (Os.isWindows) "npm.cmd" else "npm"
@@ -86,7 +81,7 @@ class Npm(override val descriptor: PluginDescriptor = NpmFactory.descriptor, pri
 
     override val globsForDefinitionFiles = listOf(NodePackageManagerType.DEFINITION_FILE)
 
-    private lateinit var stash: DirectoryStash
+    private lateinit var stash: NpmDirectoryStash
 
     private val npmViewCache = mutableMapOf<String, PackageJson>()
     private val handler = NpmDependencyHandler(projectType, this::getRemotePackageDetails)
@@ -101,10 +96,18 @@ class Npm(override val descriptor: PluginDescriptor = NpmFactory.descriptor, pri
         NpmCommand.checkVersion()
 
         val directories = definitionFiles.mapTo(mutableSetOf()) { it.resolveSibling("node_modules") }
-        stash = DirectoryStash(directories)
+        stash = NpmDirectoryStash(directories)
+
+        // sort the definition files list by the workspace.
+        // the sorting can make sure that the project which contains workspaces configuration will be processed first,
+        // the workspace packages can be positioned from the symbol link folder inside the node_modules dir of parent project.
+        sortByWorkspaces(definitionFiles)
     }
 
     override fun afterResolution(analysisRoot: File, definitionFiles: List<File>) {
+        // clean up after resolve all definition files
+        handler.workspacePackagesCache.clear()
+
         stash.close()
     }
 
@@ -130,7 +133,22 @@ class Npm(override val descriptor: PluginDescriptor = NpmFactory.descriptor, pri
         }
 
         val project = parseProject(definitionFile, analysisRoot)
-        val projectModuleInfo = listModules(workingDir, issues).undoDeduplication()
+        var packageNameWithNamespace =
+            if (StringUtils.isNotEmpty(project.id.namespace)) project.id.namespace + "/" + project.id.name else project.id.name
+        val workspacePackage = handler.workspacePackagesCache.firstOrNull { workspacePackage ->
+            workspacePackage.workspaceName.equals(packageNameWithNamespace)
+        }
+        val dependencyToType = listDependenciesByType(definitionFile)
+        val projectModuleInfo =
+            listModules(
+                workingDir,
+                issues,
+                project,
+                workspacePackage != null,
+                dependencyToType,
+                analysisRoot,
+                excludes
+            ).undoDeduplication()
 
         // Warm-up the cache to speed-up processing.
         requestAllPackageDetails(projectModuleInfo)
@@ -152,11 +170,59 @@ class Npm(override val descriptor: PluginDescriptor = NpmFactory.descriptor, pri
         ).let { listOf(it) }
     }
 
-    private fun listModules(workingDir: File, issues: MutableList<Issue>): ModuleInfo {
+    private fun listModules(
+        workingDir: File,
+        issues: MutableList<Issue>,
+        project: Project,
+        isWorkspacePackage: Boolean,
+        dependencyToType: Map<String, NpmDependencyType>,
+        analysisRoot: File,
+        excludes: Excludes
+    ): ModuleInfo {
+        // IMPORTANT:
+        // the npm list command will build a complete dependency graph tree,
+        // even the workspace package is not the dependencies of parent project, the npm list result also treat the workspace package as dependencies.
+        // therefore the json output need to be further filtered.
+
+        var packageNameWithNamespace =
+            if (StringUtils.isNotEmpty(project.id.namespace)) project.id.namespace + "/" + project.id.name else project.id.name
+
         val listProcess = NpmCommand.run(workingDir, "list", "--depth", "Infinity", "--json", "--long")
         issues += listProcess.extractNpmIssues()
 
-        return parseNpmList(listProcess.stdout)
+        var module = if (isWorkspacePackage) parseWorkspacePackageNpmList(
+            listProcess.stdout,
+            packageNameWithNamespace
+        ) else parseNpmList(listProcess.stdout)
+
+        val filterDependencies = module.dependencies.filterNot { dependency ->
+            // filter the dependencies
+            // 1. filter path excluded dependencies
+            // 2. filter the workspace packages which are not the dependencies of parent project
+
+            val file = File(dependency.value.path)
+            var path = file.toPath()
+            if (file.isSymbolicLink()) {
+                // for workspace symbol link folder in node_modules, get the actual folder path
+                if (dependency.value.path != null) {
+                    val file = File(dependency.value.path).realFile()
+                    path = file.toPath()
+                    val cacheWorkspacePackage =
+                        handler.workspacePackagesCache.firstOrNull { it -> it.workspaceName.equals(dependency.key) }
+                    if (cacheWorkspacePackage == null) {
+                        val wpk = WorkspacePackage(dependency.key, file, workingDir)
+                        logger.info("The workspace package is added into workspace package cache, workspace package : $wpk")
+                        handler.workspacePackagesCache.add(wpk)
+                    }
+                }
+            }
+
+            excludes.isPathExcluded(analysisRoot.toPath().relativize(path).invariantSeparatorsPathString)
+                || !dependencyToType.containsKey(dependency.key)
+        }
+
+        // Return a new ModuleInfo with filtered dependencies
+        return module.copy(dependencies = filterDependencies)
     }
 
     internal fun getRemotePackageDetails(packageName: String): PackageJson? {
@@ -350,3 +416,61 @@ internal fun ProcessCapture.extractNpmIssues(): List<Issue> {
 
     return issues
 }
+
+// Function to sort the list of package.json files, placing those with a non-empty "workspaces" field first
+fun sortByWorkspaces(files: List<File>): List<File> {
+    return files.sortedWith { file1, file2 ->
+        val hasWorkspaces1 = hasNonEmptyWorkspacesConfig(file1)
+        val hasWorkspaces2 = hasNonEmptyWorkspacesConfig(file2)
+
+        when {
+            hasWorkspaces1 && !hasWorkspaces2 -> -1  // file1 should come first
+            !hasWorkspaces1 && hasWorkspaces2 -> 1   // file2 should come first
+            else -> 0  // Maintain relative order if both or neither have "workspaces"
+        }
+    }
+}
+
+
+// Function to check if a given package.json file has a non-empty "workspaces" configuration
+fun hasNonEmptyWorkspacesConfig(file: File): Boolean {
+    return try {
+        val jsonText = file.readText()
+        val jsonElement = Json.parseToJsonElement(jsonText)
+        val jsonObject = jsonElement.jsonObject
+        val workspaces = jsonObject["workspaces"]
+
+        // Check if "workspaces" exists and is not empty
+        workspaces != null && when (workspaces) {
+            is JsonArray -> workspaces.isNotEmpty()
+            is JsonObject -> workspaces.keys.isNotEmpty()
+            else -> false
+        }
+    } catch (e: Exception) {
+        false  // If there's an error parsing the JSON, return false
+    }
+}
+
+private enum class NpmDependencyType(val type: String) {
+    DEPENDENCIES("dependencies"),
+    DEV_DEPENDENCIES("devDependencies")
+}
+
+private fun listDependenciesByType(definitionFile: File): Map<String, NpmDependencyType> {
+    val packageJson = parsePackageJson(definitionFile)
+    val result = mutableMapOf<String, NpmDependencyType>()
+
+    NpmDependencyType.entries.forEach { dependencyType ->
+        packageJson.getScopeDependencies(dependencyType).keys.forEach {
+            result += it to dependencyType
+        }
+    }
+
+    return result
+}
+
+private fun PackageJson.getScopeDependencies(type: NpmDependencyType) =
+    when (type) {
+        NpmDependencyType.DEPENDENCIES -> dependencies
+        NpmDependencyType.DEV_DEPENDENCIES -> devDependencies
+    }

@@ -23,17 +23,45 @@ import org.ossreviewtoolkit.model.Identifier
 import org.ossreviewtoolkit.model.Issue
 import org.ossreviewtoolkit.model.Package
 import org.ossreviewtoolkit.model.PackageLinkage
+import org.ossreviewtoolkit.model.config.Excludes
 import org.ossreviewtoolkit.model.utils.DependencyHandler
 import org.ossreviewtoolkit.plugins.packagemanagers.node.parsePackage
+import org.ossreviewtoolkit.utils.common.isSymbolicLink
+import org.ossreviewtoolkit.utils.common.realFile
+import java.io.File
+import kotlin.io.path.invariantSeparatorsPathString
 
-internal class YarnDependencyHandler(private val yarn: Yarn) : DependencyHandler<ModuleInfo> {
+internal class YarnDependencyHandler(
+    private val yarn: Yarn
+) : DependencyHandler<ModuleInfo> {
+    lateinit var analysisRoot: File
+    lateinit var excludes: Excludes
+
     override fun identifierFor(dependency: ModuleInfo): Identifier = dependency.id
 
-    override fun dependenciesFor(dependency: ModuleInfo): List<ModuleInfo> = dependency.dependencies.toList()
+    override fun dependenciesFor(dependency: ModuleInfo): List<ModuleInfo> {
+        val dependencies = dependency.dependencies.filterNot { entry ->
+            // find path excluded workspace package
+            if (entry.isProject && entry.workingDir.isSymbolicLink()) {
+                excludes.isPathExcluded(
+                    analysisRoot.toPath()
+                        .relativize(entry.workingDir.realFile().toPath().normalize()).invariantSeparatorsPathString
+                )
+            } else {
+                false
+            }
+        }
+        return dependencies.toList()
+    }
 
     override fun linkageFor(dependency: ModuleInfo): PackageLinkage =
         PackageLinkage.DYNAMIC.takeUnless { dependency.isProject } ?: PackageLinkage.PROJECT_DYNAMIC
 
-    override fun createPackage(dependency: ModuleInfo, issues: MutableCollection<Issue>): Package? =
-        if (dependency.isProject) null else parsePackage(dependency.packageFile, yarn::getRemotePackageDetails)
+    override fun createPackage(dependency: ModuleInfo, issues: MutableCollection<Issue>): Package? {
+        return if (dependency.isProject) {
+            null
+        } else {
+            parsePackage(dependency.packageFile) { yarn.getRemotePackageDetails(it, analysisRoot) }
+        }
+    }
 }

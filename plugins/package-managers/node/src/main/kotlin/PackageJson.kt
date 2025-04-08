@@ -19,29 +19,15 @@
 
 package org.ossreviewtoolkit.plugins.packagemanagers.node
 
-import java.io.File
-
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.SerializationException
-import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.JsonArray
-import kotlinx.serialization.json.JsonElement
-import kotlinx.serialization.json.JsonObject
-import kotlinx.serialization.json.JsonPrimitive
-import kotlinx.serialization.json.JsonTransformingSerializer
-import kotlinx.serialization.json.contentOrNull
-import kotlinx.serialization.json.decodeFromJsonElement
-import kotlinx.serialization.json.decodeToSequence
-import kotlinx.serialization.json.encodeToJsonElement
-import kotlinx.serialization.json.jsonArray
-import kotlinx.serialization.json.jsonObject
-import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.*
 import kotlinx.serialization.serializer
-
 import org.ossreviewtoolkit.analyzer.parseAuthorString
 import org.ossreviewtoolkit.plugins.packagemanagers.node.PackageJson.Author
 import org.ossreviewtoolkit.plugins.packagemanagers.node.PackageJson.Repository
+import java.io.File
 
 private val JSON = Json { ignoreUnknownKeys = true }
 
@@ -124,7 +110,12 @@ data class PackageJson(
 ) {
     @Serializable
     data class Author(
-        val name: String,
+        /**
+         * Normally name should be provided.
+         * for exception case, the name could be empty in some package, only email provided, e.g. react-hook-form
+         * the name will be replaced by email in the report.
+         */
+        val name: String? = null,
         val email: String? = null,
         val url: String? = null
     )
@@ -157,8 +148,8 @@ private object AuthorListSerializer : JsonTransformingSerializer<List<Author>>(s
 
             is JsonPrimitive -> {
                 parseAuthorString(contentOrNull)
-                    .filter { it.name != null }
-                    .map { Author(checkNotNull(it.name), it.email, it.homepage) }
+                    .filter { it.name != null || it.email != null }
+                    .map { Author(it.name?.takeIf { it.isNotBlank() } ?: it.email, it.email, it.homepage) }
                     .map { JSON.encodeToJsonElement(it) }
             }
 

@@ -19,10 +19,7 @@
 
 package org.ossreviewtoolkit.plugins.packagemanagers.node.pnpm
 
-import java.io.File
-
 import org.apache.logging.log4j.kotlin.logger
-
 import org.ossreviewtoolkit.analyzer.PackageManagerFactory
 import org.ossreviewtoolkit.model.ProjectAnalyzerResult
 import org.ossreviewtoolkit.model.config.AnalyzerConfiguration
@@ -30,17 +27,14 @@ import org.ossreviewtoolkit.model.config.Excludes
 import org.ossreviewtoolkit.model.utils.DependencyGraphBuilder
 import org.ossreviewtoolkit.plugins.api.OrtPlugin
 import org.ossreviewtoolkit.plugins.api.PluginDescriptor
-import org.ossreviewtoolkit.plugins.packagemanagers.node.NodePackageManager
-import org.ossreviewtoolkit.plugins.packagemanagers.node.NodePackageManagerType
-import org.ossreviewtoolkit.plugins.packagemanagers.node.PackageJson
-import org.ossreviewtoolkit.plugins.packagemanagers.node.parsePackageJson
+import org.ossreviewtoolkit.plugins.packagemanagers.node.*
 import org.ossreviewtoolkit.utils.common.CommandLineTool
-import org.ossreviewtoolkit.utils.common.DirectoryStash
 import org.ossreviewtoolkit.utils.common.Os
 import org.ossreviewtoolkit.utils.common.nextOrNull
-
 import org.semver4j.RangesList
 import org.semver4j.RangesListFactory
+import java.io.File
+import kotlin.io.path.invariantSeparatorsPathString
 
 internal object PnpmCommand : CommandLineTool {
     override fun command(workingDir: File?) = if (Os.isWindows) "pnpm.cmd" else "pnpm"
@@ -61,7 +55,7 @@ class Pnpm(override val descriptor: PluginDescriptor = PnpmFactory.descriptor) :
     NodePackageManager(NodePackageManagerType.PNPM) {
     override val globsForDefinitionFiles = listOf(NodePackageManagerType.DEFINITION_FILE)
 
-    private lateinit var stash: DirectoryStash
+    private lateinit var stash: NpmDirectoryStash
 
     private val packageDetailsCache = mutableMapOf<String, PackageJson>()
     private val handler = PnpmDependencyHandler(projectType, this::getRemotePackageDetails)
@@ -76,7 +70,7 @@ class Pnpm(override val descriptor: PluginDescriptor = PnpmFactory.descriptor) :
         PnpmCommand.checkVersion()
 
         val directories = definitionFiles.mapTo(mutableSetOf()) { it.resolveSibling("node_modules") }
-        stash = DirectoryStash(directories)
+        stash = NpmDirectoryStash(directories)
     }
 
     override fun afterResolution(analysisRoot: File, definitionFiles: List<File>) {
@@ -93,13 +87,33 @@ class Pnpm(override val descriptor: PluginDescriptor = PnpmFactory.descriptor) :
         val workingDir = definitionFile.parentFile
         installDependencies(workingDir)
 
-        val workspaceModuleDirs = getWorkspaceModuleDirs(workingDir)
+        var workspaceModuleInfoList = getProjectWorkspaceModules(workingDir)
+        val workspaceModuleDirs = workspaceModuleInfoList.mapTo(mutableSetOf()) { File(it.path) }
         handler.setWorkspaceModuleDirs(workspaceModuleDirs)
 
-        val scopes = Scope.entries.filterNot { scope -> excludes.isScopeExcluded(scope.descriptor) }
-        val moduleInfosForScope = scopes.associateWith { scope -> listModules(workingDir, scope) }
+        // filter the workspace which is pathExcluded.
+        var filteredWorkspaceModuleInfoList = workspaceModuleInfoList.filterNot {
+            excludes.isPathExcluded(
+                analysisRoot.toPath()
+                    .relativize(File(it.path).toPath())
+                    .invariantSeparatorsPathString
+            )
+        }
 
-        return workspaceModuleDirs.map { projectDir ->
+        val scopes = Scope.entries.filterNot { scope -> excludes.isScopeExcluded(scope.descriptor) }
+        val moduleInfosForScope =
+            scopes.associateWith { scope ->
+                listModules(
+                    workingDir,
+                    scope,
+                    filteredWorkspaceModuleInfoList,
+                    analysisRoot,
+                    excludes
+                )
+            }
+
+        return filteredWorkspaceModuleInfoList.mapNotNull { moduleInfo ->
+            var projectDir = File(moduleInfo.path)
             val packageJsonFile = projectDir.resolve(NodePackageManagerType.DEFINITION_FILE)
             val project = parseProject(packageJsonFile, analysisRoot)
 
@@ -120,24 +134,62 @@ class Pnpm(override val descriptor: PluginDescriptor = PnpmFactory.descriptor) :
         }
     }
 
-    private fun getWorkspaceModuleDirs(workingDir: File): Set<File> {
+    private fun getProjectWorkspaceModules(workingDir: File): List<ModuleInfo> {
         val json = PnpmCommand.run(workingDir, "list", "--json", "--only-projects", "--recursive").requireSuccess()
             .stdout
 
         val listResult = parsePnpmList(json)
-        return listResult.findModulesFor(workingDir).mapTo(mutableSetOf()) { File(it.path) }
+        return listResult.findModulesFor(workingDir)
     }
 
-    private fun listModules(workingDir: File, scope: Scope): List<ModuleInfo> {
+    private fun listModules(
+        workingDir: File,
+        scope: Scope,
+        workspaceModuleInfoList: List<ModuleInfo>,
+        analysisRoot: File,
+        excludes: Excludes
+    ): List<ModuleInfo> {
         val scopeOption = when (scope) {
             Scope.DEPENDENCIES -> "--prod"
             Scope.DEV_DEPENDENCIES -> "--dev"
         }
 
-        val json = PnpmCommand.run(workingDir, "list", "--json", "--recursive", "--depth", "Infinity", scopeOption)
-            .requireSuccess().stdout
+        return workspaceModuleInfoList.flatMap { moduleInfo ->
+            logger.info("Reading dependencies tree for module: ${moduleInfo.name}...")
 
-        return parsePnpmList(json).flatten().toList()
+            val json = if (workingDir == File(moduleInfo.path)) {
+                PnpmCommand.run(workingDir, "list", "--json", "--depth", "Infinity", "--filter", ".", scopeOption)
+                    .requireSuccess().stdout
+            } else {
+                moduleInfo.name?.let {
+                    PnpmCommand.run(workingDir, "list", "--json", "--recursive", "--depth", "Infinity", scopeOption)
+                        .requireSuccess().stdout
+                } ?: "" // Ensure json is never null
+            }
+
+            if (json.isBlank()) {
+                return@flatMap emptyList()
+            }
+
+            // FIX: Flatten the sequence of lists into a single list
+            parsePnpmList(json)
+                .flatMap { it }  // Convert Sequence<List<ModuleInfo>> to Sequence<ModuleInfo>
+                .filterNot { entry ->
+                    excludes.isPathExcluded(
+                        analysisRoot.toPath().relativize(File(entry.path).toPath()).invariantSeparatorsPathString
+                    )
+                }
+                .map { module ->
+                    val filteredDependencies = module.dependencies.filterNot { dependency ->
+                        excludes.isPathExcluded(
+                            analysisRoot.toPath()
+                                .relativize(File(dependency.value.path).toPath()).invariantSeparatorsPathString
+                        )
+                    }
+                    module.copy(dependencies = filteredDependencies)
+                }
+                .toList() // Convert sequence to list
+        }
     }
 
     private fun installDependencies(workingDir: File) =

@@ -19,11 +19,10 @@
 
 package org.ossreviewtoolkit.plugins.packagemanagers.node.yarn
 
-import java.io.File
-
 import org.ossreviewtoolkit.model.Identifier
 import org.ossreviewtoolkit.model.Package
 import org.ossreviewtoolkit.model.Project
+import java.io.File
 
 /**
  * A data class storing information about a specific Node module and its dependencies.
@@ -58,3 +57,4 @@ internal data class ModuleInfo(
 
     override fun hashCode() = 31 * id.hashCode() + dependencies.hashCode()
 }
+
